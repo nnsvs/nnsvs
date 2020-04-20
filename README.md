@@ -26,3 +26,9 @@ As of Feb. 2020, [NEUTRINO](https://n3utrino.work/), a DNN-based singing voice s
 While NEUTRINO is a great tool for creative purposes, it is not open-source software. In fact, there are only a few open-source toolkits to the best of our knowledge. To advance the singing voice synthesis research, we aim to provide a modern DNN-based singing voice synthesis tool for researchers and developers.
 
 That being said, I was just curious to see if I can make a better one than NEUTRINO. We’ll see :) 
+
+## References
+
+- A fork of sinsy: https://github.com/r9y9/sinsy
+- Python wrapper for sinsy: https://github.com/r9y9/pysinsy
+- NEUTRINO: https://n3utrino.work/
