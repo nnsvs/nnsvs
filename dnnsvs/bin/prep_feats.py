@@ -1,5 +1,4 @@
 # coding: utf-8
-#!/home/ryuichi/anaconda3/envs/py36/bin/python
 
 import hydra
 from hydra.utils import to_absolute_path
