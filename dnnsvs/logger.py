@@ -1,0 +1,31 @@
+# coding: utf-8
+from __future__ import with_statement, print_function, absolute_import
+
+import logging
+import os
+from os.path import dirname
+
+format = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+
+
+def getLogger(verbose=0, filename=None, name="dnnsvs"):
+    logger = logging.getLogger(name)
+    if verbose >= 100:
+        logger.setLevel(logging.DEBUG)
+    elif verbose > 0:
+        logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.WARN)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter(format))
+    # logger.addHandler(stream_handler)
+
+    if filename is not None:
+        os.makedirs(dirname(filename), exist_ok=True)
+        file_handler = logging.FileHandler(filename=filename)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(logging.Formatter(format))
+        logger.addHandler(file_handler)
+
+    return logger
