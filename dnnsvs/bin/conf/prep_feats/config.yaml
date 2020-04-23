@@ -1,0 +1,35 @@
+verbose: 100
+overwrite: false
+
+out_dir: dump
+
+# question path used for timelag, duration and acoustic models
+question_path:
+
+# Musical/linguistic context -> time-lag (onset fluctuations)
+timelag:
+  question_path:
+  label_phone_score_dir: data/timelag/label_phone_score
+  label_phone_align_dir: data/timelag/label_phone_align
+
+# Musical/linguistic context -> phoneme durations
+duration:
+  question_path:
+  label_dir: data/duration/label_phone_align
+
+# Musical/linguistic context -> acoustic parameters (f0, mgc, bap, vuv)
+acoustic:
+  question_path:
+  wav_dir: data/acoustic/wav
+  label_dir: data/acoustic/label_phone_align
+
+  # kiritan
+  # min 174.61411571650194
+  # max 659.2551138257398
+  f0_floor: 150
+  f0_ceil: 700
+
+  use_harvest: true
+
+  frame_period: 5 # ms
+  mgc_order: 59

@@ -36,6 +36,7 @@ setup(name='dnnsvs',
     },
     entry_points={
         "console_scripts": [
+            "dnnsvs-prep-feats = dnnsvs.bin.prep_feats:entry",
         ],
     },
     )
