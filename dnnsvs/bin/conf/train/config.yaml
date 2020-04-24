@@ -1,0 +1,29 @@
+defaults:
+  - model: timelag
+
+verbose: 100
+
+data:
+  # training set
+  train_no_dev:
+    in_dir:
+    out_dir:
+
+  # development set
+  dev:
+    in_dir:
+    out_dir:
+
+  num_workers: 0
+  batch_size: 4
+  pin_memory: true
+
+optim:
+  name: Adam
+  params:
+    lr: 0.001
+    betas: [0.9, 0.99]
+
+train:
+  out_dir: exp
+  nepochs: 10

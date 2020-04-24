@@ -1,0 +1,8 @@
+model:
+  class: dnnsvs.model.LSTMRNN
+  params:
+    D_in: 448
+    D_out: 1
+    H: 64
+    num_layers: 2
+    bidirectional: true
