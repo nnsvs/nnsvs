@@ -32,11 +32,20 @@ def midi_to_hz(x, idx, log_f0=False):
         z[indices] = np.log(z[indices])
     return z
 
+def _collect_files(data_root, utt_list, ext):
+    with open(utt_list) as f:
+        files = f.readlines()
+    files = map(lambda utt_id: utt_id.strip(), files)
+    files = filter(lambda utt_id: len(utt_id) > 0, files)
+    files = list(map(lambda utt_id: join(data_root, f"{utt_id}{ext}"), files))
+    return files
+
 
 class LinguisticSource(FileDataSource):
-    def __init__(self, data_root, question_path, add_frame_features=False,
+    def __init__(self, utt_list, data_root, question_path, add_frame_features=False,
                 subphone_features=None, log_f0_conditioning=True):
         self.data_root = data_root
+        self.utt_list = utt_list
         self.add_frame_features = add_frame_features
         self.subphone_features = subphone_features
         self.binary_dict, self.continuous_dict = hts.load_question_set(
@@ -45,8 +54,7 @@ class LinguisticSource(FileDataSource):
         self.pitch_idx = np.arange(len(self.binary_dict), len(self.binary_dict)+3)
 
     def collect_files(self):
-        files = sorted(glob(join(self.data_root, "*.lab")))
-        return files
+        return _collect_files(self.data_root, self.utt_list, ".lab")
 
     def collect_features(self, path):
         labels = hts.load(path)
@@ -61,13 +69,14 @@ class LinguisticSource(FileDataSource):
 
 
 class TimeLagFeatureSource(FileDataSource):
-    def __init__(self, label_phone_score_dir, label_phone_align_dir):
+    def __init__(self, utt_list, label_phone_score_dir, label_phone_align_dir):
+        self.utt_list = utt_list
         self.label_phone_score_dir = label_phone_score_dir
         self.label_phone_align_dir = label_phone_align_dir
 
     def collect_files(self):
-        labels_score = sorted(glob(join(self.label_phone_score_dir, "*.lab")))
-        labels_align = sorted(glob(join(self.label_phone_align_dir, "*.lab")))
+        labels_score = _collect_files(self.label_phone_score_dir, self.utt_list, ".lab")
+        labels_align = _collect_files(self.label_phone_align_dir, self.utt_list, ".lab")
         return labels_score, labels_align
 
     def collect_features(self, label_score_path, label_align_path):
@@ -78,12 +87,12 @@ class TimeLagFeatureSource(FileDataSource):
 
 
 class DurationFeatureSource(FileDataSource):
-    def __init__(self, data_root):
+    def __init__(self, utt_list, data_root):
+        self.utt_list = utt_list
         self.data_root = data_root
 
     def collect_files(self):
-        files = sorted(glob(join(self.data_root, "*.lab")))
-        return files
+        return _collect_files(self.data_root, self.utt_list, ".lab")
 
     def collect_features(self, path):
         labels = hts.load(path)
@@ -92,9 +101,10 @@ class DurationFeatureSource(FileDataSource):
 
 
 class AcousticSource(FileDataSource):
-    def __init__(self, wav_root, label_root, question_path,
+    def __init__(self, utt_list, wav_root, label_root, question_path,
             use_harvest=True, f0_floor=150, f0_ceil=700, frame_period=5,
             mgc_order=59):
+        self.utt_list = utt_list
         self.wav_root = wav_root
         self.label_root = label_root
         self.binary_dict, self.continuous_dict = hts.load_question_set(
@@ -113,8 +123,8 @@ class AcousticSource(FileDataSource):
         ]
 
     def collect_files(self):
-        wav_paths = sorted(glob(join(self.wav_root, "*.wav")))
-        label_paths = sorted(glob(join(self.label_root, "*.lab")))
+        wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
+        label_paths = _collect_files(self.label_root, self.utt_list, ".lab")
         return wav_paths, label_paths
 
     def collect_features(self, wav_path, label_path):
@@ -184,14 +194,15 @@ class AcousticSource(FileDataSource):
         return features.astype(np.float32)
 
 
-@hydra.main(config_path="conf/prep_feats/config.yaml")
+@hydra.main(config_path="conf/prepare_features/config.yaml")
 def my_app(config : DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
     logger.info(config.pretty())
 
-    out_dir = hydra.utils.to_absolute_path(config.out_dir)
-    question_path_general = hydra.utils.to_absolute_path(config.question_path)
+    utt_list = to_absolute_path(config.utt_list)
+    out_dir = to_absolute_path(config.out_dir)
+    question_path_general = to_absolute_path(config.question_path)
 
     # Time-lag model
     # in: musical/linguistic context
@@ -200,11 +211,11 @@ def my_app(config : DictConfig) -> None:
         question_path = config.timelag.question_path
     else:
         question_path = question_path_general
-    in_timelag_source = LinguisticSource(
+    in_timelag_source = LinguisticSource(utt_list,
         to_absolute_path(config.timelag.label_phone_score_dir),
         add_frame_features=False, subphone_features=None,
         question_path=question_path)
-    out_timelag_source = TimeLagFeatureSource(
+    out_timelag_source = TimeLagFeatureSource(utt_list,
         to_absolute_path(config.timelag.label_phone_score_dir),
         to_absolute_path(config.timelag.label_phone_align_dir))
 
@@ -218,10 +229,12 @@ def my_app(config : DictConfig) -> None:
         question_path = config.duration.question_path
     else:
         question_path = question_path_general
-    in_duration_source = LinguisticSource(to_absolute_path(config.duration.label_dir),
+    in_duration_source = LinguisticSource(utt_list,
+        to_absolute_path(config.duration.label_dir),
         add_frame_features=False, subphone_features=None,
         question_path=question_path)
-    out_duration_source = DurationFeatureSource(to_absolute_path(config.duration.label_dir))
+    out_duration_source = DurationFeatureSource(
+        utt_list, to_absolute_path(config.duration.label_dir))
 
     in_duration = FileSourceDataset(in_duration_source)
     out_duration = FileSourceDataset(out_duration_source)
@@ -233,10 +246,10 @@ def my_app(config : DictConfig) -> None:
         question_path = config.acoustic.question_path
     else:
         question_path = question_path_general
-    in_acoustic_source = LinguisticSource(
+    in_acoustic_source = LinguisticSource(utt_list,
         to_absolute_path(config.acoustic.label_dir), question_path,
         add_frame_features=True, subphone_features="coarse_coding")
-    out_acoustic_source = AcousticSource(
+    out_acoustic_source = AcousticSource(utt_list,
         to_absolute_path(config.acoustic.wav_dir), to_absolute_path(config.acoustic.label_dir),
         question_path, use_harvest=config.acoustic.use_harvest,
         f0_ceil=config.acoustic.f0_ceil, f0_floor=config.acoustic.f0_floor,
@@ -245,12 +258,12 @@ def my_app(config : DictConfig) -> None:
     out_acoustic = FileSourceDataset(out_acoustic_source)
 
     # Save as files
-    in_timelag_root = join(config.out_dir, "in_timelag")
-    out_timelag_root = join(config.out_dir, "out_timelag")
-    in_duration_root = join(config.out_dir, "in_duration")
-    out_duration_root = join(config.out_dir, "out_duration")
-    in_acoustic_root = join(config.out_dir, "in_acoustic")
-    out_acoustic_root = join(config.out_dir, "out_acoustic")
+    in_timelag_root = join(out_dir, "in_timelag")
+    out_timelag_root = join(out_dir, "out_timelag")
+    in_duration_root = join(out_dir, "in_duration")
+    out_duration_root = join(out_dir, "out_duration")
+    in_acoustic_root = join(out_dir, "in_acoustic")
+    out_acoustic_root = join(out_dir, "out_acoustic")
 
     skip_timelag_feature_extraction = exists(
         in_timelag_root) and exists(out_timelag_root)
@@ -270,8 +283,8 @@ def my_app(config : DictConfig) -> None:
     logger.info("Timelag feature dim: {}".format(out_timelag[0].shape))
     for idx, (x, y) in tqdm(enumerate(zip(in_timelag, out_timelag))):
         name = splitext(basename(in_timelag.collected_files[idx][0]))[0]
-        xpath = join(in_timelag_root, name + ".npy")
-        ypath = join(out_timelag_root, name + ".npy")
+        xpath = join(in_timelag_root, name + "-feats.npy")
+        ypath = join(out_timelag_root, name + "-feats.npy")
         np.save(xpath, x, allow_pickle=False)
         np.save(ypath, y, allow_pickle=False)
 
@@ -280,8 +293,8 @@ def my_app(config : DictConfig) -> None:
     logger.info("Duration feature dim: {}".format(out_duration[0].shape))
     for idx, (x, y) in tqdm(enumerate(zip(in_duration, out_duration))):
         name = splitext(basename(in_duration.collected_files[idx][0]))[0]
-        xpath = join(in_duration_root, name + ".npy")
-        ypath = join(out_duration_root, name + ".npy")
+        xpath = join(in_duration_root, name + "-feats.npy")
+        ypath = join(out_duration_root, name + "-feats.npy")
         np.save(xpath, x, allow_pickle=False)
         np.save(ypath, y, allow_pickle=False)
 
@@ -290,8 +303,8 @@ def my_app(config : DictConfig) -> None:
     logger.info("Acoustic feature dim: {}".format(out_acoustic[0].shape))
     for idx, (x, y) in tqdm(enumerate(zip(in_acoustic, out_acoustic))):
         name = splitext(basename(in_acoustic.collected_files[idx][0]))[0]
-        xpath = join(in_acoustic_root, name + ".npy")
-        ypath = join(out_acoustic_root, name + ".npy")
+        xpath = join(in_acoustic_root, name + "-feats.npy")
+        ypath = join(out_acoustic_root, name + "-feats.npy")
         np.save(xpath, x, allow_pickle=False)
         np.save(ypath, y, allow_pickle=False)
 

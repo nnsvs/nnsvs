@@ -1,5 +1,6 @@
 verbose: 100
-overwrite: false
+
+utt_list: path/to/list.txt
 
 out_dir: dump
 
