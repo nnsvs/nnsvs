@@ -1,3 +1,13 @@
+# recipe related
+egs*/*/*/data*
+egs*/*/*/db
+egs*/*/*/downloads
+egs*/*/*/dump
+egs*/*/*/exp
+egs*/*/*/tensorboard
+egs*/*/*/wav*
+
+
 # Created by https://www.gitignore.io/api/osx,vim,linux,emacs,python,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=osx,vim,linux,emacs,python,visualstudiocode
 
