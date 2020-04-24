@@ -1,0 +1,4 @@
+verbose: 100
+
+list_path: list.txt
+out_path: meanvar.joblib

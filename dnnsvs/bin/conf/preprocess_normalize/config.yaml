@@ -1,0 +1,9 @@
+verbose: 100
+
+in_dir:
+out_dir:
+
+scaler_path: path/to/meanvar.joblib
+inverse: false
+
+num_workers: 4
