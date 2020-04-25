@@ -1,3 +1,7 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+
 verbose: 100
 
 utt_list: path/to/list.txt
