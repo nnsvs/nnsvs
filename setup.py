@@ -40,6 +40,8 @@ setup(name='dnnsvs',
             "dnnsvs-fit-scaler = dnnsvs.bin.fit_scaler:entry",
             "dnnsvs-preprocess-normalize = dnnsvs.bin.preprocess_normalize:entry",
             "dnnsvs-train = dnnsvs.bin.train:entry",
+            "dnnsvs-predict = dnnsvs.bin.predict:entry",
+            "dnnsvs-inference = dnnsvs.bin.inference:entry",
         ],
     },
     )

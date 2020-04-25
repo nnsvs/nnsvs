@@ -1,0 +1,30 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+
+verbose: 100
+
+label_path: path/to/music.xml
+question_path: path/to/qst.hed
+out_wave_path: test.wav
+
+timelag:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
+
+duration:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
+
+acoustic:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
