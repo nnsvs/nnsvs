@@ -6,6 +6,7 @@ egs*/*/*/dump
 egs*/*/*/exp
 egs*/*/*/tensorboard
 egs*/*/*/wav*
+egs*/*/*/outputs
 
 
 # Created by https://www.gitignore.io/api/osx,vim,linux,emacs,python,visualstudiocode
