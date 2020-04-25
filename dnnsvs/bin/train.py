@@ -13,9 +13,9 @@ from torch import nn
 from torch.utils import data as data_utils
 from torch.nn import functional as F
 from torch import optim
-
-from nnmnkwii.datasets import FileDataSource, FileSourceDataset
-from nnmnkwii.datasets import PaddedFileSourceDataset, MemoryCacheDataset
+from torch.backends import cudnn
+from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
+from dnnsvs.util import make_non_pad_mask
 from dnnsvs.logger import getLogger
 
 logger = None
@@ -24,9 +24,8 @@ use_cuda = torch.cuda.is_available()
 
 
 class NpyFileSource(FileDataSource):
-    def __init__(self, data_root, train):
+    def __init__(self, data_root):
         self.data_root = data_root
-        self.train = train
 
     def collect_files(self):
         files = sorted(glob(join(self.data_root, "*.npy")))
@@ -36,26 +35,48 @@ class NpyFileSource(FileDataSource):
         return np.load(path).astype(np.float32)
 
 
-class PyTorchDataset(torch.utils.data.Dataset):
-    def __init__(self, X, Y, lengths):
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, X, Y):
         self.X = X
         self.Y = Y
-        if isinstance(lengths, list):
-            lengths = np.array(lengths)[:,None]
-        elif isinstance(lengths, np.ndarray):
-            lengths = lengths[:,None]
-        self.lengths = lengths
 
     def __getitem__(self, idx):
-        x, y = self.X[idx], self.Y[idx]
-        # TODO: move normalization to another script
-        #x = minmax_scale(x, self.X_min, self.X_max, feature_range=(0.01, 0.99))
-        #y = scale(y, self.Y_mean, self.Y_scale)
-        l = torch.from_numpy(self.lengths[idx])
-        x, y = torch.from_numpy(x), torch.from_numpy(y)
-        return x, y, l.view(1,1)
+        return self.X[idx], self.Y[idx]
+
     def __len__(self):
         return len(self.X)
+
+
+def _pad_2d(x, max_len, b_pad=0, constant_values=0):
+    x = np.pad(x, [(b_pad, max_len - len(x) - b_pad), (0, 0)],
+               mode="constant", constant_values=constant_values)
+    return x
+
+
+def collate_fn(batch):
+    """Create batch
+
+    Args:
+        batch(tuple): List of tuples
+            - x[0] (ndarray,int) : list of (T, D_in)
+            - x[1] (ndarray,int) : list of (T, D_out)
+    Returns:
+        tuple: Tuple of batch
+            - x (FloatTensor) : Network inputs (B, max(T), D_in)
+            - y (FloatTensor)  : Network targets (B, max(T), D_out)
+            - lengths (LongTensor): Input lengths
+    """
+    input_lengths = [len(x[0]) for x in batch]
+    max_len = max(input_lengths)
+
+    x_batch = np.array([_pad_2d(x[0], max_len) for x in batch], dtype=np.float32)
+    y_batch = np.array([_pad_2d(x[1], max_len) for x in batch], dtype=np.float32)
+
+    x_batch = torch.from_numpy(x_batch)
+    y_batch = torch.from_numpy(y_batch)
+    input_lengths = torch.LongTensor(input_lengths)
+
+    return x_batch, y_batch, input_lengths
 
 
 def get_data_loaders(config):
@@ -65,20 +86,15 @@ def get_data_loaders(config):
         in_dir = to_absolute_path(config.data[phase].in_dir)
         out_dir = to_absolute_path(config.data[phase].out_dir)
         train = phase.startswith("train")
-        in_feats = FileSourceDataset(NpyFileSource(in_dir, train))
-        utt_lengths = [len(x) for x in in_feats]
-        padded_length = max(utt_lengths)
+        in_feats = FileSourceDataset(NpyFileSource(in_dir))
+        out_feats = FileSourceDataset(NpyFileSource(out_dir))
 
-        in_feats = PaddedFileSourceDataset(
-                NpyFileSource(in_dir, train), padded_length)
-        out_feats = PaddedFileSourceDataset(
-                NpyFileSource(out_dir, train), padded_length)
         in_feats = MemoryCacheDataset(in_feats, cache_size=10000)
         out_feats = MemoryCacheDataset(out_feats, cache_size=10000)
 
-        dataset = PyTorchDataset(in_feats, out_feats, utt_lengths)
+        dataset = Dataset(in_feats, out_feats)
         data_loaders[phase] = data_utils.DataLoader(
-            dataset, batch_size=config.data.batch_size,
+            dataset, batch_size=config.data.batch_size, collate_fn=collate_fn,
             pin_memory=config.data.pin_memory,
             num_workers=config.data.num_workers, shuffle=train)
 
@@ -88,11 +104,8 @@ def get_data_loaders(config):
     return data_loaders
 
 
-def train_loop(config, model, optimizer, data_loaders):
-    if use_cuda:
-        model = model.cuda()
-
-    criterion = nn.MSELoss()
+def train_loop(config, device, model, optimizer, data_loaders):
+    criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
     for epoch in tqdm(range(config.train.nepochs)):
         for phase in data_loaders.keys():
@@ -101,16 +114,21 @@ def train_loop(config, model, optimizer, data_loaders):
             running_loss = 0
             for x, y, lengths in data_loaders[phase]:
                 # Sort by lengths . This is needed for pytorch's PackedSequence
-                sorted_lengths, indices = torch.sort(lengths.view(-1), dim=0, descending=True)
-                # Get sorted batch
-                x, y = x[indices], y[indices]
-                # Trim outputs with max length
-                y = y[:, :sorted_lengths[0]]
-                if use_cuda:
-                    x, y = x.cuda(), y.cuda()
+                sorted_lengths, indices = torch.sort(lengths, dim=0, descending=True)
+                x, y = x[indices].to(device), y[indices].to(device)
+                # Make mask for padding
+                mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
+
                 optimizer.zero_grad()
+
+                # Run forwaard
                 y_hat = model(x, sorted_lengths)
-                loss = criterion(y_hat, y)
+
+                # Compute loss
+                if True:
+                    y_hat = y_hat.masked_select(mask)
+                    y = y.masked_select(mask)
+                loss = criterion(y_hat, y).mean()
                 if train:
                     loss.backward()
                     optimizer.step()
@@ -127,11 +145,20 @@ def my_app(config : DictConfig) -> None:
     logger = getLogger(config.verbose)
     logger.info(config.pretty())
 
-    model = hydra.utils.instantiate(config.model)
+    if use_cuda:
+        from torch.backends import cudnn
+        cudnn.benchmark = config.cudnn.benchmark
+        cudnn.deterministic = config.cudnn.deterministic
+        logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
+        logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
+
+    device = torch.device("cuda" if use_cuda else "cpu")
+
+    model = hydra.utils.instantiate(config.model).to(device)
     optimizer_class = getattr(optim, config.optim.name)
     optimizer = optimizer_class(model.parameters(), **config.optim.params)
     data_loaders = get_data_loaders(config)
-    train_loop(config, model, optimizer, data_loaders)
+    train_loop(config, device, model, optimizer, data_loaders)
 
     # save last checkpoint
     out_dir = to_absolute_path(config.train.out_dir)

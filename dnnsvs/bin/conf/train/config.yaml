@@ -1,4 +1,6 @@
 defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
   - model: timelag
 
 verbose: 100
@@ -14,6 +16,7 @@ data:
     in_dir:
     out_dir:
 
+  # data loader
   num_workers: 0
   batch_size: 4
   pin_memory: true
@@ -26,4 +29,8 @@ optim:
 
 train:
   out_dir: exp
-  nepochs: 10
+  nepochs: 200
+
+cudnn:
+  benchmark: false
+  deterministic: true

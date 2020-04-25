@@ -3,6 +3,6 @@ model:
   params:
     D_in: 448
     D_out: 1
-    H: 64
+    H: 256
     num_layers: 2
     bidirectional: true
