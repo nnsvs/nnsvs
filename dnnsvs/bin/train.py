@@ -2,7 +2,7 @@
 
 import hydra
 from hydra.utils import to_absolute_path
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import numpy as np
 from glob import glob
 from tqdm import tqdm
@@ -158,11 +158,17 @@ def my_app(config : DictConfig) -> None:
     optimizer_class = getattr(optim, config.optim.name)
     optimizer = optimizer_class(model.parameters(), **config.optim.params)
     data_loaders = get_data_loaders(config)
+
+    # Save model definition
+    out_dir = to_absolute_path(config.train.out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+    with open(join(out_dir, "model.yaml"), "w") as f:
+        OmegaConf.save(config.model, f)
+
+    # Run training loop
     train_loop(config, device, model, optimizer, data_loaders)
 
     # save last checkpoint
-    out_dir = to_absolute_path(config.train.out_dir)
-    os.makedirs(out_dir, exist_ok=True)
     checkpoint_path = join(out_dir, "latest.pth")
     torch.save({
         "state_dict": model.state_dict(),
