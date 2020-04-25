@@ -37,7 +37,7 @@ setup(name='dnnsvs',
     entry_points={
         "console_scripts": [
             "dnnsvs-prepare-features = dnnsvs.bin.prepare_features:entry",
-            "dnnsvs-compute-meanvar-stats = dnnsvs.bin.compute_meanvar_stats:entry",
+            "dnnsvs-fit-scaler = dnnsvs.bin.fit_scaler:entry",
             "dnnsvs-preprocess-normalize = dnnsvs.bin.preprocess_normalize:entry",
             "dnnsvs-train = dnnsvs.bin.train:entry",
         ],
