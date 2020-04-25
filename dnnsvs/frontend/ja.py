@@ -33,8 +33,6 @@ def xml2lab(xml):
         HTS full context labels
     """
     _lazy_init()
-    global _global_sinsy
-
     _global_sinsy.loadScoreFromMusicXML(xml)
     label = _global_sinsy.createLabelData(False, 1, 1)
     label = hts.load(lines=label.getData())
