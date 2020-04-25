@@ -29,7 +29,12 @@ optim:
 
 train:
   out_dir: exp
-  nepochs: 200
+  nepochs: 10
+  checkpoint_epoch_interval: 5
+
+resume:
+  checkpoint:
+  load_optimizer: false
 
 cudnn:
   benchmark: false

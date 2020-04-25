@@ -8,6 +8,7 @@ from glob import glob
 from tqdm import tqdm
 from os.path import basename, splitext, exists, join
 import os
+import shutil
 import torch
 from torch import nn
 from torch.utils import data as data_utils
@@ -104,10 +105,23 @@ def get_data_loaders(config):
     return data_loaders
 
 
+def save_checkpoint(config, model, optimizer, epoch):
+    out_dir = to_absolute_path(config.train.out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+    checkpoint_path = join(out_dir, "checkpoint_epoch{:04d}.pth".format(epoch))
+    torch.save({
+        "state_dict": model.state_dict(),
+        "optimizer_state": optimizer.state_dict(),
+    }, checkpoint_path)
+    logger.info(f"Checkpoint is saved at {checkpoint_path}")
+    lastest_path = join(out_dir, "latest.pth")
+    shutil.copyfile(checkpoint_path, lastest_path)
+
+
 def train_loop(config, device, model, optimizer, data_loaders):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
-    for epoch in tqdm(range(config.train.nepochs)):
+    for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
             model.train() if train else model.eval()
@@ -135,6 +149,11 @@ def train_loop(config, device, model, optimizer, data_loaders):
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info(f"[{phase}] [Epoch {epoch}]: loss {ave_loss}")
+        if epoch % config.train.checkpoint_epoch_interval == 0:
+            save_checkpoint(config, model, optimizer, epoch)
+
+    # save at last epoch
+    save_checkpoint(config, model, optimizer, config.train.nepochs)
 
     return model
 
@@ -159,6 +178,15 @@ def my_app(config : DictConfig) -> None:
     optimizer = optimizer_class(model.parameters(), **config.optim.params)
     data_loaders = get_data_loaders(config)
 
+    # Resume
+    if config.resume.checkpoint is not None:
+        logger.info("Load weights from {}".format(config.resume.checkpoint))
+        checkpoint = torch.load(to_absolute_path(config.resume.checkpoint))
+        model.load_state_dict(checkpoint["state_dict"])
+        if config.resume.load_optimizer:
+            logger.info("Load optimizer state")
+            optimizer.load_state_dict(checkpoint["optimizer_state"])
+
     # Save model definition
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
@@ -167,14 +195,6 @@ def my_app(config : DictConfig) -> None:
 
     # Run training loop
     train_loop(config, device, model, optimizer, data_loaders)
-
-    # save last checkpoint
-    checkpoint_path = join(out_dir, "latest.pth")
-    torch.save({
-        "state_dict": model.state_dict(),
-        "optimizer": optimizer.state_dict(),
-    }, checkpoint_path)
-    logger.info(f"Checkpoint is saved at {checkpoint_path}")
 
 
 def entry():
