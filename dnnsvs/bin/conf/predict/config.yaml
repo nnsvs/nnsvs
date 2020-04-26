@@ -1,0 +1,12 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+
+verbose: 100
+
+in_dir:
+out_dir:
+
+model:
+  checkpoint:
+  model_yaml:
