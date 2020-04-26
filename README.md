@@ -1,5 +1,8 @@
 # DNN SVS
 
+[![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE)
+![Python CI](https://github.com/r9y9/dnnsvs/workflows/Python%20CI/badge.svg)
+
 PyTorch-based singing voice synthesis (SVS) library for research purposes.
 
 ## Samples
