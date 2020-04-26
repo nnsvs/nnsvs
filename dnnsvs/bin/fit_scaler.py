@@ -32,7 +32,7 @@ def my_app(config : DictConfig) -> None:
             logger.info("std:\n{}".format(np.sqrt(scaler.var_)))
         if isinstance(scaler, MinMaxScaler):
             logger.info("data min:\n{}".format(scaler.data_min_))
-            logger.info("data max:\n{}".format(np.sqrt(scaler.data_max_)))
+            logger.info("data max:\n{}".format(scaler.data_max_))
 
 
 def entry():

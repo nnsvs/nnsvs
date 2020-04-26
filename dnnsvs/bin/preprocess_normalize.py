@@ -73,7 +73,6 @@ def my_app(config : DictConfig) -> None:
     scaler = joblib.load(scaler_path)
     inverse = config.inverse
     num_workers = config.num_workers
-    logger.info(f"shape of mean: {scaler.mean_.shape}")
 
     os.makedirs(out_dir, exist_ok=True)
     apply_normalization_dir2dir(in_dir, out_dir, scaler, inverse, num_workers)
