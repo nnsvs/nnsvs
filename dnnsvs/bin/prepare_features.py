@@ -214,7 +214,8 @@ def my_app(config : DictConfig) -> None:
     in_timelag_source = LinguisticSource(utt_list,
         to_absolute_path(config.timelag.label_phone_score_dir),
         add_frame_features=False, subphone_features=None,
-        question_path=question_path)
+        question_path=question_path,
+        log_f0_conditioning=config.log_f0_conditioning)
     out_timelag_source = TimeLagFeatureSource(utt_list,
         to_absolute_path(config.timelag.label_phone_score_dir),
         to_absolute_path(config.timelag.label_phone_align_dir))
@@ -232,7 +233,8 @@ def my_app(config : DictConfig) -> None:
     in_duration_source = LinguisticSource(utt_list,
         to_absolute_path(config.duration.label_dir),
         add_frame_features=False, subphone_features=None,
-        question_path=question_path)
+        question_path=question_path,
+        log_f0_conditioning=config.log_f0_conditioning)
     out_duration_source = DurationFeatureSource(
         utt_list, to_absolute_path(config.duration.label_dir))
 
@@ -248,7 +250,8 @@ def my_app(config : DictConfig) -> None:
         question_path = question_path_general
     in_acoustic_source = LinguisticSource(utt_list,
         to_absolute_path(config.acoustic.label_dir), question_path,
-        add_frame_features=True, subphone_features="coarse_coding")
+        add_frame_features=True, subphone_features="coarse_coding",
+        log_f0_conditioning=config.log_f0_conditioning)
     out_acoustic_source = AcousticSource(utt_list,
         to_absolute_path(config.acoustic.wav_dir), to_absolute_path(config.acoustic.label_dir),
         question_path, use_harvest=config.acoustic.use_harvest,
@@ -264,13 +267,6 @@ def my_app(config : DictConfig) -> None:
     out_duration_root = join(out_dir, "out_duration")
     in_acoustic_root = join(out_dir, "in_acoustic")
     out_acoustic_root = join(out_dir, "out_acoustic")
-
-    skip_timelag_feature_extraction = exists(
-        in_timelag_root) and exists(out_timelag_root)
-    skip_duration_feature_extraction = exists(
-        in_duration_root) and exists(out_duration_root)
-    skip_acoustic_feature_extraction = exists(
-        in_acoustic_root) and exists(out_acoustic_root)
 
     for d in [in_timelag_root, out_timelag_root, in_duration_root, out_duration_root,
             in_acoustic_root, out_acoustic_root]:

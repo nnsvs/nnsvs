@@ -11,6 +11,8 @@ out_dir: dump
 # question path used for timelag, duration and acoustic models
 question_path:
 
+log_f0_conditioning: true
+
 # Musical/linguistic context -> time-lag (onset fluctuations)
 timelag:
   question_path:
