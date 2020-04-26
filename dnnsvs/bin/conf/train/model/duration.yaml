@@ -1,8 +1,9 @@
 model:
   class: dnnsvs.model.LSTMRNN
   params:
-    D_in: 448
-    D_out: 1
-    H: 512
+    in_dim: 448
+    out_dim: 1
+    hidden_dim: 512
     num_layers: 2
     bidirectional: true
+    dropout: 0.1
