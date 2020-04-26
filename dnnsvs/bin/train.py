@@ -118,10 +118,22 @@ def save_checkpoint(config, model, optimizer, epoch):
     shutil.copyfile(checkpoint_path, lastest_path)
 
 
+def save_best_checkpoint(config, model, optimizer, best_loss):
+    out_dir = to_absolute_path(config.train.out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+    checkpoint_path = join(out_dir, "best_loss.pth")
+    torch.save({
+        "state_dict": model.state_dict(),
+        "optimizer_state": optimizer.state_dict(),
+    }, checkpoint_path)
+    logger.info(f"[Best loss {best_loss}: checkpoint is saved at {checkpoint_path}")
+
+
 def train_loop(config, device, model, optimizer, data_loaders):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
 
+    best_loss = 10000000
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
@@ -149,11 +161,16 @@ def train_loop(config, device, model, optimizer, data_loaders):
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info(f"[{phase}] [Epoch {epoch}]: loss {ave_loss}")
+            if not train and ave_loss < best_loss:
+                best_loss = ave_loss
+                save_best_checkpoint(config, model, optimizer, best_loss)
+
         if epoch % config.train.checkpoint_epoch_interval == 0:
             save_checkpoint(config, model, optimizer, epoch)
 
     # save at last epoch
     save_checkpoint(config, model, optimizer, config.train.nepochs)
+    logger.info(f"The best loss was {best_loss}")
 
     return model
 
