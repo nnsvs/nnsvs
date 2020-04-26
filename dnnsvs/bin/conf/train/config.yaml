@@ -29,8 +29,10 @@ optim:
 
 train:
   out_dir: exp
-  nepochs: 10
-  checkpoint_epoch_interval: 5
+  nepochs: 50
+  checkpoint_epoch_interval: 10
+
+  masked_loss: true
 
 resume:
   checkpoint:

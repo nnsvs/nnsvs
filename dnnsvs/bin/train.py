@@ -121,6 +121,7 @@ def save_checkpoint(config, model, optimizer, epoch):
 def train_loop(config, device, model, optimizer, data_loaders):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
+
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
@@ -130,8 +131,6 @@ def train_loop(config, device, model, optimizer, data_loaders):
                 # Sort by lengths . This is needed for pytorch's PackedSequence
                 sorted_lengths, indices = torch.sort(lengths, dim=0, descending=True)
                 x, y = x[indices].to(device), y[indices].to(device)
-                # Make mask for padding
-                mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
 
                 optimizer.zero_grad()
 
@@ -139,10 +138,11 @@ def train_loop(config, device, model, optimizer, data_loaders):
                 y_hat = model(x, sorted_lengths)
 
                 # Compute loss
-                if True:
+                if config.train.masked_loss:
+                    mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
                     y_hat = y_hat.masked_select(mask)
                     y = y.masked_select(mask)
-                loss = criterion(y_hat, y).mean()
+                    loss = criterion(y_hat, y).mean()
                 if train:
                     loss.backward()
                     optimizer.step()
