@@ -64,7 +64,7 @@ class LinguisticSource(FileDataSource):
             subphone_features=self.subphone_features)
         if self.log_f0_conditioning:
             for idx in self.pitch_idx:
-                features[:, idx] = midi_to_hz(features, idx, True)
+                features[:, idx] = interp1d(midi_to_hz(features, idx, True), kind="slinear")
         return features.astype(np.float32)
 
 
