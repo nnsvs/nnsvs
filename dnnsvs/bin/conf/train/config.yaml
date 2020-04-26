@@ -17,15 +17,15 @@ data:
     out_dir:
 
   # data loader
-  num_workers: 0
-  batch_size: 4
+  num_workers: 2
+  batch_size: 2
   pin_memory: true
 
 optim:
   name: Adam
   params:
     lr: 0.001
-    betas: [0.9, 0.99]
+    betas: [0.9, 0.999]
 
 train:
   out_dir: exp
@@ -40,4 +40,4 @@ resume:
 
 cudnn:
   benchmark: false
-  deterministic: true
+  deterministic: false
