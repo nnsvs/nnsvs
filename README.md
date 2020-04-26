@@ -13,7 +13,7 @@ https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
 - [pysinsy](https://github.com/r9y9/pysinsy) **development** version is required. Please have a look at the repostiory for installation.
 - Pytorch >= 1.x
 
-Note taht packages listed above should be manually installed. After installing them, you can run:
+Note that packages listed above should be manually installed. After installing them, you can run:
 
 ```
 python setup.py develop
@@ -44,6 +44,8 @@ See [HISTORY.md](HISTORY.md)
 
 ## References
 
+- Y. Hono et al, "Recent Development of the DNN-based Singing Voice Synthesis System — Sinsy," Proc. of APSIPA, 2017. ([PDF](http://www.apsipa.org/proceedings/2018/pdfs/0001003.pdf))
 - A fork of sinsy: https://github.com/r9y9/sinsy
 - Python wrapper for sinsy: https://github.com/r9y9/pysinsy
 - NEUTRINO: https://n3utrino.work/
+
