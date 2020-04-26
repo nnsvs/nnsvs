@@ -1,0 +1,43 @@
+# coding: utf-8
+
+import torch
+from torch import nn
+from torch.nn import functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+
+class FeedForwardNet(torch.nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
+        super(FeedForwardNet, self).__init__()
+        self.first_linear = nn.Linear(in_dim, hidden_dim)
+        self.hidden_layers = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)])
+        self.last_linear = nn.Linear(hidden_dim, out_dim)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, lengths=None):
+        h = self.relu(self.first_linear(x))
+        for hl in self.hidden_layers:
+            h = self.dropout(self.relu(hl(h)))
+        return self.last_linear(h)
+
+
+class LSTMRNN(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
+            dropout=0.0):
+        super(LSTMRNN, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.num_direction =  2 if bidirectional else 1
+        self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers,
+            bidirectional=bidirectional, batch_first=True, dropout=dropout)
+        self.hidden2out = nn.Linear(self.num_direction*self.hidden_dim, out_dim)
+
+    def forward(self, sequence, lengths):
+        sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
+        out, (h, c) = self.lstm(sequence)
+        out, out_lengths = pad_packed_sequence(out, batch_first=True)
+        out = self.hidden2out(out)
+        return out
+
