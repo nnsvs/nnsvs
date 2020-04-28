@@ -90,14 +90,19 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # Compute normalization stats for each input/output
     mkdir -p $dump_norm_dir
     for inout in "in" "out"; do
+        if [ $inout = "in" ]; then
+            scaler_class="sklearn.preprocessing.MinMaxScaler"
+        else
+            scaler_class="sklearn.preprocessing.StandardScaler"
+        fi
         for typ in timelag duration acoustic;
         do
             find $dump_org_dir/$train_set/${inout}_${typ} -name "*feats.npy" > train_list.txt
-            meanvar=$dump_org_dir/${inout}_${typ}_scaler.joblib
-            dnnsvs-fit-scaler list_path=train_list.txt \
-                out_path=$meanvar
+            scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib
+            dnnsvs-fit-scaler list_path=train_list.txt scaler.class=$scaler_class \
+                out_path=$scaler_path
             rm -f train_list.txt
-            cp -v $meanvar $dump_norm_dir/${inout}_${typ}_scaler.joblib
+            cp -v $scaler_path $dump_norm_dir/${inout}_${typ}_scaler.joblib
         done
     done
 
