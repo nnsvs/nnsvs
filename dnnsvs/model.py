@@ -5,6 +5,49 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+from torch.nn.utils import weight_norm
+
+
+def WNConv1d(*args, **kwargs):
+    return weight_norm(nn.Conv1d(*args, **kwargs))
+
+
+class ResnetBlock(nn.Module):
+    def __init__(self, dim, dilation=1):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.LeakyReLU(0.2),
+            nn.ReflectionPad1d(dilation),
+            WNConv1d(dim, dim, kernel_size=3, dilation=dilation),
+            nn.LeakyReLU(0.2),
+            WNConv1d(dim, dim, kernel_size=1),
+        )
+        self.shortcut = WNConv1d(dim, dim, kernel_size=1)
+
+    def forward(self, x):
+        return self.shortcut(x) + self.block(x)
+
+
+class Conv1dResnet(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0):
+        super().__init__()
+        model = [
+            nn.ReflectionPad1d(3),
+            WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
+        ]
+        for n in range(num_layers):
+            model.append(ResnetBlock(hidden_dim, dilation=3**n))
+        model += [
+            nn.LeakyReLU(0.2),
+            nn.ReflectionPad1d(3),
+            WNConv1d(hidden_dim, out_dim, kernel_size=7, padding=0),
+        ]
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x, lengths=None):
+        return self.model(x.transpose(1,2)).transpose(1,2)
+
 
 class FeedForwardNet(torch.nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
