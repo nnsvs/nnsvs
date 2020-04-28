@@ -36,8 +36,7 @@ class LSTMRNN(nn.Module):
 
     def forward(self, sequence, lengths):
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
-        out, (h, c) = self.lstm(sequence)
-        out, out_lengths = pad_packed_sequence(out, batch_first=True)
+        out, _ = self.lstm(sequence)
+        out, _ = pad_packed_sequence(out, batch_first=True)
         out = self.hidden2out(out)
         return out
-

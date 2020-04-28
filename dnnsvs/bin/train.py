@@ -82,7 +82,6 @@ def collate_fn(batch):
 
 def get_data_loaders(config):
     data_loaders = {}
-    utt_lengths = {}
     for phase in ["train_no_dev", "dev"]:
         in_dir = to_absolute_path(config.data[phase].in_dir)
         out_dir = to_absolute_path(config.data[phase].out_dir)
@@ -148,7 +147,6 @@ def train_loop(config, device, model, optimizer, data_loaders):
 
                 # Run forwaard
                 y_hat = model(x, sorted_lengths)
-
                 # Compute loss
                 if config.train.masked_loss:
                     mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
