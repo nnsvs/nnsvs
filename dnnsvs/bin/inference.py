@@ -88,15 +88,9 @@ def gen_parameters(y_predicted, acoustic_out_scaler):
     return mgc, lf0, vuv, bap
 
 
-def gen_waveform(y_predicted, acoustic_out_scaler, linguistic_features, do_postfilter=False, do_clip=False):
-    if False:
-        y_predicted = trim_zeros_frames(y_predicted)
-
+def gen_waveform(y_predicted, acoustic_out_scaler, linguistic_features, do_postfilter=False):
     # Generate parameters and split streams
     mgc, diff_lf0, vuv, bap = gen_parameters(y_predicted, acoustic_out_scaler)
-
-    if do_clip:
-        diff_lf0 = np.clip(diff_lf0, np.log(0.9), np.log(1.1))
 
     if do_postfilter:
         mgc = merlin_post_filter(mgc, alpha)
@@ -110,9 +104,9 @@ def gen_waveform(y_predicted, acoustic_out_scaler, linguistic_features, do_postf
     else:
         f0_score = midi_to_hz(linguistic_features, pitch_idx, False)[:, None]
         lf0_score = f0_score.copy()
+        nonzero_indices = np.nonzero(lf0_score)
         lf0_score[nonzero_indices] = np.log(f0_score[nonzero_indices])
-    nonzero_indices = np.nonzero(lf0_score)
-    lf0_score = interp1d(lf0_score, kind="slinear")
+        lf0_score = interp1d(lf0_score, kind="slinear")
 
     f0 = diff_lf0 + lf0_score
     f0[vuv < 0.5] = 0
@@ -140,7 +134,8 @@ def gen_duration(labels, question_path, duration_model, duration_in_scaler, dura
 
     if log_f0_conditioning:
         for idx in pitch_indices:
-            duration_linguistic_features[:, idx] = midi_to_hz(duration_linguistic_features, idx, True)
+            duration_linguistic_features[:, idx] = interp1d(
+                midi_to_hz(duration_linguistic_features, idx, True), kind="slinear")
 
     # Apply normalization
     duration_linguistic_features = duration_in_scaler.transform(duration_linguistic_features)
@@ -161,7 +156,9 @@ def gen_duration(labels, question_path, duration_model, duration_in_scaler, dura
     for i in range(1, len(note_indices)):
         # Apply time lag
         p = labels[note_indices[i-1]:note_indices[i]]
-        p.start_times = np.asarray(p.start_times) + lag[i-1].reshape(-1)
+        p.start_times = np.minimum(
+            np.asarray(p.start_times) + lag[i-1].reshape(-1),
+            np.asarray(p.end_times) - 50000 * len(p))
         p.start_times = np.maximum(p.start_times, 0)
         if len(output_labels) > 0:
             p.start_times = np.maximum(p.start_times, output_labels.start_times[-1] + 50000)
@@ -171,6 +168,8 @@ def gen_duration(labels, question_path, duration_model, duration_in_scaler, dura
         d_hat = duration_predicted[note_indices[i-1]:note_indices[i]]
         d_norm = d[0] * d_hat / d_hat.sum()
         d_norm = np.round(d_norm)
+        d_norm[d_norm <= 0] = 1
+
         # TODO: better way to adjust?
         if d_norm.sum() != d[0]:
             d_norm[-1] +=  d[0] - d_norm.sum()
@@ -189,7 +188,7 @@ def test_one_utt(config, label_path, question_path,
         duration_model, duration_in_scaler, duration_out_scaler,
         acoustic_model, acoustic_in_scaler, acoustic_out_scaler,
         post_filter=True, pred_duration=True):
-    labels = hts.load(label_path)
+    labels = hts.load(label_path).round_()
 
     binary_dict, continuous_dict = hts.load_question_set(
         question_path, append_hat_for_LL=False)
@@ -206,7 +205,8 @@ def test_one_utt(config, label_path, question_path,
         add_frame_features=False, subphone_features=None).astype(np.float32)
     if log_f0_conditioning:
         for idx in pitch_indices:
-            timelag_linguistic_features[:, idx] = midi_to_hz(timelag_linguistic_features, idx, True)
+            timelag_linguistic_features[:, idx] = interp1d(
+                midi_to_hz(timelag_linguistic_features, idx, True), kind="slinear")
     timelag_linguistic_features = timelag_in_scaler.transform(timelag_linguistic_features)
 
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0)
@@ -228,7 +228,8 @@ def test_one_utt(config, label_path, question_path,
 
     if log_f0_conditioning:
         for idx in pitch_indices:
-            linguistic_features[:, idx] = midi_to_hz(linguistic_features, idx, True)
+            linguistic_features[:, idx] = interp1d(
+                midi_to_hz(linguistic_features, idx, True), kind="slinear")
 
     linguistic_features_org = linguistic_features.copy()
 
@@ -261,6 +262,7 @@ def my_app(config : DictConfig) -> None:
     timelag_model.load_state_dict(checkpoint["state_dict"])
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
     timelag_out_scaler = joblib.load(to_absolute_path(config.timelag.out_scaler_path))
+    timelag_model.eval()
 
     # duration
     duration_def = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
@@ -269,6 +271,7 @@ def my_app(config : DictConfig) -> None:
     duration_model.load_state_dict(checkpoint["state_dict"])
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
     duration_out_scaler = joblib.load(to_absolute_path(config.duration.out_scaler_path))
+    duration_model.eval()
 
     # acoustic model
     acoustic_def = OmegaConf.load(to_absolute_path(config.acoustic.model_yaml))
@@ -277,6 +280,7 @@ def my_app(config : DictConfig) -> None:
     acoustic_model.load_state_dict(checkpoint["state_dict"])
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
     acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
+    acoustic_model.eval()
 
     label_path = to_absolute_path(config.label_path)
     question_path = to_absolute_path(config.question_path)
@@ -286,8 +290,8 @@ def my_app(config : DictConfig) -> None:
         duration_model, duration_in_scaler, duration_out_scaler,
         acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
 
-    wav = wav.astype(np.int16)
-    wavfile.write(out_wave_path, rate=fs, data=wav)
+    wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+    wavfile.write(out_wave_path, rate=fs, data=wav.astype(np.int16))
 
 
 def entry():
