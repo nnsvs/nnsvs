@@ -3,6 +3,6 @@ model:
   params:
     in_dim: 449
     out_dim: 199
-    hidden_dim: 256
-    num_layers: 4
+    hidden_dim: 128
+    num_layers: 6
     dropout: 0.1

@@ -36,7 +36,7 @@ class Conv1dResnet(nn.Module):
             WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
         ]
         for n in range(num_layers):
-            model.append(ResnetBlock(hidden_dim, dilation=3**n))
+            model.append(ResnetBlock(hidden_dim, dilation=2**n))
         model += [
             nn.LeakyReLU(0.2),
             nn.ReflectionPad1d(3),
