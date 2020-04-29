@@ -10,8 +10,6 @@ wav_root=$HOME/data/kiritan_singing/wav
 spk="kiritan"
 
 dumpdir=dump
-dump_org_dir=$dumpdir/$spk/org
-dump_norm_dir=$dumpdir/$spk/norm
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
 question_path=./conf/jp_qst001_dnnsvs.hed
@@ -40,6 +38,9 @@ train_set="train_no_dev"
 dev_set="dev"
 eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
+
+dump_org_dir=$dumpdir/$spk/org
+dump_norm_dir=$dumpdir/$spk/norm
 
 # exp name
 if [ -z ${tag} ]; then
@@ -73,9 +74,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
-    head -1 data/list/utt_list.txt > data/list/$eval_set.list
-    head -2 data/list/utt_list.txt | tail -1 > data/list/$dev_set.list
-    tail -n +3 data/list/utt_list.txt > data/list/$train_set.list
+    grep 01_ data/list/utt_list.txt > data/list/$eval_set.list
+    grep 02_ data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v 01_ data/list/utt_list.txt | grep -v 02_ > data/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
