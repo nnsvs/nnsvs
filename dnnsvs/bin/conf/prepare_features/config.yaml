@@ -11,6 +11,7 @@ out_dir: dump
 # question path used for timelag, duration and acoustic models
 question_path:
 
+# Musical/linguistic feature extraction common settings
 log_f0_conditioning: true
 
 # Musical/linguistic context -> time-lag (onset fluctuations)
@@ -40,3 +41,10 @@ acoustic:
 
   frame_period: 5 # ms
   mgc_order: 59
+
+  # windows to compute delta and delta-delta features
+  # set 1 to disable
+  num_windows: 3
+
+  # Wheter to use relative f0 modeling.
+  relative_f0: true

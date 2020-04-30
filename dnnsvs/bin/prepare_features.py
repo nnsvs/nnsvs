@@ -21,6 +21,7 @@ from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
 from dnnsvs.logger import getLogger
+from dnnsvs.gen import get_windows
 logger = None
 
 
@@ -103,7 +104,7 @@ class DurationFeatureSource(FileDataSource):
 class AcousticSource(FileDataSource):
     def __init__(self, utt_list, wav_root, label_root, question_path,
             use_harvest=True, f0_floor=150, f0_ceil=700, frame_period=5,
-            mgc_order=59):
+            mgc_order=59, num_windows=3, relative_f0=True):
         self.utt_list = utt_list
         self.wav_root = wav_root
         self.label_root = label_root
@@ -115,12 +116,9 @@ class AcousticSource(FileDataSource):
         self.f0_ceil = f0_ceil
         self.frame_period = frame_period
         self.mgc_order = mgc_order
+        self.relative_f0 = relative_f0
+        self.windows = get_windows(num_windows)
 
-        self.windows = [
-            (0, 0, np.array([1.0])),
-            (1, 1, np.array([-0.5, 0.0, 0.5])),
-            (1, 1, np.array([1.0, -2.0, 1.0])),
-        ]
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -135,9 +133,11 @@ class AcousticSource(FileDataSource):
             subphone_features="coarse_coding")
 
         f0_score = midi_to_hz(l_features, self.pitch_idx, False)
-        # TODO: better to set the margin carefully
-        max_f0 = int(max(f0_score)) + 100
-        min_f0 = int(max(self.f0_floor, min(f0_score[f0_score > 0]) - 20))
+        notes = l_features[:, self.pitch_idx]
+        notes = notes[notes > 0]
+        # allow 1-tone upper/lower
+        max_f0 = librosa.midi_to_hz(max(notes) + 2)
+        min_f0 = librosa.midi_to_hz(max(notes) - 2)
         assert max_f0 > min_f0
 
         fs, x = wavfile.read(wav_path)
@@ -168,28 +168,32 @@ class AcousticSource(FileDataSource):
             vuv = (lf0 != 0).astype(np.float32)
         lf0 = interp1d(lf0, kind="slinear")
 
-        # # F0 derived from the musical score
-        f0_score = f0_score[:, None]
-        lf0_score = f0_score.copy()
-        nonzero_indices = np.nonzero(f0_score)
-        lf0_score[nonzero_indices] = np.log(f0_score[nonzero_indices])
-        lf0_score = interp1d(lf0_score, kind="slinear")
-
-
         # Adjust lengths
         mgc = mgc[:labels.num_frames()]
         lf0 = lf0[:labels.num_frames()]
         vuv = vuv[:labels.num_frames()]
         bap = bap[:labels.num_frames()]
 
-        diff_lf0 = lf0 - lf0_score
-        diff_lf0 = np.clip(diff_lf0, np.log(0.5), np.log(2.0))
+        if self.relative_f0:
+            # # F0 derived from the musical score
+            f0_score = f0_score[:, None]
+            lf0_score = f0_score.copy()
+            nonzero_indices = np.nonzero(f0_score)
+            lf0_score[nonzero_indices] = np.log(f0_score[nonzero_indices])
+            lf0_score = interp1d(lf0_score, kind="slinear")
+            # relative f0
+            diff_lf0 = lf0 - lf0_score
+            diff_lf0 = np.clip(diff_lf0, np.log(0.5), np.log(2.0))
+
+            f0_target = diff_lf0
+        else:
+            f0_target = lf0
 
         mgc = apply_delta_windows(mgc, self.windows)
-        diff_lf0 = apply_delta_windows(diff_lf0, self.windows)
+        f0_target = apply_delta_windows(f0_target, self.windows)
         bap = apply_delta_windows(bap, self.windows)
 
-        features = np.hstack((mgc, diff_lf0, vuv, bap))
+        features = np.hstack((mgc, f0_target, vuv, bap))
 
         return features.astype(np.float32)
 
@@ -256,7 +260,9 @@ def my_app(config : DictConfig) -> None:
         to_absolute_path(config.acoustic.wav_dir), to_absolute_path(config.acoustic.label_dir),
         question_path, use_harvest=config.acoustic.use_harvest,
         f0_ceil=config.acoustic.f0_ceil, f0_floor=config.acoustic.f0_floor,
-        frame_period=config.acoustic.frame_period, mgc_order=config.acoustic.mgc_order)
+        frame_period=config.acoustic.frame_period, mgc_order=config.acoustic.mgc_order,
+        num_windows=config.acoustic.num_windows,
+        relative_f0=config.acoustic.relative_f0)
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)
 
