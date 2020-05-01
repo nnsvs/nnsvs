@@ -4,9 +4,15 @@ defaults:
 
 verbose: 100
 
+device: cuda # or cpu
+
 label_path: path/to/music.xml
 question_path: path/to/qst.hed
 out_wave_path: test.wav
+
+sample_rate: 48000
+frame_period: 5
+log_f0_conditioning: true
 
 timelag:
   question_path:
@@ -14,6 +20,8 @@ timelag:
   in_scaler_path:
   out_scaler_path:
   model_yaml:
+  stream_sizes: [1]
+  has_dynamic_features: [false]
 
 duration:
   question_path:
@@ -21,6 +29,8 @@ duration:
   in_scaler_path:
   out_scaler_path:
   model_yaml:
+  stream_sizes: [1]
+  has_dynamic_features: [false]
 
 acoustic:
   question_path:
@@ -28,3 +38,10 @@ acoustic:
   in_scaler_path:
   out_scaler_path:
   model_yaml:
+  subphone_features: coarse_coding
+  # (mgc, lf0, vuv, bap)
+  stream_sizes: [180, 3, 1, 15]
+  has_dynamic_features: [true, true, false, true]
+  num_windows: 3
+  relative_f0: true
+  post_filter: true
