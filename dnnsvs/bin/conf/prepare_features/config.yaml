@@ -31,6 +31,8 @@ acoustic:
   wav_dir: data/acoustic/wav
   label_dir: data/acoustic/label_phone_align
 
+  subphone_features: coarse_coding
+
   # kiritan
   # min 174.61411571650194
   # max 659.2551138257398

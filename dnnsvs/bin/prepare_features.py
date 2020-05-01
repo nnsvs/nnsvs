@@ -75,7 +75,7 @@ def my_app(config : DictConfig) -> None:
         question_path = question_path_general
     in_acoustic_source = MusicalLinguisticSource(utt_list,
         to_absolute_path(config.acoustic.label_dir), question_path,
-        add_frame_features=True, subphone_features="coarse_coding",
+        add_frame_features=True, subphone_features=config.acoustic.subphone_features,
         log_f0_conditioning=config.log_f0_conditioning)
     out_acoustic_source = WORLDAcousticSource(utt_list,
         to_absolute_path(config.acoustic.wav_dir), to_absolute_path(config.acoustic.label_dir),
