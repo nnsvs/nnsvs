@@ -17,6 +17,7 @@ from torch import optim
 from torch.backends import cudnn
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
 from dnnsvs.util import make_non_pad_mask
+from dnnsvs.multistream import split_streams
 from dnnsvs.logger import getLogger
 
 logger = None
@@ -128,9 +129,22 @@ def save_best_checkpoint(config, model, optimizer, best_loss):
     logger.info(f"[Best loss {best_loss}: checkpoint is saved at {checkpoint_path}")
 
 
+def get_stream_weight(stream_weights, stream_sizes):
+    if stream_weights is not None:
+        assert len(stream_weights) == len(stream_sizes)
+        return torch.tensor(stream_weights)
+
+    S = sum(stream_sizes)
+    w = torch.tensor(stream_sizes).float() / S
+    return w
+
+
 def train_loop(config, device, model, optimizer, data_loaders):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
+
+    stream_weights = get_stream_weight(
+        config.model.stream_weights, config.model.stream_sizes).to(device)
 
     best_loss = 10000000
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
@@ -147,15 +161,29 @@ def train_loop(config, device, model, optimizer, data_loaders):
 
                 # Run forwaard
                 y_hat = model(x, sorted_lengths)
+
                 # Compute loss
-                if config.train.masked_loss:
-                    mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
+                mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
+
+                if config.train.stream_wise_loss:
+                    # Strean-wise loss
+                    streams = split_streams(y, config.model.stream_sizes)
+                    streams_hat = split_streams(y_hat, config.model.stream_sizes)
+                    loss = 0
+                    for s_hat, s, sw in zip(streams_hat, streams, stream_weights):
+                        s_hat_mask = s_hat.masked_select(mask)
+                        s_mask = s.masked_select(mask)
+                        loss += sw * criterion(s_hat_mask, s_mask).mean()
+                else:
+                    # Joint modeling
                     y_hat = y_hat.masked_select(mask)
                     y = y.masked_select(mask)
                     loss = criterion(y_hat, y).mean()
+
                 if train:
                     loss.backward()
                     optimizer.step()
+
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info(f"[{phase}] [Epoch {epoch}]: loss {ave_loss}")
@@ -188,7 +216,7 @@ def my_app(config : DictConfig) -> None:
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    model = hydra.utils.instantiate(config.model).to(device)
+    model = hydra.utils.instantiate(config.model.netG).to(device)
     optimizer_class = getattr(optim, config.optim.name)
     optimizer = optimizer_class(model.parameters(), **config.optim.params)
     data_loaders = get_data_loaders(config)
@@ -206,7 +234,7 @@ def my_app(config : DictConfig) -> None:
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     with open(join(out_dir, "model.yaml"), "w") as f:
-        OmegaConf.save(config.model, f)
+        OmegaConf.save(config.model.netG, f)
 
     # Run training loop
     train_loop(config, device, model, optimizer, data_loaders)

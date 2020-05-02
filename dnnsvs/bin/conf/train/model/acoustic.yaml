@@ -1,8 +1,15 @@
 model:
-  class: dnnsvs.model.Conv1dResnet
-  params:
-    in_dim: 449
-    out_dim: 199
-    hidden_dim: 128
-    num_layers: 6
-    dropout: 0.1
+  # (mgc, lf0, vuv, bap)
+  stream_sizes: [180, 3, 1, 15]
+  has_dynamic_features: [true, true, false, true]
+  # If None, automatically set based on stream sizes
+  stream_weights:
+
+  netG:
+    class: dnnsvs.model.Conv1dResnet
+    params:
+      in_dim: 449
+      out_dim: 199
+      hidden_dim: 128
+      num_layers: 6
+      dropout: 0.1

@@ -1,7 +1,7 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - model: timelag
+  - model: acoustic
 
 verbose: 100
 
@@ -33,7 +33,7 @@ train:
   nepochs: 50
   checkpoint_epoch_interval: 20
 
-  masked_loss: true
+  stream_wise_loss: false
 
 resume:
   checkpoint:

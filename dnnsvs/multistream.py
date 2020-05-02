@@ -16,9 +16,16 @@ def select_streams(inputs, stream_sizes=[60, 1, 1, 1],
             start_indices, stream_sizes, streams):
         if not enabled:
             continue
-        ret.append(inputs[:, start_idx:start_idx + size])
+        if len(inputs.shape) == 3:
+            s = inputs[:, :, start_idx:start_idx + size]
+        else:
+            s = inputs[:, start_idx:start_idx + size]
+        ret.append(s)
 
-    return np.concatenate(ret, -1)
+    if isinstance(inputs, torch.Tensor):
+        return torch.cat(ret, dim=-1)
+    else:
+        return np.concatenate(ret, -1)
 
 
 def split_streams(inputs, stream_sizes=[60, 1, 1, 1]):
@@ -26,7 +33,11 @@ def split_streams(inputs, stream_sizes=[60, 1, 1, 1]):
     start_indices = np.hstack(([0], np.cumsum(stream_sizes)[:-1]))
     for start_idx, size in zip(
             start_indices, stream_sizes):
-        ret.append(inputs[:, start_idx:start_idx + size])
+        if len(inputs.shape) == 3:
+            s = inputs[:, :, start_idx:start_idx + size]
+        else:
+            s = inputs[:, start_idx:start_idx + size]
+        ret.append(s)
 
     return ret
 
