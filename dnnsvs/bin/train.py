@@ -105,13 +105,14 @@ def get_data_loaders(config):
     return data_loaders
 
 
-def save_checkpoint(config, model, optimizer, epoch):
+def save_checkpoint(config, model, optimizer, lr_scheduler, epoch):
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     checkpoint_path = join(out_dir, "checkpoint_epoch{:04d}.pth".format(epoch))
     torch.save({
         "state_dict": model.state_dict(),
         "optimizer_state": optimizer.state_dict(),
+        "lr_scheduler_state": lr_scheduler.state_dict(),
     }, checkpoint_path)
     logger.info(f"Checkpoint is saved at {checkpoint_path}")
     lastest_path = join(out_dir, "latest.pth")
@@ -139,7 +140,7 @@ def get_stream_weight(stream_weights, stream_sizes):
     return w
 
 
-def train_loop(config, device, model, optimizer, data_loaders):
+def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
 
@@ -191,11 +192,14 @@ def train_loop(config, device, model, optimizer, data_loaders):
                 best_loss = ave_loss
                 save_best_checkpoint(config, model, optimizer, best_loss)
 
+        # step per each epoch (may consider updating per iter.)
+        lr_scheduler.step()
+
         if epoch % config.train.checkpoint_epoch_interval == 0:
-            save_checkpoint(config, model, optimizer, epoch)
+            save_checkpoint(config, model, optimizer, lr_scheduler, epoch)
 
     # save at last epoch
-    save_checkpoint(config, model, optimizer, config.train.nepochs)
+    save_checkpoint(config, model, optimizer, lr_scheduler, config.train.nepochs)
     logger.info(f"The best loss was {best_loss}")
 
     return model
@@ -216,9 +220,17 @@ def my_app(config : DictConfig) -> None:
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
+    # Model
     model = hydra.utils.instantiate(config.model.netG).to(device)
-    optimizer_class = getattr(optim, config.optim.name)
-    optimizer = optimizer_class(model.parameters(), **config.optim.params)
+
+    # Optimizer
+    optimizer_class = getattr(optim, config.optim.optimizer.name)
+    optimizer = optimizer_class(model.parameters(), **config.optim.optimizer.params)
+
+    # Scheduler
+    lr_scheduler_class = getattr(optim.lr_scheduler, config.optim.lr_scheduler.name)
+    lr_scheduler = lr_scheduler_class(optimizer, **config.optim.lr_scheduler.params)
+
     data_loaders = get_data_loaders(config)
 
     # Resume
@@ -229,6 +241,7 @@ def my_app(config : DictConfig) -> None:
         if config.resume.load_optimizer:
             logger.info("Load optimizer state")
             optimizer.load_state_dict(checkpoint["optimizer_state"])
+            lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
 
     # Save model definition
     out_dir = to_absolute_path(config.train.out_dir)
@@ -237,7 +250,7 @@ def my_app(config : DictConfig) -> None:
         OmegaConf.save(config.model.netG, f)
 
     # Run training loop
-    train_loop(config, device, model, optimizer, data_loaders)
+    train_loop(config, device, model, optimizer, lr_scheduler, data_loaders)
 
 
 def entry():
