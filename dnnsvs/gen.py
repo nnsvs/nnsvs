@@ -39,7 +39,7 @@ def _midi_to_hz(x, idx, log_f0=False):
 
 def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_out_scaler,
         binary_dict, continuous_dict,
-        pitch_indices=None, log_f0_conditioning=True):
+        pitch_indices=None, log_f0_conditioning=True, allowed_range=[-30, 30]):
     # round start/end times just in case.
     labels.round_()
 
@@ -69,7 +69,13 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
     y = timelag_model(x, [x.shape[1]]).squeeze(0).cpu()
 
     # De-normalization and rounding
-    lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy())) * 50000
+    lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()))
+
+    # Clip to the allowed range
+    lag = np.clip(lag, allowed_range[0], allowed_range[1])
+
+    # frames -> 100 ns
+    lag *= 50000
 
     return lag
 
