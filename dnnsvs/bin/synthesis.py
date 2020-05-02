@@ -19,7 +19,7 @@ from dnnsvs.logger import getLogger
 logger = None
 
 
-def inference(config, device, label_path, question_path,
+def synthesis(config, device, label_path, question_path,
         timelag_model, timelag_in_scaler, timelag_out_scaler,
         duration_model, duration_in_scaler, duration_out_scaler,
         acoustic_model, acoustic_in_scaler, acoustic_out_scaler):
@@ -70,7 +70,7 @@ def inference(config, device, label_path, question_path,
     return generated_waveform
 
 
-@hydra.main(config_path="conf/inference/config.yaml")
+@hydra.main(config_path="conf/synthesis/config.yaml")
 def my_app(config : DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
@@ -138,7 +138,7 @@ def my_app(config : DictConfig) -> None:
         label_path = to_absolute_path(config.label_path)
         out_wav_path = to_absolute_path(config.out_wav_path)
 
-        wav = inference(config, device, label_path, question_path,
+        wav = synthesis(config, device, label_path, question_path,
             timelag_model, timelag_in_scaler, timelag_out_scaler,
             duration_model, duration_in_scaler, duration_out_scaler,
             acoustic_model, acoustic_in_scaler, acoustic_out_scaler)

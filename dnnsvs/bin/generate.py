@@ -23,7 +23,7 @@ logger = None
 use_cuda = torch.cuda.is_available()
 
 
-@hydra.main(config_path="conf/predict/config.yaml")
+@hydra.main(config_path="conf/generate/config.yaml")
 def my_app(config : DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
