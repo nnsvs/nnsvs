@@ -4,7 +4,7 @@ model:
   stream_weights: [1]
 
   netG:
-    class: dnnsvs.model.LSTMRNN
+    class: nnsvs.model.LSTMRNN
     params:
       in_dim: 445
       out_dim: 1

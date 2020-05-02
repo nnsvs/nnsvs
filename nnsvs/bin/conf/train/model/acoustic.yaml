@@ -7,7 +7,7 @@ model:
   stream_weights:
 
   netG:
-    class: dnnsvs.model.Conv1dResnet
+    class: nnsvs.model.Conv1dResnet
     params:
       in_dim: 449
       out_dim: 199

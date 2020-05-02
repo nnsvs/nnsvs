@@ -7,7 +7,7 @@ import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-from dnnsvs.logger import getLogger
+from nnsvs.logger import getLogger
 logger = None
 
 @hydra.main(config_path="conf/fit_scaler/config.yaml")

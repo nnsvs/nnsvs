@@ -13,10 +13,10 @@ from torch import nn
 from torch.nn import functional as F
 from nnmnkwii.datasets import FileSourceDataset
 
-from dnnsvs.gen import get_windows
-from dnnsvs.multistream import multi_stream_mlpg
-from dnnsvs.bin.train import NpyFileSource
-from dnnsvs.logger import getLogger
+from nnsvs.gen import get_windows
+from nnsvs.multistream import multi_stream_mlpg
+from nnsvs.bin.train import NpyFileSource
+from nnsvs.logger import getLogger
 
 logger = None
 

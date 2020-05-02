@@ -14,7 +14,7 @@ from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
 
-from dnnsvs.gen import get_windows
+from nnsvs.gen import get_windows
 
 def _collect_files(data_root, utt_list, ext):
     with open(utt_list) as f:

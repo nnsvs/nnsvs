@@ -22,7 +22,7 @@ import joblib
 from glob import glob
 from itertools import zip_longest
 
-from dnnsvs.logger import getLogger
+from nnsvs.logger import getLogger
 logger = None
 
 

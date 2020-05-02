@@ -22,11 +22,11 @@
 import pkg_resources
 import os
 
-__version__ = pkg_resources.get_distribution('dnnsvs').version
+__version__ = pkg_resources.get_distribution('nnsvs').version
 
 ON_RTD = os.environ.get('READTHEDOCS', None) == 'True'
 
-project = 'dnnsvs'
+project = 'nnsvs'
 copyright = '2020, Ryuichi Yamamoto'
 author = 'Ryuichi Yamamoto'
 
@@ -149,7 +149,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'dnnsvsdoc'
+htmlhelp_basename = 'nnsvsdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -176,7 +176,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'dnnsvs.tex', 'dnnsvs Documentation',
+    (master_doc, 'nnsvs.tex', 'nnsvs Documentation',
      'Ryuichi Yamamoto', 'manual'),
 ]
 
@@ -186,7 +186,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'dnnsvs', 'dnnsvs Documentation',
+    (master_doc, 'nnsvs', 'nnsvs Documentation',
      [author], 1)
 ]
 
@@ -197,8 +197,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'dnnsvs', 'dnnsvs Documentation',
-     author, 'dnnsvs', 'One line description of project.',
+    (master_doc, 'nnsvs', 'nnsvs Documentation',
+     author, 'nnsvs', 'One line description of project.',
      'Miscellaneous'),
 ]
 

@@ -10,9 +10,9 @@ from nnmnkwii.io import hts
 from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.postfilters import merlin_post_filter
 from nnmnkwii.preprocessing.f0 import interp1d
-from dnnsvs.io.hts import get_note_indices
-from dnnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
-from dnnsvs.multistream import select_streams, split_streams
+from nnsvs.io.hts import get_note_indices
+from nnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
+from nnsvs.multistream import select_streams, split_streams
 
 
 def get_windows(num_window=1):

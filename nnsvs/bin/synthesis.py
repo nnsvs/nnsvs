@@ -12,10 +12,10 @@ import os
 from tqdm import tqdm
 from nnmnkwii.io import hts
 
-from dnnsvs.gen import (
+from nnsvs.gen import (
     predict_timelag, predict_duration, predict_acoustic, postprocess_duration,
     gen_waveform)
-from dnnsvs.logger import getLogger
+from nnsvs.logger import getLogger
 logger = None
 
 
@@ -108,7 +108,7 @@ def my_app(config : DictConfig) -> None:
     acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
     acoustic_model.eval()
 
-    # Run inference for each utt.
+    # Run synthesis for each utt.
     question_path = to_absolute_path(config.question_path)
 
     if config.utt_list is not None:
@@ -124,7 +124,7 @@ def my_app(config : DictConfig) -> None:
                 if not exists(label_path):
                     raise RuntimeError(f"Label file does not exist: {label_path}")
 
-                wav = inference(config, device, label_path, question_path,
+                wav = synthesis(config, device, label_path, question_path,
                     timelag_model, timelag_in_scaler, timelag_out_scaler,
                     duration_model, duration_in_scaler, duration_out_scaler,
                     acoustic_model, acoustic_in_scaler, acoustic_out_scaler)

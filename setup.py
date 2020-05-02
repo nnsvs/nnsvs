@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 from importlib.machinery import SourceFileLoader
 from os.path import exists
 
-version = SourceFileLoader('dnnsvs.version', 'dnnsvs/version.py').load_module().version
+version = SourceFileLoader('nnsvs.version', 'nnsvs/version.py').load_module().version
 
 packages = find_packages()
 if exists("README.md"):
@@ -12,7 +12,7 @@ if exists("README.md"):
 else:
     LONG_DESC = ""
 
-setup(name='dnnsvs',
+setup(name='nnsvs',
     version=version,
     description='DNN-based singing voice synthesis library',
     long_description=LONG_DESC,
@@ -36,12 +36,12 @@ setup(name='dnnsvs',
     },
     entry_points={
         "console_scripts": [
-            "dnnsvs-prepare-features = dnnsvs.bin.prepare_features:entry",
-            "dnnsvs-fit-scaler = dnnsvs.bin.fit_scaler:entry",
-            "dnnsvs-preprocess-normalize = dnnsvs.bin.preprocess_normalize:entry",
-            "dnnsvs-train = dnnsvs.bin.train:entry",
-            "dnnsvs-generate = dnnsvs.bin.generate:entry",
-            "dnnsvs-synthesis = dnnsvs.bin.synthesis:entry",
+            "nnsvs-prepare-features = nnsvs.bin.prepare_features:entry",
+            "nnsvs-fit-scaler = nnsvs.bin.fit_scaler:entry",
+            "nnsvs-preprocess-normalize = nnsvs.bin.preprocess_normalize:entry",
+            "nnsvs-train = nnsvs.bin.train:entry",
+            "nnsvs-generate = nnsvs.bin.generate:entry",
+            "nnsvs-synthesis = nnsvs.bin.synthesis:entry",
         ],
     },
     )

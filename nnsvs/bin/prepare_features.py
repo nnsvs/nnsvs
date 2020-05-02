@@ -12,10 +12,10 @@ import sys
 
 from nnmnkwii.datasets import FileSourceDataset
 
-from dnnsvs.data import (
+from nnsvs.data import (
     MusicalLinguisticSource, TimeLagFeatureSource,
     DurationFeatureSource, WORLDAcousticSource)
-from dnnsvs.logger import getLogger
+from nnsvs.logger import getLogger
 logger = None
 
 

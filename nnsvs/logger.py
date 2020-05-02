@@ -8,7 +8,7 @@ from os.path import dirname
 format = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
 
 
-def getLogger(verbose=0, filename=None, name="dnnsvs"):
+def getLogger(verbose=0, filename=None, name="nnsvs"):
     logger = logging.getLogger(name)
     if verbose >= 100:
         logger.setLevel(logging.DEBUG)

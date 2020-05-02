@@ -16,9 +16,9 @@ from torch.nn import functional as F
 from torch import optim
 from torch.backends import cudnn
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
-from dnnsvs.util import make_non_pad_mask
-from dnnsvs.multistream import split_streams
-from dnnsvs.logger import getLogger
+from nnsvs.util import make_non_pad_mask
+from nnsvs.multistream import split_streams
+from nnsvs.logger import getLogger
 
 logger = None
 
