@@ -73,6 +73,7 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
     return lag
 
+
 def postprocess_duration(labels, pred_durations, lag):
     note_indices = get_note_indices(labels)
     # append the end of note
@@ -166,11 +167,9 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
     linguistic_features = acoustic_in_scaler.transform(linguistic_features)
 
     # Predict acoustic features
-    acoustic_model = acoustic_model.cpu()
-    acoustic_model.eval()
-    x = torch.from_numpy(linguistic_features).float()
+    x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
-    pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).data.numpy()
+    pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
     # Apply denormalization
     pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)
