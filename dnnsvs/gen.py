@@ -69,7 +69,7 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
     y = timelag_model(x, [x.shape[1]]).squeeze(0).cpu()
 
     # De-normalization and rounding
-    lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()) / 50000) * 50000
+    lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy())) * 50000
 
     return lag
 

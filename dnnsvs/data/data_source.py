@@ -77,7 +77,9 @@ class TimeLagFeatureSource(FileDataSource):
         label_score = hts.load(label_score_path)
         label_align = hts.load(label_align_path)
         timelag = np.asarray(label_align.start_times) - np.asarray(label_score.start_times)
-        return timelag.astype(np.float32).reshape(-1, 1)
+        # 100ns -> num frames
+        timelag = timelag.astype(np.float32) / 50000
+        return timelag.reshape(-1, 1)
 
 
 class DurationFeatureSource(FileDataSource):
