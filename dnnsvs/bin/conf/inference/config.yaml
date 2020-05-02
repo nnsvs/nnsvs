@@ -6,13 +6,18 @@ verbose: 100
 
 device: cuda # or cpu
 
-label_path: path/to/music.xml
-question_path: path/to/qst.hed
-out_wave_path: test.wav
+utt_list:
+in_dir:
+out_dir:
 
 sample_rate: 48000
 frame_period: 5
+question_path: path/to/qst.hed
 log_f0_conditioning: true
+
+# Use ground truth duration or not
+# if true, time-lag and duration models will not be used.
+ground_truth_duration: false
 
 timelag:
   question_path:
@@ -22,6 +27,8 @@ timelag:
   model_yaml:
   stream_sizes: [1]
   has_dynamic_features: [false]
+
+  allowed_range: [-30, 30] # in frames
 
 duration:
   question_path:

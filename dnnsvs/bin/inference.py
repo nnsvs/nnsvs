@@ -7,6 +7,9 @@ import numpy as np
 import joblib
 import torch
 from scipy.io import wavfile
+from os.path import join, basename, exists
+import os
+from tqdm import tqdm
 from nnmnkwii.io import hts
 
 from dnnsvs.gen import (
@@ -32,20 +35,24 @@ def inference(config, device, label_path, question_path,
 
     log_f0_conditioning = config.log_f0_conditioning
 
-    # Time-lag
-    lag = predict_timelag(device, labels, timelag_model, timelag_in_scaler,
-        timelag_out_scaler, binary_dict, continuous_dict, pitch_indices,
-        log_f0_conditioning)
+    if config.ground_truth_duration:
+        # Use provided alignment
+        duration_modified_labels = labels
+    else:
+        # Time-lag
+        lag = predict_timelag(device, labels, timelag_model, timelag_in_scaler,
+            timelag_out_scaler, binary_dict, continuous_dict, pitch_indices,
+            log_f0_conditioning, config.timelag.allowed_range)
 
-    # Timelag predictions
-    durations = predict_duration(device, labels, duration_model,
-        duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
-        pitch_indices, log_f0_conditioning)
+        # Timelag predictions
+        durations = predict_duration(device, labels, duration_model,
+            duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
+            pitch_indices, log_f0_conditioning)
 
-    # Normalize phoneme durations
-    duration_modified_labels = postprocess_duration(labels, durations, lag)
+        # Normalize phoneme durations
+        duration_modified_labels = postprocess_duration(labels, durations, lag)
 
-    # Predict acoustic ftures
+    # Predict acoustic features
     acoustic_features = predict_acoustic(device, duration_modified_labels, acoustic_model,
         acoustic_in_scaler, acoustic_out_scaler, binary_dict, continuous_dict,
         config.acoustic.subphone_features, pitch_indices, log_f0_conditioning)
@@ -75,8 +82,8 @@ def my_app(config : DictConfig) -> None:
         device = torch.device(config.device)
 
     # timelag
-    timelag_def = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
-    timelag_model = hydra.utils.instantiate(timelag_def).to(device)
+    timelag_config = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
+    timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
     checkpoint = torch.load(to_absolute_path(config.timelag.checkpoint))
     timelag_model.load_state_dict(checkpoint["state_dict"])
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
@@ -84,8 +91,8 @@ def my_app(config : DictConfig) -> None:
     timelag_model.eval()
 
     # duration
-    duration_def = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
-    duration_model = hydra.utils.instantiate(duration_def).to(device)
+    duration_config = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
+    duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
     checkpoint = torch.load(to_absolute_path(config.duration.checkpoint))
     duration_model.load_state_dict(checkpoint["state_dict"])
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
@@ -93,25 +100,35 @@ def my_app(config : DictConfig) -> None:
     duration_model.eval()
 
     # acoustic model
-    acoustic_def = OmegaConf.load(to_absolute_path(config.acoustic.model_yaml))
-    acoustic_model = hydra.utils.instantiate(acoustic_def).to(device)
+    acoustic_config = OmegaConf.load(to_absolute_path(config.acoustic.model_yaml))
+    acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
     checkpoint = torch.load(to_absolute_path(config.acoustic.checkpoint))
     acoustic_model.load_state_dict(checkpoint["state_dict"])
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
     acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
     acoustic_model.eval()
 
-    # Run inference
-    label_path = to_absolute_path(config.label_path)
+    # Run inference for each utt.
     question_path = to_absolute_path(config.question_path)
-    out_wave_path = to_absolute_path(config.out_wave_path)
-    wav = inference(config, device, label_path, question_path,
-        timelag_model, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+    in_dir = to_absolute_path(config.in_dir)
+    out_dir = to_absolute_path(config.out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+    with open(to_absolute_path(config.utt_list)) as f:
+        lines = list(filter(lambda s : len(s.strip()) > 0, f.readlines()))
+        for idx in tqdm(range(len(lines))):
+            utt_id = lines[idx].strip()
+            label_path = join(in_dir, f"{utt_id}.lab")
+            if not exists(label_path):
+                raise RuntimeError(f"Label file does not exist: {label_path}")
 
-    wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
-    wavfile.write(out_wave_path, rate=config.sample_rate, data=wav.astype(np.int16))
+            wav = inference(config, device, label_path, question_path,
+                timelag_model, timelag_in_scaler, timelag_out_scaler,
+                duration_model, duration_in_scaler, duration_out_scaler,
+                acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+            wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+
+            out_wav_path = join(out_dir, f"{utt_id}.wav")
+            wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
 
 
 def entry():
