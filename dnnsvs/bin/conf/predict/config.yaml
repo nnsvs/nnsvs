@@ -7,6 +7,9 @@ verbose: 100
 in_dir:
 out_dir:
 
+out_scaler_path:
+
 model:
   checkpoint:
   model_yaml:
+
