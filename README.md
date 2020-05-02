@@ -1,17 +1,21 @@
-# DNN SVS
+# NN-SVS
 
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE)
-![Python CI](https://github.com/r9y9/dnnsvs/workflows/Python%20CI/badge.svg)
+![Python CI](https://github.com/r9y9/nnsvs/workflows/Python%20CI/badge.svg)
 
-PyTorch-based singing voice synthesis (SVS) library for research purposes.
+Neural network-based singing voice synthesis library for research.
 
 ## Samples
 
-https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
+- Kiritan samples: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
+
+## Demo
+
+- Comming soon
 
 ## Installation
 
-- Python 3.5 or newer
+- Python 3.6 or newer
 - [nnmnkwii](https://github.com/r9y9/nnmnkwii): **development** version (master branch) is required
 - [pysinsy](https://github.com/r9y9/pysinsy) **development** version is required. Please have a look at the repostiory for installation.
 - Pytorch >= 1.x
@@ -24,14 +28,16 @@ python setup.py develop
 
 to install the rest of dependencies.
 
+## Respository structure
+
+- Core library: [nnsvs/](nnsvs/)
+- Command line programs: [nnsvs/bin/](nnsvs/bin) and its configurations [nnsvs/bin/conf/](nnsvs/bin/conf/)
+- Recipes: [egs/](egs/)
+
+
 ## Recipes
 
-Please see the [egs](egs) directory for recipes. Recipes include all the necessary steps to reproduce experiments, as similar to ones in [kaldi](https://github.com/kaldi-asr/kaldi) and [ESPnet](https://github.com/espnet/espnet). Note that the directory structure is different from the kaldi's ones.
-
-
-## What
-
-PyTorch-based singing voice synthesis (SVS) library for research purposes. We’ll focus on the research advancement of the singing voice synthesis technology.
+A recipe is a set of scripts and configuraitons that are used to reproduce experiments. All the steps used to conduct experiments are provided in a self-contained way. Please have a look at the [egs](egs) directory if you want to build your singing voice systems.
 
 ## Background
 
@@ -44,6 +50,10 @@ That being said, I was just curious to see if I can make a better one than NEUTR
 ## History
 
 See [HISTORY.md](HISTORY.md)
+
+## Known issues
+
+- Hydra configurations are not easily overrided by users, without manually editing configs in [nnsvs/bin/conf](nnsvs/bin/conf). See https://github.com/facebookresearch/hydra/issues/386 for details.
 
 ## References
 
