@@ -12,7 +12,7 @@ spk="kiritan"
 dumpdir=dump
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path=./conf/jp_qst001_dnnsvs.hed
+question_path=./conf/jp_qst001_nnsvs.hed
 
 stage=0
 stop_stage=0
@@ -38,6 +38,7 @@ train_set="train_no_dev"
 dev_set="dev"
 eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
+testsets=($dev_set $eval_set)
 
 dump_org_dir=$dumpdir/$spk/org
 dump_norm_dir=$dumpdir/$spk/norm
@@ -84,7 +85,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     for s in ${datasets[@]};
     do
-      dnnsvs-prepare-features utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/  \
+      nnsvs-prepare-features utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/  \
         question_path=$question_path
     done
 
@@ -100,7 +101,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         do
             find $dump_org_dir/$train_set/${inout}_${typ} -name "*feats.npy" > train_list.txt
             scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib
-            dnnsvs-fit-scaler list_path=train_list.txt scaler.class=$scaler_class \
+            nnsvs-fit-scaler list_path=train_list.txt scaler.class=$scaler_class \
                 out_path=$scaler_path
             rm -f train_list.txt
             cp -v $scaler_path $dump_norm_dir/${inout}_${typ}_scaler.joblib
@@ -112,7 +113,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         for inout in "in" "out"; do
             for typ in timelag duration acoustic;
             do
-                dnnsvs-preprocess-normalize in_dir=$dump_org_dir/$s/${inout}_${typ}/ \
+                nnsvs-preprocess-normalize in_dir=$dump_org_dir/$s/${inout}_${typ}/ \
                     scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib \
                     out_dir=$dump_norm_dir/$s/${inout}_${typ}/
             done
@@ -122,7 +123,7 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "stage 2: Training time-lag model"
-    xrun dnnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
+    xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_timelag/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_timelag/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_timelag/ \
@@ -131,7 +132,7 @@ fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "stage 3: Training phoneme duration model"
-    xrun dnnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_duration/ \
+    xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_duration/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_duration/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_duration/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
@@ -141,7 +142,7 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
-    xrun dnnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_acoustic/ \
+    xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_acoustic/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_acoustic/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_acoustic/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
@@ -149,23 +150,49 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 fi
 
 
+# NOTE: step 5 does not generate waveform. It just saves neural net's outputs.
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    echo "stage 5: Generation from trained models"
-    for s in ${datasets[@]}; do
+    echo "stage 5: Generation features from timelag/duration/acoustic models"
+    for s in ${testsets[@]}; do
         for typ in timelag duration acoustic; do
             checkpoint=$expdir/$typ/latest.pth
             name=$(basename $checkpoint)
-            # Prediction
-            xrun dnnsvs-predict model.checkpoint=$checkpoint \
+            xrun nnsvs-generate model.checkpoint=$checkpoint \
                 model.model_yaml=$expdir/$typ/model.yaml \
+                out_scaler_path=$dump_norm_dir/out_${typ}_scaler.joblib \
                 in_dir=$dump_norm_dir/$s/in_${typ}/ \
-                out_dir=$expdir/$typ/predicted/${name%.*}/norm/
-            # De-normalization
-            xrun dnnsvs-preprocess-normalize in_dir=$expdir/$typ/predicted/${name%.*}/norm/ \
-                scaler_path=$dump_norm_dir/out_${typ}_scaler.joblib \
-                out_dir=$expdir/$typ/predicted/${name%.*}/org/ inverse=true
-            # remove normalized ones to save disk memory
-            rm -rf $expdir/$typ/predicted/${name%.*}/norm/
+                out_dir=$expdir/$typ/predicted/$s/${name%.*}/
+        done
+    done
+fi
+
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    echo "stage 6: Synthesis waveforms"
+    for s in ${testsets[@]}; do
+        for input in label_phone_score label_phone_align; do
+            if [ $input = label_phone_score ]; then
+                ground_truth_duration=false
+            else
+                ground_truth_duration=true
+            fi
+            xrun nnsvs-synthesis question_path=conf/jp_qst001_nnsvs.hed \
+            timelag.checkpoint=$expdir/timelag/latest.pth \
+            timelag.in_scaler_path=$dump_norm_dir/in_timelag_scaler.joblib \
+            timelag.out_scaler_path=$dump_norm_dir/out_timelag_scaler.joblib \
+            timelag.model_yaml=$expdir/timelag/model.yaml \
+            duration.checkpoint=$expdir/duration/latest.pth \
+            duration.in_scaler_path=$dump_norm_dir/in_duration_scaler.joblib \
+            duration.out_scaler_path=$dump_norm_dir/out_duration_scaler.joblib \
+            duration.model_yaml=$expdir/duration/model.yaml \
+            acoustic.checkpoint=$expdir/acoustic/latest.pth \
+            acoustic.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
+            acoustic.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
+            acoustic.model_yaml=$expdir/acoustic/model.yaml \
+            utt_list=./data/list/$s.list \
+            in_dir=data/acoustic/$input/ \
+            out_dir=$expdir/synthesis/$s/latest/$input \
+            ground_truth_duration=$ground_truth_duration
         done
     done
 fi
