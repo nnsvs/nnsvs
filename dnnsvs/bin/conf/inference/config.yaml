@@ -6,9 +6,21 @@ verbose: 100
 
 device: cuda # or cpu
 
+# Input can be either specified by
+# 1) utt_list and in_dir
+# 2) label path
+# The former is useful for batch experiments, and latter is useful
+# for testing.
+
+# (1)
 utt_list:
 in_dir:
 out_dir:
+
+# (2)
+label_path:
+out_wav_path:
+
 
 sample_rate: 48000
 frame_period: 5

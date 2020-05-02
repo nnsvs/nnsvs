@@ -110,25 +110,40 @@ def my_app(config : DictConfig) -> None:
 
     # Run inference for each utt.
     question_path = to_absolute_path(config.question_path)
-    in_dir = to_absolute_path(config.in_dir)
-    out_dir = to_absolute_path(config.out_dir)
-    os.makedirs(out_dir, exist_ok=True)
-    with open(to_absolute_path(config.utt_list)) as f:
-        lines = list(filter(lambda s : len(s.strip()) > 0, f.readlines()))
-        for idx in tqdm(range(len(lines))):
-            utt_id = lines[idx].strip()
-            label_path = join(in_dir, f"{utt_id}.lab")
-            if not exists(label_path):
-                raise RuntimeError(f"Label file does not exist: {label_path}")
 
-            wav = inference(config, device, label_path, question_path,
-                timelag_model, timelag_in_scaler, timelag_out_scaler,
-                duration_model, duration_in_scaler, duration_out_scaler,
-                acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
-            wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+    if config.utt_list is not None:
+        in_dir = to_absolute_path(config.in_dir)
+        out_dir = to_absolute_path(config.out_dir)
+        os.makedirs(out_dir, exist_ok=True)
+        with open(to_absolute_path(config.utt_list)) as f:
+            lines = list(filter(lambda s : len(s.strip()) > 0, f.readlines()))
+            logger.info(f"Processes {len(lines)} utterances...")
+            for idx in tqdm(range(len(lines))):
+                utt_id = lines[idx].strip()
+                label_path = join(in_dir, f"{utt_id}.lab")
+                if not exists(label_path):
+                    raise RuntimeError(f"Label file does not exist: {label_path}")
 
-            out_wav_path = join(out_dir, f"{utt_id}.wav")
-            wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
+                wav = inference(config, device, label_path, question_path,
+                    timelag_model, timelag_in_scaler, timelag_out_scaler,
+                    duration_model, duration_in_scaler, duration_out_scaler,
+                    acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+                wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+
+                out_wav_path = join(out_dir, f"{utt_id}.wav")
+                wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
+    else:
+        assert config.label_path is not None
+        logger.info(f"Process the label file: {config.label_path}")
+        label_path = to_absolute_path(config.label_path)
+        out_wav_path = to_absolute_path(config.out_wav_path)
+
+        wav = inference(config, device, label_path, question_path,
+            timelag_model, timelag_in_scaler, timelag_out_scaler,
+            duration_model, duration_in_scaler, duration_out_scaler,
+            acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+        wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+        wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
 
 
 def entry():
