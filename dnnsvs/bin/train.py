@@ -247,7 +247,7 @@ def my_app(config : DictConfig) -> None:
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     with open(join(out_dir, "model.yaml"), "w") as f:
-        OmegaConf.save(config.model.netG, f)
+        OmegaConf.save(config.model, f)
 
     # Run training loop
     train_loop(config, device, model, optimizer, lr_scheduler, data_loaders)
