@@ -75,6 +75,8 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
 def postprocess_duration(labels, pred_durations, lag):
     note_indices = get_note_indices(labels)
+    # append the end of note
+    note_indices.append(len(labels))
 
     output_labels = hts.HTSLabelFile()
 
