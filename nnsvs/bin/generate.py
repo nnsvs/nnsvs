@@ -36,7 +36,8 @@ def my_app(config : DictConfig) -> None:
 
     model_config = OmegaConf.load(to_absolute_path(config.model.model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.model.checkpoint))
+    checkpoint = torch.load(to_absolute_path(config.model.checkpoint),
+        map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint["state_dict"])
 
     scaler = joblib.load(to_absolute_path(config.out_scaler_path))

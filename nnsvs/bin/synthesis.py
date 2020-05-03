@@ -84,7 +84,8 @@ def my_app(config : DictConfig) -> None:
     # timelag
     timelag_config = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
     timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.timelag.checkpoint))
+    checkpoint = torch.load(to_absolute_path(config.timelag.checkpoint),
+        map_location=lambda storage, loc: storage)
     timelag_model.load_state_dict(checkpoint["state_dict"])
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
     timelag_out_scaler = joblib.load(to_absolute_path(config.timelag.out_scaler_path))
@@ -93,7 +94,8 @@ def my_app(config : DictConfig) -> None:
     # duration
     duration_config = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
     duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.duration.checkpoint))
+    checkpoint = torch.load(to_absolute_path(config.duration.checkpoint),
+        map_location=lambda storage, loc: storage)
     duration_model.load_state_dict(checkpoint["state_dict"])
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
     duration_out_scaler = joblib.load(to_absolute_path(config.duration.out_scaler_path))
@@ -102,7 +104,8 @@ def my_app(config : DictConfig) -> None:
     # acoustic model
     acoustic_config = OmegaConf.load(to_absolute_path(config.acoustic.model_yaml))
     acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.acoustic.checkpoint))
+    checkpoint = torch.load(to_absolute_path(config.acoustic.checkpoint),
+        map_location=lambda storage, loc: storage)
     acoustic_model.load_state_dict(checkpoint["state_dict"])
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
     acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
