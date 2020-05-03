@@ -15,12 +15,11 @@ except ImportError as e:
 _global_sinsy = None
 
 
-def _lazy_init():
+def _lazy_init(dic_dir="/usr/local/lib/sinsy/dic"):
     global _global_sinsy
     if _global_sinsy is None:
         _global_sinsy = pysinsy.sinsy.Sinsy()
-        # TODO: remove hardcode
-        assert _global_sinsy.setLanguages("j", "/usr/local/lib/sinsy/dic")
+        assert _global_sinsy.setLanguages("j", dic_dir)
 
 
 def xml2lab(xml):
