@@ -7,11 +7,10 @@ Neural network-based singing voice synthesis library for research.
 
 ## Demo
 
-The following rendered nbviewer' page and interactive notebook are available.
+### Neural network-based singing voice synthesis demo using kiritan_singing database (Japanese)
 
-- Neural network-based singing voice synthesis demo using kiritan_singing database (Japanese)
- [![Nbviewer](https://github.com/jupyter/design/blob/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/gist/r9y9/79705665ed5a94f0028839ca40992751) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/r9y9/Colaboratory/blob/master/Neural_network_based_singing_voice_synthesis_demo_using_kiritan_singing_database_(Japanese).ipynb)
-
+- [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/r9y9/Colaboratory/blob/master/Neural_network_based_singing_voice_synthesis_demo_using_kiritan_singing_database_(Japanese).ipynb)
+- [![Nbviewer](https://github.com/jupyter/design/blob/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/gist/r9y9/79705665ed5a94f0028839ca40992751)
 
 ## Samples
 
