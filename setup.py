@@ -29,6 +29,7 @@ setup(name='nnsvs',
         "pysptk",
         "pyworld",
         "tensorboard",
+        "nnmnkwii",
     ],
     extras_require={
         "test": [
