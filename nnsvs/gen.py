@@ -119,12 +119,6 @@ def postprocess_duration(labels, pred_durations, lag):
 
 def predict_duration(device, labels, duration_model, duration_in_scaler, duration_out_scaler,
         lag, binary_dict, continuous_dict, pitch_indices=None, log_f0_conditioning=True):
-
-    # Get note indices
-    note_indices = get_note_indices(labels)
-    # append the end of note
-    note_indices.append(len(labels))
-
     # Extract musical/linguistic features
     duration_linguistic_features = fe.linguistic_features(
         labels, binary_dict, continuous_dict,
