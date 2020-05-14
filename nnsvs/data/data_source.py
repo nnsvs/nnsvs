@@ -188,6 +188,15 @@ class WORLDAcousticSource(FileDataSource):
         f0_target = apply_delta_windows(f0_target, self.windows)
         bap = apply_delta_windows(bap, self.windows)
 
-        features = np.hstack((mgc, f0_target, vuv, bap))
+        features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
 
-        return features.astype(np.float32)
+        # Align waveform and features
+        wave = x.astype(np.float32) / 2**15
+        T = int(features.shape[0] * (fs * self.frame_period / 1000))
+        if len(wave) < T:
+            assert T - len(wave) < 10
+            wave = np.pad(wave, (0, T-len(wave)))
+        assert wave.shape[0] >= T
+        wave = wave[:T]
+
+        return features, wave

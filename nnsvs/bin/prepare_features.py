@@ -123,13 +123,16 @@ def my_app(config : DictConfig) -> None:
 
     # Save features for acoustic model
     logger.info("Acoustic linguistic feature dim: {}".format(in_acoustic[0].shape))
-    logger.info("Acoustic feature dim: {}".format(out_acoustic[0].shape))
-    for idx, (x, y) in tqdm(enumerate(zip(in_acoustic, out_acoustic))):
+    logger.info("Acoustic feature dim: {}".format(out_acoustic[0][0].shape))
+    for idx, (x, yw) in tqdm(enumerate(zip(in_acoustic, out_acoustic))):
+        y, wave = yw
         name = splitext(basename(in_acoustic.collected_files[idx][0]))[0]
         xpath = join(in_acoustic_root, name + "-feats.npy")
         ypath = join(out_acoustic_root, name + "-feats.npy")
+        wpath = join(out_acoustic_root, name + "-wave.npy")
         np.save(xpath, x, allow_pickle=False)
         np.save(ypath, y, allow_pickle=False)
+        np.save(wpath, wave, allow_pickle=False)
 
 
 def entry():

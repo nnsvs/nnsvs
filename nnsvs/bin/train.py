@@ -21,7 +21,6 @@ from nnsvs.multistream import split_streams
 from nnsvs.logger import getLogger
 
 logger = None
-
 use_cuda = torch.cuda.is_available()
 
 
@@ -30,7 +29,7 @@ class NpyFileSource(FileDataSource):
         self.data_root = data_root
 
     def collect_files(self):
-        files = sorted(glob(join(self.data_root, "*.npy")))
+        files = sorted(glob(join(self.data_root, "*-feats.npy")))
         return files
 
     def collect_features(self, path):
