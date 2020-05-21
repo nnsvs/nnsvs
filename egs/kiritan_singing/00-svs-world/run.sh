@@ -14,6 +14,12 @@ dumpdir=dump
 # HTS-style question used for extracting musical/linguistic context from musicxml files
 question_path=./conf/jp_qst001_nnsvs.hed
 
+# Pretrained model dir
+# leave empty to disable
+pretrained_expdir=
+
+batch_size=8
+
 stage=0
 stop_stage=0
 
@@ -123,30 +129,51 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "stage 2: Training time-lag model"
-    xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
+    if [ ! -z "${pretrained_expdir}" ]; then
+        resume_checkpoint=$pretrained_expdir/timelag/latest.pth
+    else
+        resume_checkpoint=
+    fi
+   xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_timelag/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_timelag/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_timelag/ \
-        model=timelag train.out_dir=$expdir/timelag
+        model=timelag train.out_dir=$expdir/timelag \
+        data.batch_size=$batch_size \
+        resume.checkpoint=$resume_checkpoint
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "stage 3: Training phoneme duration model"
+    if [ ! -z "${pretrained_expdir}" ]; then
+        resume_checkpoint=$pretrained_expdir/duration/latest.pth
+    else
+        resume_checkpoint=
+    fi
     xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_duration/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_duration/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_duration/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
-        model=duration train.out_dir=$expdir/duration
+        model=duration train.out_dir=$expdir/duration \
+        data.batch_size=$batch_size \
+        resume.checkpoint=$resume_checkpoint
 fi
 
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
+    if [ ! -z "${pretrained_expdir}" ]; then
+        resume_checkpoint=$pretrained_expdir/acoustic/latest.pth
+    else
+        resume_checkpoint=
+    fi
     xrun nnsvs-train data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_acoustic/ \
         data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_acoustic/ \
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_acoustic/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
-        model=acoustic train.out_dir=$expdir/acoustic
+        model=acoustic train.out_dir=$expdir/acoustic \
+        data.batch_size=$batch_size \
+        resume.checkpoint=$resume_checkpoint
 fi
 
 
