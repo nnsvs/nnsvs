@@ -1,6 +1,6 @@
 # 00-svs-world
 
-A recipe to build a atatistical parametric singing voice synthesis system. The system consists of three trainable networks:
+A recipe to build a statistical parametric singing voice synthesis system. The system consists of three trainable networks:
 
 1. Time-lag model
 2. Duration model
@@ -48,3 +48,21 @@ CUDA_VISIBLE_DEVICES=0 ./run.sh --stage 5 --stop-stage 6
 ```
 
 You can find generated samples in the `exp/kiritan/synthesis` directory.
+
+## Advanced usage
+
+### Pretrained model
+
+If you want to utilize an external pretrained models, please specify `--pretrained-expdir` like:
+
+```
+CUDA_VISIBLE_DEVICES=0  run.sh --stage 2 --stop-stage 4 --pretrained-expdir /path/to/expdir
+```
+
+It is expected that the pretrained exp directory contains three sub-directires:
+
+1. timelag
+2. duration
+3. acoustic
+
+where each directory has a pre-trained model for timelag/duration/acoustic model, respectively.

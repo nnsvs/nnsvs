@@ -1,7 +1,7 @@
 #!/bin/bash
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
-DNNSVS_ROOT=$script_dir/../../../
+NNSVS_ROOT=$script_dir/../../../
 
 # Directory
 # **CHANGE** this to your database path
@@ -26,7 +26,7 @@ stop_stage=0
 # exp tag
 tag="" # tag for managing experiments.
 
-. $DNNSVS_ROOT/utils/parse_options.sh || exit 1;
+. $NNSVS_ROOT/utils/parse_options.sh || exit 1;
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
