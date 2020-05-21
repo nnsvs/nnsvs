@@ -383,7 +383,6 @@ QS "L-Note_Beat=5/4" {*$5/4%*}
 QS "L-Note_Beat=4/8" {*$4/8%*}
 QS "L-Note_Beat=6/8" {*$6/8%*}
 
-CQS "d5" {%(\d+)|}
 CQS "d6" {|(\d+)&}
 CQS "d7" {&(\d+);}
 CQS "d8" {;(\d+)-}
@@ -400,7 +399,6 @@ QS "C-Note_Beat=5/4" {*=5/4~*}
 QS "C-Note_Beat=4/8" {*=4/8~*}
 QS "C-Note_Beat=6/8" {*=6/8~*}
 
-CQS "e5" {~(\d+)!}
 CQS "e6" {!(\d+)@}
 CQS "e7" {@(\d+)#}
 CQS "e8" {#(\d+)+}
@@ -478,7 +476,6 @@ QS "R-Note_Beat=5/4" {*-5/4$*}
 QS "R-Note_Beat=4/8" {*-4/8$*}
 QS "R-Note_Beat=6/8" {*-6/8$*}
 
-CQS "f5" {$(\d+)$}
 CQS "f6" {$(\d+)+}
 CQS "f7" {+(\d+)%}
 CQS "f8" {%(\d+);}

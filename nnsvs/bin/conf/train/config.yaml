@@ -25,7 +25,7 @@ optim:
   optimizer:
     name: Adam
     params:
-      lr: 0.002
+      lr: 0.001
       betas: [0.5, 0.999]
       weight_decay: 0.0
   lr_scheduler:

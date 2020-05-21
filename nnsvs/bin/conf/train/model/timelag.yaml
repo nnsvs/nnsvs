@@ -6,7 +6,7 @@ model:
   netG:
     class: nnsvs.model.FeedForwardNet
     params:
-      in_dim: 445
+      in_dim: 442
       out_dim: 1
       hidden_dim: 128
       num_layers: 2
