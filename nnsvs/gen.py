@@ -36,10 +36,19 @@ def _midi_to_hz(x, idx, log_f0=False):
         z[indices] = np.log(z[indices])
     return z
 
+def _is_silence(l):
+    is_full_context = "@" in l
+    if is_full_context:
+        is_silence = ("-sil" in l or "-pau" in l)
+    else:
+        is_silence = (l == "sil" or l == "pau")
+    return is_silence
+
 
 def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_out_scaler,
         binary_dict, continuous_dict,
-        pitch_indices=None, log_f0_conditioning=True, allowed_range=[-30, 30]):
+        pitch_indices=None, log_f0_conditioning=True,
+        allowed_range=[-20, 20], allowed_range_rest=[-40, 40]):
     # round start/end times just in case.
     labels.round_()
 
@@ -72,7 +81,11 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
     lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()))
 
     # Clip to the allowed range
-    lag = np.clip(lag, allowed_range[0], allowed_range[1])
+    for idx in range(len(lag)):
+        if _is_silence(note_labels.contexts[idx]):
+            lag[idx] = np.clip(lag[idx], allowed_range_rest[0], allowed_range_rest[1])
+        else:
+            lag[idx] = np.clip(lag[idx], allowed_range[0], allowed_range[1])
 
     # frames -> 100 ns
     lag *= 50000

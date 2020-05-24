@@ -40,7 +40,8 @@ timelag:
   stream_sizes: [1]
   has_dynamic_features: [false]
 
-  allowed_range: [-30, 30] # in frames
+  allowed_range: [-20, 20] # in frames
+  allowed_range_rest: [-40, 40]
 
 duration:
   question_path:
