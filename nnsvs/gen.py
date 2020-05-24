@@ -221,6 +221,10 @@ def gen_waveform(labels, acoustic_features, acoustic_out_scaler,
     spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha)
     aperiodicity = pyworld.decode_aperiodicity(bap.astype(np.float64), sample_rate, fftlen)
 
+    # fill aperiodicity with ones for unvoiced regions
+    aperiodicity[vuv.reshape(-1) < 0.5, :] = 1.0
+    # WORLD fails catastrophically for out of range aperiodicity
+    aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
     ### F0 ###
     if relative_f0:

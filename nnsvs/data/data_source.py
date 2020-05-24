@@ -99,7 +99,8 @@ class DurationFeatureSource(FileDataSource):
 class WORLDAcousticSource(FileDataSource):
     def __init__(self, utt_list, wav_root, label_root, question_path,
             use_harvest=True, f0_floor=150, f0_ceil=700, frame_period=5,
-            mgc_order=59, num_windows=3, relative_f0=True):
+            mgc_order=59, num_windows=3, relative_f0=True,
+            interp_unvoiced_aperiodicity=True):
         self.utt_list = utt_list
         self.wav_root = wav_root
         self.label_root = label_root
@@ -112,6 +113,7 @@ class WORLDAcousticSource(FileDataSource):
         self.frame_period = frame_period
         self.mgc_order = mgc_order
         self.relative_f0 = relative_f0
+        self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
         self.windows = get_windows(num_windows)
 
 
@@ -148,7 +150,6 @@ class WORLDAcousticSource(FileDataSource):
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=self.f0_floor)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
 
-        bap = pyworld.code_aperiodicity(aperiodicity, fs)
         mgc = pysptk.sp2mc(spectrogram, order=self.mgc_order,
                            alpha=pysptk.util.mcepalpha(fs))
         # F0 of speech
@@ -162,6 +163,18 @@ class WORLDAcousticSource(FileDataSource):
         else:
             vuv = (lf0 != 0).astype(np.float32)
         lf0 = interp1d(lf0, kind="slinear")
+
+        # Aperiodicy
+        # ref: https://github.com/MTG/WGANSing/blob/mtg/vocoder.py
+        if self.interp_unvoiced_aperiodicity:
+            is_voiced = (vuv > 0).reshape(-1)
+            if not np.any(is_voiced):
+                pass  # all unvoiced, do nothing
+            else:
+                for k in range(aperiodicity.shape[1]):
+                    aperiodicity[~is_voiced, k] = np.interp(
+                        np.where(~is_voiced)[0], np.where(is_voiced)[0], aperiodicity[is_voiced, k])
+        bap = pyworld.code_aperiodicity(aperiodicity, fs)
 
         # Adjust lengths
         mgc = mgc[:labels.num_frames()]

@@ -103,9 +103,10 @@ def my_app(config : DictConfig) -> None:
 
     # Save features for timelag model
     if config.timelag.enabled:
-        logger.info("Timelag linguistic feature dim: {}".format(in_timelag[0].shape))
-        logger.info("Timelag feature dim: {}".format(out_timelag[0].shape))
-        for idx, (x, y) in tqdm(enumerate(zip(in_timelag, out_timelag))):
+        logger.info("Timelag linguistic feature dim: {}".format(in_timelag[0].shape[1]))
+        logger.info("Timelag feature dim: {}".format(out_timelag[0].shape[1]))
+        for idx in tqdm(range(len(in_timelag))):
+            x, y = in_timelag[idx], out_timelag[idx]
             name = splitext(basename(in_timelag.collected_files[idx][0]))[0]
             xpath = join(in_timelag_root, name + "-feats.npy")
             ypath = join(out_timelag_root, name + "-feats.npy")
@@ -114,9 +115,10 @@ def my_app(config : DictConfig) -> None:
 
     # Save features for duration model
     if config.duration.enabled:
-        logger.info("Duration linguistic feature dim: {}".format(in_duration[0].shape))
-        logger.info("Duration feature dim: {}".format(out_duration[0].shape))
-        for idx, (x, y) in tqdm(enumerate(zip(in_duration, out_duration))):
+        logger.info("Duration linguistic feature dim: {}".format(in_duration[0].shape[1]))
+        logger.info("Duration feature dim: {}".format(out_duration[0].shape[1]))
+        for idx in tqdm(range(len(in_duration))):
+            x, y = in_duration[idx], out_duration[idx]
             name = splitext(basename(in_duration.collected_files[idx][0]))[0]
             xpath = join(in_duration_root, name + "-feats.npy")
             ypath = join(out_duration_root, name + "-feats.npy")
@@ -125,10 +127,10 @@ def my_app(config : DictConfig) -> None:
 
     # Save features for acoustic model
     if config.acoustic.enabled:
-        logger.info("Acoustic linguistic feature dim: {}".format(in_acoustic[0].shape))
-        logger.info("Acoustic feature dim: {}".format(out_acoustic[0][0].shape))
-        for idx, (x, yw) in tqdm(enumerate(zip(in_acoustic, out_acoustic))):
-            y, wave = yw
+        logger.info("Acoustic linguistic feature dim: {}".format(in_acoustic[0].shape[1]))
+        logger.info("Acoustic feature dim: {}".format(out_acoustic[0][0].shape[1]))
+        for idx in tqdm(range(len(in_acoustic))):
+            x, (y, wave) = in_acoustic[idx], out_acoustic[idx]
             name = splitext(basename(in_acoustic.collected_files[idx][0]))[0]
             xpath = join(in_acoustic_root, name + "-feats.npy")
             ypath = join(out_acoustic_root, name + "-feats.npy")

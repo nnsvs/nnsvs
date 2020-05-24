@@ -51,5 +51,7 @@ acoustic:
   # set 1 to disable
   num_windows: 3
 
-  # Wheter to use relative f0 modeling.
+  # Use relative f0 modeling.
   relative_f0: true
+
+  interp_unvoiced_aperiodicity: true
