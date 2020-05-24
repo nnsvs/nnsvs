@@ -207,7 +207,7 @@ class WORLDAcousticSource(FileDataSource):
         wave = x.astype(np.float32) / 2**15
         T = int(features.shape[0] * (fs * self.frame_period / 1000))
         if len(wave) < T:
-            if T - len(wave) > 100:
+            if T - len(wave) > int(fs * 0.005):
                 print("Warn!!", T, len(wave), T-len(wave))
                 print("you have unepxcted input. Please debug though ipdb")
                 import ipdb; ipdb.set_trace()
