@@ -13,6 +13,25 @@ import numpy as np
 
 from nnsvs.io.hts import get_note_indices
 
+
+def _is_silence(l):
+    is_full_context = "@" in l
+    if is_full_context:
+        is_silence = ("-sil" in l or "-pau" in l)
+    else:
+        is_silence = (l == "sil" or l == "pau")
+    return is_silence
+
+
+def remove_sil_and_pau(lab):
+    newlab = hts.HTSLabelFile()
+    for l in lab:
+        if "-sil" not in l[-1] and "-pau" not in l[-1]:
+            newlab.append(l, strict=False)
+
+    return newlab
+
+
 def get_parser():
     parser = argparse.ArgumentParser(
         description="Data preparation for NIT-SONG070",
@@ -20,9 +39,6 @@ def get_parser():
     )
     parser.add_argument("hts_demo_root", type=str, help="HTS demo root")
     parser.add_argument("out_dir", type=str, help="Output directory")
-    parser.add_argument(
-        "--max-timelag", type=int, default=50, help="Max allowed time-lag (in frames)"
-    )
     parser.add_argument("--gain-normalize", action='store_true')
     return parser
 
@@ -30,9 +46,14 @@ args = get_parser().parse_args(sys.argv[1:])
 
 hts_demo_root = args.hts_demo_root
 out_dir = args.out_dir
-max_timelag = args.max_timelag
 hts_label_root = join(hts_demo_root, "data/labels")
 gain_normalize = args.gain_normalize
+
+# Time-lag constraints to filter outliers
+timelag_allowed_range = (-20, 19)
+timelag_allowed_range_rest = (-40, 39)
+
+offset_correction_threshold = 0.01
 
 mono_dir = join(hts_label_root, "mono")
 full_dir = join(hts_label_root, "full")
@@ -80,15 +101,37 @@ for lab_align_path in full_lab_align_files:
 
     onset_align = np.asarray(lab_align[note_indices].start_times)
     onset_score = np.asarray(lab_score[note_indices].start_times)
-    # Exclude large diff parts (probably a bug of musicxml though)
-    diff = np.abs(onset_align - onset_score) / 50000
-    if diff.max() > max_timelag:
-        print(f"{name}: {np.sum(diff > max_timelag)}/{len(diff)} of time-lags are excluded. max/max: {diff.min()}/{diff.max()}")
-        note_indices = list(np.asarray(note_indices)[diff <= max_timelag])
+
+    global_offset = (onset_align - onset_score).mean()
+    global_offset = int(round(global_offset / 50000) * 50000)
+
+    # Apply offset correction only when there is a big gap
+    apply_offset_correction = np.abs(global_offset * 1e-7) > offset_correction_threshold
+    if apply_offset_correction:
+        print(f"{name}: Global offset (in sec): {global_offset * 1e-7}")
+        lab_score.start_times = list(np.asarray(lab_score.start_times) + global_offset)
+        lab_score.end_times = list(np.asarray(lab_score.end_times) + global_offset)
+        onset_score += global_offset
+
+    # Exclude large diff parts (probably a bug of musicxml or alignment though)
+    valid_note_indices = []
+    for idx, (a, b) in enumerate(zip(onset_align, onset_score)):
+        note_idx = note_indices[idx]
+        lag = np.abs(a - b) / 50000
+        if _is_silence(lab_score.contexts[note_idx]):
+            if lag >= timelag_allowed_range_rest[0] and lag <= timelag_allowed_range_rest[1]:
+                valid_note_indices.append(note_idx)
+        else:
+            if lag >= timelag_allowed_range[0] and lag <= timelag_allowed_range[1]:
+                valid_note_indices.append(note_idx)
+
+    if len(valid_note_indices) < len(note_indices):
+        D = len(note_indices) - len(valid_note_indices)
+        print(f"{name}: {D}/{len(note_indices)} time-lags are excluded.")
 
     # Note onsets as labels
-    lab_align = lab_align[note_indices]
-    lab_score = lab_score[note_indices]
+    lab_align = lab_align[valid_note_indices]
+    lab_score = lab_score[valid_note_indices]
 
     # Save lab files
     lab_align_dst_path = join(lab_align_dst_dir, name)

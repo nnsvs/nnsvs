@@ -70,7 +70,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     # the following three directories will be created
     # 1) data/timelag 2) data/duration 3) data/acoustic
-    python utils/data_prep.py $hts_demo_root ./data --max-timelag 50 --gain-normalize
+    python utils/data_prep.py $hts_demo_root ./data --gain-normalize
 
     echo "train/dev/eval split"
     mkdir -p data/list
