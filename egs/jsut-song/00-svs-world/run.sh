@@ -12,7 +12,7 @@ question_path=./conf/jp_qst001_nnsvs.hed
 
 # Pretrained model dir
 # leave empty to disable
-pretrained_expdir=../../nit-song070/00-svs-world/exp/kiritan
+pretrained_expdir=../../kiritan_singing/00-svs-world/exp/kiritan
 
 batch_size=4
 
