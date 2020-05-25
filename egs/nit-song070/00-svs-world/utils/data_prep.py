@@ -53,7 +53,7 @@ gain_normalize = args.gain_normalize
 timelag_allowed_range = (-20, 19)
 timelag_allowed_range_rest = (-40, 39)
 
-offset_correction_threshold = 0.01
+offset_correction_threshold = 0.005
 
 mono_dir = join(hts_label_root, "mono")
 full_dir = join(hts_label_root, "full")
@@ -153,9 +153,7 @@ for d in [lab_align_dst_dir]:
 print("Prepare data for duration models")
 full_lab_align_files = sorted(glob(join(full_align_dir, "*.lab")))
 for lab_align_path in full_lab_align_files:
-    lab_score_path = join(full_dir, basename(lab_align_path))
     name = basename(lab_align_path)
-    assert exists(lab_score_path)
 
     lab_align = hts.load(lab_align_path)
 
