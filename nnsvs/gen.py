@@ -6,6 +6,7 @@ import pysptk
 import pyworld
 import librosa
 
+from sklearn.preprocessing import MinMaxScaler
 from nnmnkwii.io import hts
 from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.postfilters import merlin_post_filter
@@ -72,6 +73,11 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
     # Normalization
     timelag_linguistic_features = timelag_in_scaler.transform(timelag_linguistic_features)
+    if isinstance(timelag_in_scaler, MinMaxScaler):
+        # clip to feature range
+        timelag_linguistic_features = np.clip(
+            timelag_linguistic_features, timelag_in_scaler.feature_range[0],
+            timelag_in_scaler.feature_range[1])
 
     # Run model
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
@@ -145,6 +151,11 @@ def predict_duration(device, labels, duration_model, duration_in_scaler, duratio
 
     # Apply normalization
     duration_linguistic_features = duration_in_scaler.transform(duration_linguistic_features)
+    if isinstance(duration_in_scaler, MinMaxScaler):
+        # clip to feature range
+        duration_linguistic_features = np.clip(
+            duration_linguistic_features, duration_in_scaler.feature_range[0],
+            duration_in_scaler.feature_range[1])
 
     # Apply model
     x = torch.from_numpy(duration_linguistic_features).float().to(device)
@@ -178,6 +189,11 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
 
     # Apply normalization
     linguistic_features = acoustic_in_scaler.transform(linguistic_features)
+    if isinstance(acoustic_in_scaler, MinMaxScaler):
+        # clip to feature range
+        linguistic_features = np.clip(
+            linguistic_features, acoustic_in_scaler.feature_range[0],
+            acoustic_in_scaler.feature_range[1])
 
     # Predict acoustic features
     x = torch.from_numpy(linguistic_features).float().to(device)
