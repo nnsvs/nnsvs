@@ -132,9 +132,9 @@ class WORLDAcousticSource(FileDataSource):
         f0_score = _midi_to_hz(l_features, self.pitch_idx, False)
         notes = l_features[:, self.pitch_idx]
         notes = notes[notes > 0]
-        # allow 1-tone upper/lower
-        min_f0 = librosa.midi_to_hz(min(notes) - 2)
-        max_f0 = librosa.midi_to_hz(max(notes) + 2)
+        # allow semi-tone upper/lower
+        min_f0 = librosa.midi_to_hz(min(notes) - 1)
+        max_f0 = librosa.midi_to_hz(max(notes) + 1)
         assert max_f0 > min_f0
 
         fs, x = wavfile.read(wav_path)
