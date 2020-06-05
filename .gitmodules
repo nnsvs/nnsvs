@@ -1,0 +1,12 @@
+[submodule "3rdparty/bandmat"]
+	path = 3rdparty/bandmat
+	url = https://github.com/MattShannon/bandmat.git
+[submodule "3rdparty/sinsy"]
+	path = 3rdparty/sinsy
+	url = https://github.com/r9y9/sinsy.git
+[submodule "3rdparty/hts_engine_API"]
+	path = 3rdparty/hts_engine_API
+	url = https://github.com/r9y9/hts_engine_API.git
+[submodule "3rdparty/nnmnkwii"]
+	path = 3rdparty/nnmnkwii
+	url = https://github.com/r9y9/nnmnkwii.git
