@@ -24,6 +24,8 @@ Neural network-based singing voice synthesis library for research.
 Note that packages listed above should be manually installed. After installing them, you can run:
 
 ```
+git submodule init
+git submodule update
 cd 3rdparty
 ./install.sh
 cd ..
