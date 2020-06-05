@@ -10,3 +10,6 @@
 [submodule "3rdparty/nnmnkwii"]
 	path = 3rdparty/nnmnkwii
 	url = https://github.com/r9y9/nnmnkwii.git
+[submodule "3rdparty/pysinsy"]
+	path = 3rdparty/pysinsy
+	url = https://github.com/r9y9/pysinsy.git
