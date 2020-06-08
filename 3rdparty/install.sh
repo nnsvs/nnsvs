@@ -1,41 +1,26 @@
 # install hts_engine_API
-pushd hts_engine_API/src
-touch ChangeLog
-export CFLAGS="$CFLAGS -fPIC"
-autoreconf -fvi
-./configure
-make clean
-make
-sudo make install
-popd
+cd hts_engine_API/src && ./waf configure build && sudo ./waf install
+cd ../../ && rm -rf hts_engine_API
 
 # install bandmat
-pushd bandmat
-python3 setup.py install
-popd
-
-
+cd bandmat && python setup.py install
+cd ../ && rm -rf bandmat
 
 # install nnmnkwii
-if [ "`pip freeze | grep nnmnkwikk`" != '' ]; then
+if [ "`pip freeze | grep nnmnkwii`" != '' ]; then
     pip uninstall nnmnkwii
 fi
-pushd nnmnkwii
-python3 setup.py install
-popd
+cd nnmnkwii && python setup.py install
+cd ../ && rm -rf nnmnkwii
 
 # install sinsy
-pushd sinsy/src
-mkdir -p build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON  ..
-make -j
-sudo make install
-popd
+cd sinsy/src/ && mkdir -p build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON  .. && make -j && sudo make install
+cd ../../ && rm -rf sinsy
 
 # install pysinsy
-pushd pysinsy
-python3 setup.py develop
-popd
+cd pysinsy && python setup.py develop
+cd ../ && rm -rf pysinsy
 
 # set enviromental variable
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
