@@ -144,7 +144,7 @@ class WORLDAcousticSource(FileDataSource):
             f0, timeaxis = pyworld.harvest(x, fs, frame_period=self.frame_period,
             f0_floor=min_f0, f0_ceil=max_f0)
         else:
-            f0, timeaxis = pyworld.dio(x, fs, frame_period=frame_period,
+            f0, timeaxis = pyworld.dio(x, fs, frame_period=self.frame_period,
                 f0_floor=min_f0, f0_ceil=max_f0)
             f0 = pyworld.stonemask(x, f0, timeaxis, fs)
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=self.f0_floor)
