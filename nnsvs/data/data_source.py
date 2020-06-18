@@ -185,6 +185,11 @@ class WORLDAcousticSource(FileDataSource):
         if self.relative_f0:
             # # F0 derived from the musical score
             f0_score = f0_score[:, None]
+            if len(f0_score) > len(f0):
+                print("Warning! likely to have mistakes in alignment in {}".format(label_path))
+                print(f0_score.shape, f0.shape)
+                f0_score = f0_score[:len(f0)]
+
             lf0_score = f0_score.copy()
             nonzero_indices = np.nonzero(f0_score)
             lf0_score[nonzero_indices] = np.log(f0_score[nonzero_indices])
