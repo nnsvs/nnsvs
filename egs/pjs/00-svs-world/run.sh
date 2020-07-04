@@ -82,8 +82,10 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     for s in ${datasets[@]};
     do
+	# PJS corpus:
+	#Max frequency: 523.2511306011974, Min frequency: 92.4986056779085
       nnsvs-prepare-features utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/  \
-        question_path=$question_path
+        question_path=$question_path acoustic.f0_floor=80 acoustic.f0_ceil=580
     done
 
     # Compute normalization stats for each input/output
