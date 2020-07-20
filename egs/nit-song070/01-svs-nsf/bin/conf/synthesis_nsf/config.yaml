@@ -1,0 +1,110 @@
+# coding: utf-8
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+verbose: 100
+
+nsf_root_dir:
+nsf_type: hn-sinc-nsf
+
+# This setting is for NNSVS
+# The setting for NSF is below
+device: cuda # or cpu
+
+# Only the combination of utt_list and in_dir input is supported
+utt_list:
+in_dir:
+out_dir:
+  
+sample_rate: 16000
+frame_period: 5
+question_path: path/to/qst.hed
+log_f0_conditioning: true
+
+# Use ground truth duration or not
+# if true, time-lag and duration models will not be used.
+ground_truth_duration: false
+
+timelag:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
+  stream_sizes: [1]
+  has_dynamic_features: [false]
+
+  allowed_range: [-20, 20] # in frames
+  allowed_range_rest: [-40, 40]
+
+duration:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
+  stream_sizes: [1]
+  has_dynamic_features: [false]
+
+acoustic:
+  question_path:
+  checkpoint:
+  in_scaler_path:
+  out_scaler_path:
+  model_yaml:
+  subphone_features: coarse_coding
+  # (mgc, lf0, vuv, bap)
+  stream_sizes: [180, 3, 1, 3]
+  has_dynamic_features: [true, true, false, true]
+  num_windows: 3
+  relative_f0: true
+  post_filter: true
+
+nsf:
+  args:
+    # NSF default settings except inference
+    batch_size: 1
+    epochs: 50
+    no_best_epochs: 5
+    lr: 0.0001
+    no_cuda: false
+    seed: 1
+    eval_mode_for_validation: false
+    model_forward_with_target: false
+    shuffle: true
+    num_workers: 0
+    save_model_dir: "./"
+    not_save_each_epoch: false
+    save_epoch_name: "epoch"
+    save_trained_name: "trained_network"
+    save_model_ext: ".pt"
+    trained_model:
+    inference: true
+    # Caution. output directory setting of NSF will be overwritten by NNSVS,
+    # output_dir will be never used.
+    output_dir: "./output"
+    optimizer: Adam
+    verbose: 1
+  model:
+    # Dimensions of input features
+    # input_dims = [dimension_of_feature_1, dimension_of_feature_2, ...]
+    input_dims: [60, 1, 1]
+    # File name extension for input features
+    # input_exts = [name_extention_of_feature_1, ...]
+    # ".f0" must be the last
+    input_exts: ['.mgc', '.bap', '.f0']
+    # Temporal resolution for input features
+    # input_reso = [reso_feature_1, reso_feature_2, ...]
+    #  for waveform modeling, temporal resolution of input acoustic features
+    #  may be = waveform_sampling_rate * frame_shift_of_acoustic_features(for example, 80 = 16000 Hz * 5 ms)
+    input_reso: [80, 80, 80]
+    # Whether input features should be z-normalized
+    # input_norm = [normalize_feature_1, normalize_feature_2]
+    input_norm: [True, True, True]
+    # Similar configurations for output features
+    output_dims: [1]
+    output_exts: ['.wav']
+    output_reso: [1]
+    output_norm: [False]
+    # Waveform sampling rate
+    wav_samp_rate: 16000

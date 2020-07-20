@@ -1,0 +1,87 @@
+# coding: utf-8
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+verbose: 100
+
+nsf_root_dir:
+nsf_type: hn-sinc-nsf
+  
+data:
+  #training set
+  train_no_dev:
+    list_path: data/list/train_no_dev.list
+  #development set
+  dev:
+    list_path: data/list/dev.list
+  #evaluation set
+  eval:
+    list_path: data/list/eval.list
+    
+nsf:
+  args:
+    # NSF default settings
+    batch_size: 1
+    epochs: 50
+    no_best_epochs: 5
+    lr: 0.0001
+    no_cuda: false
+    seed: 1
+    eval_mode_for_validation: false
+    model_forward_with_target: false
+    shuffle: true
+    num_workers: 0
+    save_model_dir: "./"
+    not_save_each_epoch: false
+    save_epoch_name: "epoch"
+    save_trained_name: "trained_network"
+    save_model_ext: ".pt"
+    trained_model:
+    inference: false
+    # Caution. output directory setting of NSF will be overwritten by NNSVS,
+    # output_dir will be never used.
+    output_dir: "./output"
+    optimizer: Adam
+    verbose: 1
+  model:
+    # Directories for input features
+    # input_dirs = [path_of_feature_1, path_of_feature_2, ..., ]
+    input_dirs: ["nsf/input_dirs" , "nsf/input_dirs", "nsf/input_dirs"]
+    # Dimensions of input features
+    # input_dims = [dimension_of_feature_1, dimension_of_feature_2, ...]
+    input_dims: [60, 1, 1]
+    # File name extension for input features
+    # input_exts = [name_extention_of_feature_1, ...]
+    # ".f0" must be the last
+    input_exts: ['.mgc', '.bap', '.f0']
+    # Temporal resolution for input features
+    # input_reso = [reso_feature_1, reso_feature_2, ...]
+    #  for waveform modeling, temporal resolution of input acoustic features
+    #  may be = waveform_sampling_rate * frame_shift_of_acoustic_features(for example, 80 = 16000 Hz * 5 ms)
+    input_reso: [80, 80, 80]
+    # Whether input features should be z-normalized
+    # input_norm = [normalize_feature_1, normalize_feature_2]
+    input_norm: [True, True, True]
+    # Similar configurations for output features
+    output_dirs: ["nsf/output_dirs"]
+    output_dims: [1]
+    output_exts: ['.wav']
+    output_reso: [1]
+    output_norm: [False]
+    # Waveform sampling rate
+    wav_samp_rate: 16000
+    # Truncating input sequences so that the maximum length = truncate_seq
+    #  When truncate_seq is larger, more GPU mem required
+    # If you don't want truncating, please truncate_seq = None
+    # sample_rate * sec (for example, 48000 = 16000 Hz * 3 s)
+    truncate_seq: 48000
+    # Minimum sequence length
+    #  If sequence length < minimum_len, this sequence is not used for training
+    #  minimum_len can be None
+    # resolution * minimum frames(for rexample 4000 = 80(sample/frame) * 50(frame)
+    minimum_len: 4000
+    # Directories for test input features
+    # test_input_dirs = [path_of_feature_1, path_of_feature_2, ..., ]
+    test_input_dirs: ["nsf/test_input_dirs", "nsf/test_input_dirs", "nsf/test_input_dirs"]
+    # test_output_dirs is used to store synthesized waves at inference.
+    test_output_dirs: []

@@ -1,0 +1,25 @@
+# coding: utf-8
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+
+verbose: 100
+
+in_dir: 
+out_dir: 
+  
+# question path used for timelag, duration and acoustic models
+question_path: conf/jp_qst001_nnsvs.hed
+label_dir: data/acoustic/label_phone_align
+  
+# acoustic parameters
+sample_rate: 16000
+stream_sizes: [180, 3, 1, 3]
+has_dynamic_features: [true, true, false, true]
+# windows to compute delta and delta-delta features. Set 1 to disable
+num_windows: 3
+# Use relative f0 modeling.
+relative_f0: true
+
+# if test_set is set to true, prepare_nsf_data creates acoustic features only(does not create wav files.)
+test_set: false
