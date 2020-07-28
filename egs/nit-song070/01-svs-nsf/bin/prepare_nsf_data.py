@@ -103,13 +103,15 @@ def my_app(config : DictConfig) -> None:
 
         if exists(feats_out_dir) != True:
             os.makedirs(feats_out_dir)
-                    
+
+        # NSF binary data format is required to be read by numpy.fromfile.
+        # "npy" format may not be adequate.
         with open(join(feats_out_dir, utt_id + ".f0"), "wb") as f:
-            np.save(f, f0.astype(np.float32))
+            f0.astype(np.float32).tofile(f)
         with open(join(feats_out_dir, utt_id + ".mgc"), "wb") as f:
-            np.save(f, mgc.astype(np.float32))
+            mgc.astype(np.float32).tofile(f)
         with open(join(feats_out_dir, utt_id + ".bap"), "wb") as f:
-            np.save(f, bap.astype(np.float32))
+            bap.astype(np.float32).tofile(f)
     
     if test_set != True:
         wave_files = sorted(glob(join(in_dir, "*-wave.npy")))

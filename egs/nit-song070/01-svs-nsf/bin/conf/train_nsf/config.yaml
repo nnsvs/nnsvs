@@ -29,18 +29,18 @@ nsf:
     seed: 1
     eval_mode_for_validation: false
     model_forward_with_target: false
+    model_forward_with_file_name: false
     shuffle: true
     num_workers: 0
+    multi_gpu_data_parallel: false
     save_model_dir: "./"
     not_save_each_epoch: false
     save_epoch_name: "epoch"
     save_trained_name: "trained_network"
     save_model_ext: ".pt"
     trained_model:
+    ignore_training_history_in_trained_model: false
     inference: false
-    # Caution. output directory setting of NSF will be overwritten by NNSVS,
-    # output_dir will be never used.
-    output_dir: "./output"
     optimizer: Adam
     verbose: 1
   model:
@@ -84,4 +84,4 @@ nsf:
     # test_input_dirs = [path_of_feature_1, path_of_feature_2, ..., ]
     test_input_dirs: ["nsf/test_input_dirs", "nsf/test_input_dirs", "nsf/test_input_dirs"]
     # test_output_dirs is used to store synthesized waves at inference.
-    test_output_dirs: []
+    test_output_dirs: 
