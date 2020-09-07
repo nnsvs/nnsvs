@@ -233,7 +233,7 @@ def my_app(config : DictConfig) -> None:
     data_loaders = get_data_loaders(config)
 
     # Resume
-    if config.resume.checkpoint is not None:
+    if config.resume.checkpoint is not None and len(config.resume.checkpoint) > 0:
         logger.info("Load weights from {}".format(config.resume.checkpoint))
         checkpoint = torch.load(to_absolute_path(config.resume.checkpoint))
         model.load_state_dict(checkpoint["state_dict"])
