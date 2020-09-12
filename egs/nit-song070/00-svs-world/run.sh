@@ -63,6 +63,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
         cd downloads
         curl -LO http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
         tar jxvf HTS-demo_NIT-SONG070-F001.tar.bz2
+        cd $script_dir
     fi
 fi
 
