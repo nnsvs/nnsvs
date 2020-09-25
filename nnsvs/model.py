@@ -94,7 +94,6 @@ class RMDN(nn.Module):
         self.prediction_type="probabilistic"
     def forward(self, x, lengths):
         sequence = pack_padded_sequence(x, lengths, batch_first=True)
-        print(lengths)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = self.mdn(out)
