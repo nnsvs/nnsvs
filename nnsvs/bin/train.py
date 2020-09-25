@@ -140,10 +140,7 @@ def get_stream_weight(stream_weights, stream_sizes):
 
 
 def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
-    if model.prediction_type == "probabilistic":
-        criterion = mdn_loss
-    else
-        criterion = nn.MSELoss(reduction="none")
+    criterion = nn.MSELoss(reduction="none")
     
     logger.info("Start utterance-wise training...")
 
@@ -164,25 +161,29 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 optimizer.zero_grad()
 
                 # Run forwaard
-                y_hat = model(x, sorted_lengths)
-
-                # Compute loss
-                mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
-
-                if config.train.stream_wise_loss:
-                    # Strean-wise loss
-                    streams = split_streams(y, config.model.stream_sizes)
-                    streams_hat = split_streams(y_hat, config.model.stream_sizes)
-                    loss = 0
-                    for s_hat, s, sw in zip(streams_hat, streams, stream_weights):
-                        s_hat_mask = s_hat.masked_select(mask)
-                        s_mask = s.masked_select(mask)
-                        loss += sw * criterion(s_hat_mask, s_mask).mean()
+                if model.prediction_type == "probabilistic":
+                    pi, sigma, mu = model(x, sorted_lengths)
+                    loss = mdn_loss(pi, sigma, mu, y)
                 else:
-                    # Joint modeling
-                    y_hat = y_hat.masked_select(mask)
-                    y = y.masked_select(mask)
-                    loss = criterion(y_hat, y).mean()
+                    y_hat = model(x, sorted_lengths)
+
+                    # Compute loss
+                    mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
+
+                    if config.train.stream_wise_loss:
+                        # Strean-wise loss
+                        streams = split_streams(y, config.model.stream_sizes)
+                        streams_hat = split_streams(y_hat, config.model.stream_sizes)
+                        loss = 0
+                        for s_hat, s, sw in zip(streams_hat, streams, stream_weights):
+                            s_hat_mask = s_hat.masked_select(mask)
+                            s_mask = s.masked_select(mask)
+                            loss += sw * criterion(s_hat_mask, s_mask).mean()
+                    else:
+                        # Joint modeling
+                        y_hat = y_hat.masked_select(mask)
+                        y = y.masked_select(mask)
+                        loss = criterion(y_hat, y).mean()
 
                 if train:
                     loss.backward()

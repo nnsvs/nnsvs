@@ -22,7 +22,7 @@ class MDNLayer(nn.Module):
     Input:
         minibatch (BxD): B is the batch size and D is in_dim
     Output:
-        (pi, sigma, mu) (BxG, BxGxO, BxGxO): G is num_gaussians and O is out_dim.
+        pi, sigma, mu (BxG, BxGxO, BxGxO): G is num_gaussians and O is out_dim.
             pi is a multinomial distribution of the Gaussians. 
             mu and sigma are the mean and the standard deviation of each Gaussian.
     """
@@ -38,19 +38,16 @@ class MDNLayer(nn.Module):
         self.sigma = nn.Linear(in_dim, out_dim * num_gaussians)
         self.mu = nn.Linear(in_dim, out_dim * num_gaussians)
 
-    def forward(self, x):
-        # p(z_k = 1) for all k; num_gaussians mixing components that sum to 1
-        pi = self.pi(x) 
-        # mixtuer_num * out_dim gaussian variances, which must be >= 0
-        sigma = torch.exp(self.sigma(x))
+    def forward(self, minibatch):
+        pi = self.pi(minibatch) 
+        sigma = torch.exp(self.sigma(minibatch))
         sigma = sigma.view(-1, self.num_gaussians, self.out_dim)        
-        # num_gaussians * out_dim  gaussian means        
-        mu = self.mu(x)
+        mu = self.mu(minibatch)
         mu = mu.view(-1, self.num_gaussians, self.out_dim)
         return pi, sigma, mu
 
 def mdn_loss(pi, sigma, mu, target):
-    """Calculates the error, given the MoG parameters and the target
+    """Calculates the error, given the MoG parameters and the target.
     The loss is the negative log likelihood of the data given the MoG
     parameters.
     Arguments:
@@ -61,35 +58,34 @@ def mdn_loss(pi, sigma, mu, target):
         mu (BxGxO): The means of the Gaussians. 
         target (BxO): The target variables.
     Returns:
-        loss (scalar): Negative Log Likelihood of Mixture Density Networks.
+        loss (Bx1): Negative Log Likelihood of Mixture Density Networks.
     """
     # Expand the dim of target from BxO -> Bx1xO -> BxGxO
     target = target.unsqueeze(1).expand_as(sigma)
-    # Create gaussian with mean=mu and variance=sigma^2
+    # Create gaussians with mean=mu and variance=sigma^2
     g = torch.distributions.Normal(loc=mu, scale=sigma)
     # p(y|x,w) = exp(log p(y|x,w))
     loss = torch.exp(g.log_prob(target))
-    # Multiply along the dimension of target variable to reduce the dim of loss
-    # to get scalar loss
+    # Multiply along the dimension of targets variable to reduce the dim of loss
     # BxGxO -> BxG 
     loss = torch.prod(loss, dim=2)
-    # Sum all gaussian components with weight coefficient pi
+    # Sum all Gaussians with weight coefficients pi
+    # BxG -> Bx1
     loss = torch.sum(loss * pi, dim=1)
+    print(loss.shape)
     # Calculate negative log likelihood and average it
     return torch.mean(-torch.log(loss))
 
-def mdn_sample_mode(pi, sigma, mu):
+def mdn_sample_mode(pi, mu):
     """ Returns the mean of the Gaussian component whose weight coefficient is the largest
     as the most probable predictions.
 
     Arguments:
         pi (BxG): The multinomial distribution of the Gaussians. B is the batch size,
             G is num_gaussians of class MDNLayer.
-        sigma (BxGxO): The standard deviation of the Gaussians. O is out_dim of class 
-            MDNLayer.
         mu (BxGxO): The means of the Gaussians. 
     Returns:
-        mode (BxO): The mean of the Gaussian component whose weight coefficient is the largest.
+        mode (BxO): The means of the Gaussians whose weight coefficient (pi) is the largest.
     """
     
     batch_size, _ , out_dim = mu.shape

@@ -82,13 +82,13 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
     # Run model
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
-    if timelag_model.prediction_type = "probabilistic":
-        pi, sigma, mu = timelag_model.(x, [x.shape[1]])
-        y = mdn_sample_mode(pi, sigma, mu).squeeze(0).cpu()
+    if timelag_model.prediction_type == "probabilistic":
+        pi, _, mu = timelag_model(x, [x.shape[1]])
+        y = mdn_sample_mode(pi, mu).squeeze(0).cpu()
     else:
         y = timelag_model(x, [x.shape[1]]).squeeze(0).cpu()
 
-    # De-normalization and rounding
+    # De-normalization and roundingbao
     lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()))
 
     # Clip to the allowed range
@@ -166,9 +166,9 @@ def predict_duration(device, labels, duration_model, duration_in_scaler, duratio
     x = torch.from_numpy(duration_linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
 
-    if duration_model.prediction_type = "probabilistic":
-        pi, sigma, mu = duration_model.(x, [x.shape[1]])
-        pred_durations = mdn_sample_mode(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+    if duration_model.prediction_type == "probabilistic":
+        pi, _, mu = duration_model(x, [x.shape[1]])
+        pred_durations = mdn_sample_mode(pi, mu).squeeze(0).cpu().data.numpy()
     else:
         pred_durations = duration_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
@@ -209,9 +209,9 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
     x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
 
-    if acoustic_model.prediction_type = "probabilistic":
-        pi, sigma, mu = acoustic_model.(x, [x.shape[1]])
-        pred_acoustic = mdn_sample_mode(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+    if acoustic_model.prediction_type == "probabilistic":
+        pi, _, mu = acoustic_model(x, [x.shape[1]])
+        pred_acoustic = mdn_sample_mode(pi, mu).squeeze(0).cpu().data.numpy()
     else:
         pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
