@@ -157,9 +157,6 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_duration/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
         model=duration train.out_dir=$expdir/duration \
-	model.netG._target_=nnsvs.model.RMDN \
-	model.netG.hidden_dim=128 \
-	model.netG.num_layers=2 \
         data.batch_size=$batch_size \
         resume.checkpoint=$resume_checkpoint
 fi
