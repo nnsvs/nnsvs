@@ -7,7 +7,7 @@ version = SourceFileLoader('nnsvs.version', 'nnsvs/version.py').load_module().ve
 
 packages = find_packages()
 if exists("README.md"):
-    with open("README.md", "r") as fh:
+    with open("README.md", "r", encoding="UTF-8") as fh:
         LONG_DESC = LONG_DESC = fh.read()
 else:
     LONG_DESC = ""
