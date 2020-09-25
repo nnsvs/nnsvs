@@ -177,7 +177,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_acoustic/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
         model=acoustic train.out_dir=$expdir/acoustic \
-        data.batch_size=$batch_size \
+	model.netG._target_=nnsvs.model.RMDN \
+	model.netG.hidden_dim=128 \
+	model.netG.num_layers=2 \
+        data.batch_size=1 \
         resume.checkpoint=$resume_checkpoint
 fi
 
