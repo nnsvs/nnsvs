@@ -19,10 +19,10 @@ from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheData
 from nnsvs.util import make_non_pad_mask
 from nnsvs.multistream import split_streams
 from nnsvs.logger import getLogger
+from nnsvs.mdn import mdn_loss
 
 logger = None
 use_cuda = torch.cuda.is_available()
-
 
 class NpyFileSource(FileDataSource):
     def __init__(self, data_root):
@@ -140,7 +140,11 @@ def get_stream_weight(stream_weights, stream_sizes):
 
 
 def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
-    criterion = nn.MSELoss(reduction="none")
+    if model.prediction_type == "probabilistic":
+        criterion = mdn_loss
+    else
+        criterion = nn.MSELoss(reduction="none")
+    
     logger.info("Start utterance-wise training...")
 
     stream_weights = get_stream_weight(
