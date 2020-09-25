@@ -68,7 +68,7 @@ def mdn_loss(pi, sigma, mu, target):
     g = torch.distributions.Normal(loc=mu, scale=sigma)
     # p(y|x,w) = exp(log p(y|x,w))
     loss = torch.exp(g.log_prob(target))
-    # Multiply along the dimension of targets variable to reduce the dim of loss
+    # Multiply along the dimension of target variables to reduce the dim of loss
     # B, max(T), G, D_out -> B, max(T), G 
     loss = torch.prod(loss, dim=3)
     # Sum all Gaussians with weight coefficients pi
@@ -83,7 +83,7 @@ def mdn_sample_mode(pi, mu):
 
     Arguments:
         pi (B, max(T), G): The multinomial distribution of the Gaussians. B is the batch size,
-            G is num_gaussians of class MDNLayer.
+            max(T) is the max frame length in this batch, G is num_gaussians of class MDNLayer.
         mu (B, max(T), G, D_out): The means of the Gaussians. 
     Returns:
         mode (B, max(T), D_out): The means of the Gaussians whose weight coefficient (pi) is the largest.
