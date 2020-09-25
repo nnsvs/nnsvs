@@ -64,6 +64,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
         cd downloads
         curl -LO http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
         tar jxvf HTS-demo_NIT-SONG070-F001.tar.bz2
+	cd $script_dir
     fi
 fi
 
@@ -156,6 +157,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_duration/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
         model=duration train.out_dir=$expdir/duration \
+	model.netG._target_=nnsvs.model.RMDN \
+	model.netG.hidden_dim=128 \
+	model.netG.num_layers=2 \
         data.batch_size=$batch_size \
         resume.checkpoint=$resume_checkpoint
 fi
