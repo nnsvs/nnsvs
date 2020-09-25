@@ -20,9 +20,11 @@ class MDNLayer(nn.Module):
         out_dim (int): the number of dimensions in the output
         num_gaussians (int): the number of mixture component
     Input:
-        minibatch (BxD): B is the batch size and D is in_dim
+        minibatch (B, max(T), D_in): B is the batch size and max(T) is the max frame lengths
+            in this batch, and D_in is in_dim
     Output:
-        pi, sigma, mu (BxG, BxGxO, BxGxO): G is num_gaussians and O is out_dim.
+        pi, sigma, mu (B, max(T), D_out), (B, max(T), G, D_out), (B, max(T), G, D_out): 
+            G is num_gaussians and D_out is out_dim.
             pi is a multinomial distribution of the Gaussians. 
             mu and sigma are the mean and the standard deviation of each Gaussian.
     """
@@ -41,9 +43,9 @@ class MDNLayer(nn.Module):
     def forward(self, minibatch):
         pi = self.pi(minibatch) 
         sigma = torch.exp(self.sigma(minibatch))
-        sigma = sigma.view(-1, self.num_gaussians, self.out_dim)        
+        sigma = sigma.view(len(minibatch), -1, self.num_gaussians, self.out_dim)        
         mu = self.mu(minibatch)
-        mu = mu.view(-1, self.num_gaussians, self.out_dim)
+        mu = mu.view(len(minibatch), -1, self.num_gaussians, self.out_dim)
         return pi, sigma, mu
 
 def mdn_loss(pi, sigma, mu, target):
@@ -51,48 +53,48 @@ def mdn_loss(pi, sigma, mu, target):
     The loss is the negative log likelihood of the data given the MoG
     parameters.
     Arguments:
-        pi (BxG): The multinomial distribution of the Gaussians. B is the batch size,
-            G is num_gaussians of class MDNLayer.
-        sigma (BxGxO): The standard deviation of the Gaussians. O is out_dim of class 
+        pi (B, max(T), G): The multinomial distribution of the Gaussians. B is the batch size,
+            max(T) is the max frame length in this batch, and G is num_gaussians of class MDNLayer.
+        sigma (B, max(T) , G ,D_out): The standard deviation of the Gaussians. D_out is out_dim of class 
             MDNLayer.
-        mu (BxGxO): The means of the Gaussians. 
-        target (BxO): The target variables.
+        mu (B , max(T), G, D_out): The means of the Gaussians. 
+        target (B,max(T), D_out): The target variables.
     Returns:
-        loss (Bx1): Negative Log Likelihood of Mixture Density Networks.
+        loss (B, max(T), 1): Negative Log Likelihood of Mixture Density Networks.
     """
-    # Expand the dim of target from BxO -> Bx1xO -> BxGxO
-    target = target.unsqueeze(1).expand_as(sigma)
+    # Expand the dim of target from B,max(T),D_out -> B,max(T),1,D_out -> B,max(T),G,D_out
+    target = target.unsqueeze(2).expand_as(sigma)
     # Create gaussians with mean=mu and variance=sigma^2
     g = torch.distributions.Normal(loc=mu, scale=sigma)
     # p(y|x,w) = exp(log p(y|x,w))
     loss = torch.exp(g.log_prob(target))
     # Multiply along the dimension of targets variable to reduce the dim of loss
-    # BxGxO -> BxG 
-    loss = torch.prod(loss, dim=2)
+    # B, max(T), G, D_out -> B, max(T), G 
+    loss = torch.prod(loss, dim=3)
     # Sum all Gaussians with weight coefficients pi
-    # BxG -> Bx1
-    loss = torch.sum(loss * pi, dim=1)
-    print(loss.shape)
+    # B, max(T), G -> B, max(T)
+    loss = torch.sum(loss * pi, dim=2)
     # Calculate negative log likelihood and average it
-    return torch.mean(-torch.log(loss))
+    return torch.mean(-torch.log(loss), dim=1)
 
 def mdn_sample_mode(pi, mu):
     """ Returns the mean of the Gaussian component whose weight coefficient is the largest
     as the most probable predictions.
 
     Arguments:
-        pi (BxG): The multinomial distribution of the Gaussians. B is the batch size,
+        pi (B, max(T), G): The multinomial distribution of the Gaussians. B is the batch size,
             G is num_gaussians of class MDNLayer.
-        mu (BxGxO): The means of the Gaussians. 
+        mu (B, max(T), G, D_out): The means of the Gaussians. 
     Returns:
-        mode (BxO): The means of the Gaussians whose weight coefficient (pi) is the largest.
+        mode (B, max(T), D_out): The means of the Gaussians whose weight coefficient (pi) is the largest.
     """
     
-    batch_size, _ , out_dim = mu.shape
+    batch_size, max_T, _ , out_dim = mu.shape
     # Get the indexes of the largest pi 
-    max_component = torch.max(pi, dim=1) # shape (Bx1)
-    mode = torch.zeros(batch_size, out_dim)
+    max_component = torch.max(pi, dim=2) # shape (B, max(T), 1)
+    mode = torch.zeros(batch_size, max_T, out_dim)
     for i in range(batch_size):
-        for j in range(out_dim):
-            mode[i, j] = mu[i, max_component[i], j]
+        for j in range(max_T):
+            for k in range(out_dim):
+                mode[i, j, k] = mu[i, j, max_component[j], k]
     return mode

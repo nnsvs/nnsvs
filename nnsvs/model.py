@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from torch.nn.utils import weight_norm
-import mdn
+from nnsvs.mdn import MDNLayer
 
 def WNConv1d(*args, **kwargs):
     return weight_norm(nn.Conv1d(*args, **kwargs))
@@ -90,7 +90,7 @@ class RMDN(nn.Module):
         self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers, 
                             bidirectional=bidirectional, batch_first=True, 
                             dropout=dropout)
-        self.mdn = mdn.MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians=num_gaussians)
+        self.mdn = MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians=num_gaussians)
         self.prediction_type="probabilistic"
     def forward(self, x, lengths):
         sequence = pack_padded_sequence(x, lengths, batch_first=True)
@@ -101,13 +101,13 @@ class RMDN(nn.Module):
         return out
 
 class MDN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, num_gaussians=30):
-        super(FFMDN, self).__init__()
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0, num_gaussians=30):
+        super(MDN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
         self.hidden_layers = nn.ModuleList(
             [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)])
         self.tanh = nn.Tanh()
-        self.mdn = mdn.MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)
+        self.mdn = MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)
         self.prediction_type="probabilistic"
     def forward(self, x, lengths=None):
         out = self.tanh(self.first_linear(x))

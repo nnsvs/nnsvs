@@ -163,7 +163,7 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 # Run forwaard
                 if model.prediction_type == "probabilistic":
                     pi, sigma, mu = model(x, sorted_lengths)
-                    loss = mdn_loss(pi, sigma, mu, y)
+                    loss = mdn_loss(pi, sigma, mu, y).mean()
                 else:
                     y_hat = model(x, sorted_lengths)
 
