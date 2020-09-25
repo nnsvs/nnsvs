@@ -91,10 +91,10 @@ def mdn_sample_mode(pi, mu):
     
     batch_size, max_T, _ , out_dim = mu.shape
     # Get the indexes of the largest pi 
-    max_component = torch.max(pi, dim=2) # shape (B, max(T), 1)
+    _, max_component = torch.max(pi, dim=2) # shape (B, max(T), 1)
     mode = torch.zeros(batch_size, max_T, out_dim)
     for i in range(batch_size):
         for j in range(max_T):
             for k in range(out_dim):
-                mode[i, j, k] = mu[i, j, max_component[j], k]
+                mode[i, j, k] = mu[i, j, max_component[i, j], k]
     return mode
