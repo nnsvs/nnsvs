@@ -68,9 +68,9 @@ def mdn_loss(pi, sigma, mu, target):
     g = torch.distributions.Normal(loc=mu, scale=sigma)
     # p(y|x,w) = exp(log p(y|x,w))
     loss = torch.exp(g.log_prob(target))
-    # Multiply along the dimension of target variables to reduce the dim of loss
+    # Sum along the dimension of target variables to reduce the dim of loss
     # B, max(T), G, D_out -> B, max(T), G 
-    loss = torch.prod(loss, dim=3)
+    loss = torch.sum(loss, dim=3)
     # Sum all Gaussians with weight coefficients pi
     # B, max(T), G -> B, max(T)
     loss = torch.sum(loss * pi, dim=2)
