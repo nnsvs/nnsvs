@@ -60,7 +60,7 @@ def mdn_loss(pi, sigma, mu, target):
         mu (B , max(T), G, D_out): The means of the Gaussians. 
         target (B,max(T), D_out): The target variables.
     Returns:
-        loss (B, max(T), 1): Negative Log Likelihood of Mixture Density Networks.
+        loss (B, max(T)): Negative Log Likelihood of Mixture Density Networks.
     """
     # Expand the dim of target from B,max(T),D_out -> B,max(T),1,D_out -> B,max(T),G,D_out
     target = target.unsqueeze(2).expand_as(sigma)
@@ -84,7 +84,8 @@ def mdn_sample_mode(pi, mu):
     Arguments:
         pi (B, max(T), G): The multinomial distribution of the Gaussians. B is the batch size,
             max(T) is the max frame length in this batch, G is num_gaussians of class MDNLayer.
-        mu (B, max(T), G, D_out): The means of the Gaussians. 
+        mu (B, max(T), G, D_out): The means of the Gaussians. D_out is out_dim of class 
+            MDNLayer.
     Returns:
         mode (B, max(T), D_out): The means of the Gaussians whose weight coefficient (pi) is the largest.
     """
