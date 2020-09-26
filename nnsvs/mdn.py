@@ -62,17 +62,17 @@ def mdn_loss(pi, sigma, mu, target):
     Returns:
         loss (B, max(T)): Negative Log Likelihood of Mixture Density Networks.
     """
-    # Expand the dim of target from B,max(T),D_out -> B,max(T),1,D_out -> B,max(T),G,D_out
+    # Expand the dim of target from (B,max(T),D_out) -> (B,max(T),1,D_out) -> (B,max(T),G,D_out)
     target = target.unsqueeze(2).expand_as(sigma)
     # Create gaussians with mean=mu and variance=sigma^2
     g = torch.distributions.Normal(loc=mu, scale=sigma)
     # p(y|x,w) = exp(log p(y|x,w))
     loss = torch.exp(g.log_prob(target))
     # Sum along the dimension of target variables to reduce the dim of loss
-    # B, max(T), G, D_out -> B, max(T), G 
+    # (B, max(T), G, D_out) -> (B, max(T), G)
     loss = torch.sum(loss, dim=3)
     # Sum all Gaussians with weight coefficients pi
-    # B, max(T), G -> B, max(T)
+    # (B, max(T), G) -> (B, max(T))
     loss = torch.sum(loss * pi, dim=2)
     # Calculate negative log likelihood and average it
     return torch.mean(-torch.log(loss), dim=1)
@@ -92,7 +92,7 @@ def mdn_sample_mode(pi, mu):
     
     batch_size, max_T, _ , out_dim = mu.shape
     # Get the indexes of the largest pi 
-    _, max_component = torch.max(pi, dim=2) # shape (B, max(T), 1)
+    _, max_component = torch.max(pi, dim=2) # (B, max(T), 1)
     mode = torch.zeros(batch_size, max_T, out_dim)
     for i in range(batch_size):
         for j in range(max_T):
