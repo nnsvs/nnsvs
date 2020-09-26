@@ -178,7 +178,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 	model.netG.hidden_dim=128 \
 	model.netG.num_layers=2 \
 	+model.netG.num_gaussians=10 \
-        data.batch_size=2 \
+        data.batch_size=1 \
         resume.checkpoint=$resume_checkpoint
 fi
 
