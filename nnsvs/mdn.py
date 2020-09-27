@@ -24,7 +24,7 @@ class MDNLayer(nn.Module):
         minibatch (B, max(T), D_in): B is the batch size and max(T) is the max frame lengths
             in this batch, and D_in is in_dim
     Output:
-        pi, sigma, mu (B, max(T), D_out), (B, max(T), G, D_out), (B, max(T), G, D_out): 
+        pi, sigma, mu (B, max(T), G), (B, max(T), G, D_out), (B, max(T), G, D_out): 
             G is num_gaussians and D_out is out_dim.
             pi is a multinomial distribution of the Gaussians. 
             mu and sigma are the mean and the standard deviation of each Gaussian.
@@ -35,12 +35,14 @@ class MDNLayer(nn.Module):
         self.out_dim = out_dim
         self.num_gaussians = num_gaussians
 
-        self.pi = nn.Linear(in_dim, num_gaussians)
+        self.pi = nn.Sequential(nn.Linear(in_dim, num_gaussians),
+                                nn.Softmax(dim=2)
+        )                
         self.sigma = nn.Linear(in_dim, out_dim * num_gaussians)
         self.mu = nn.Linear(in_dim, out_dim * num_gaussians)
 
     def forward(self, minibatch):
-        pi = F.softmax(self.pi(minibatch), -1)
+        pi = self.pi(minibatch) 
         sigma = torch.exp(self.sigma(minibatch))
         sigma = sigma.view(len(minibatch), -1, self.num_gaussians, self.out_dim)        
         mu = self.mu(minibatch)
