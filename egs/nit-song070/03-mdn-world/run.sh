@@ -23,6 +23,8 @@ batch_size=4
 stage=0
 stop_stage=0
 
+num_gaussians=2
+
 # exp tag
 tag="" # tag for managing experiments.
 
@@ -139,7 +141,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 	model.netG._target_=nnsvs.model.MDN \
 	model.netG.hidden_dim=128 \
 	model.netG.num_layers=2 \
-	+model.netG.num_gaussians=500 \
+	+model.netG.num_gaussians=$num_gaussians \
         data.batch_size=$batch_size \
         resume.checkpoint=$resume_checkpoint 
 	
@@ -161,6 +163,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 	model.netG.hidden_dim=128 \
 	model.netG.num_layers=2 \
 	+model.netG.num_gaussians=500 \
+	+model.netG.num_gaussians=$num_gaussians \
 	~model.netG.bidirectional=True \
         data.batch_size=$batch_size \
         resume.checkpoint=$resume_checkpoint
