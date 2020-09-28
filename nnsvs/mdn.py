@@ -2,10 +2,7 @@
 
 import torch
 from torch import nn
-<<<<<<< HEAD
-=======
 import torch.nn.functional as F
->>>>>>> mdn_dev
 
 class MDNLayer(nn.Module):
     """ Mixture Density Network layer
@@ -27,11 +24,7 @@ class MDNLayer(nn.Module):
         minibatch (B, max(T), D_in): B is the batch size and max(T) is the max frame lengths
             in this batch, and D_in is in_dim
     Output:
-<<<<<<< HEAD
-        pi, sigma, mu (B, max(T), D_out), (B, max(T), G, D_out), (B, max(T), G, D_out): 
-=======
         pi, sigma, mu (B, max(T), G), (B, max(T), G, D_out), (B, max(T), G, D_out): 
->>>>>>> mdn_dev
             G is num_gaussians and D_out is out_dim.
             pi is a multinomial distribution of the Gaussians. 
             mu and sigma are the mean and the standard deviation of each Gaussian.
@@ -43,13 +36,8 @@ class MDNLayer(nn.Module):
         self.num_gaussians = num_gaussians
 
         self.pi = nn.Sequential(nn.Linear(in_dim, num_gaussians),
-<<<<<<< HEAD
-                                nn.Softmax(dim=1)
-        )                                
-=======
                                 nn.Softmax(dim=2)
         )                
->>>>>>> mdn_dev
         self.sigma = nn.Linear(in_dim, out_dim * num_gaussians)
         self.mu = nn.Linear(in_dim, out_dim * num_gaussians)
 
@@ -75,22 +63,6 @@ def mdn_loss(pi, sigma, mu, target):
     Returns:
         loss (B, max(T)): Negative Log Likelihood of Mixture Density Networks.
     """
-<<<<<<< HEAD
-    # Expand the dim of target from (B,max(T),D_out) -> (B,max(T),1,D_out) -> (B,max(T),G,D_out)
-    target = target.unsqueeze(2).expand_as(sigma)
-    # Create gaussians with mean=mu and variance=sigma^2
-    g = torch.distributions.Normal(loc=mu, scale=sigma)
-    # p(y|x,w) = exp(log p(y|x,w))
-    loss = torch.exp(g.log_prob(target))
-    # Sum along the dimension of target variables to reduce the dim of loss
-    # (B, max(T), G, D_out) -> (B, max(T), G)
-    loss = torch.sum(loss, dim=3)
-    # Sum all Gaussians with weight coefficients pi
-    # (B, max(T), G) -> (B, max(T))
-    loss = torch.sum(loss * pi, dim=2)
-    # Calculate negative log likelihood and average it
-    return torch.mean(-torch.log(loss), dim=1)
-=======
     # Expand the dim of target as (B,max(T),D_out) -> (B,max(T),1,D_out) -> (B,max(T),G,D_out)
     target = target.unsqueeze(2).expand_as(sigma)
 
@@ -123,7 +95,6 @@ def to_one_hot(tensor, n, fill_with=1.):
         one_hot = one_hot.cuda()
     one_hot.scatter_(len(tensor.size()), tensor.unsqueeze(-1), fill_with)
     return one_hot
->>>>>>> mdn_dev
 
 def mdn_sample_mode(pi, mu):
     """ Returns the mean of the Gaussian component whose weight coefficient is the largest
@@ -138,17 +109,6 @@ def mdn_sample_mode(pi, mu):
         mode (B, max(T), D_out): The means of the Gaussians whose weight coefficient (pi) is the largest.
     """
     
-<<<<<<< HEAD
-    batch_size, max_T, _ , out_dim = mu.shape
-    # Get the indexes of the largest pi 
-    _, max_component = torch.max(pi, dim=2) # (B, max(T), 1)
-    mode = torch.zeros(batch_size, max_T, out_dim)
-    for i in range(batch_size):
-        for j in range(max_T):
-            for k in range(out_dim):
-                mode[i, j, k] = mu[i, j, max_component[i, j], k]
-    return mode
-=======
     batch_size, max_T, num_gaussians , out_dim = mu.shape
     # Get the indexes of the largest pi
     _, max_component = torch.max(pi, dim=2) # (B, max(T))
@@ -206,4 +166,3 @@ def mdn_sample(pi, sigma, mu):
     sample = dist.sample()
     
     return sample
->>>>>>> mdn_dev
