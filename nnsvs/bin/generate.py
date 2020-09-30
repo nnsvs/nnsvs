@@ -17,7 +17,7 @@ from nnsvs.gen import get_windows
 from nnsvs.multistream import multi_stream_mlpg
 from nnsvs.bin.train import NpyFileSource
 from nnsvs.logger import getLogger
-from nnsvs.mdn import mdn_sample_mode
+from nnsvs.mdn import mdn_sample
 
 logger = None
 
@@ -49,8 +49,8 @@ def my_app(config : DictConfig) -> None:
         for idx in tqdm(range(len(in_feats))):
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
             if model.prediction_type == "probabilistic":
-                pi, _, mu = model(feats, [feats.shape[1]])
-                out = mdn_sample_mode(pi, mu).squeeze(0).cpu().data.numpy()
+                pi, sigma, mu = model(feats, [feats.shape[1]])
+                out = mdn_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
             else:
                 out = model(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
 

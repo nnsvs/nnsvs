@@ -74,7 +74,7 @@ class TestMDN(unittest.TestCase):
         y = torch.from_numpy(self.y_train_inv.reshape(self.batch_size, -1, self.d_out)).to(self.device) # (B, max(T), D_out)
         for e in range(3000):
             self.model.zero_grad()
-            pi, sigma, mu = self.model.forward(x)
+            pi, sigma, mu = self.model(x)
             loss = mdn.mdn_loss(pi, sigma, mu, y).mean()
             if e % 100 == 0:    
                 print(f"loss: {loss.data.item()}")
@@ -84,7 +84,7 @@ class TestMDN(unittest.TestCase):
     def test_mdn_sample_mode(self):
         self.test_mdn_loss()
             
-        pi, sigma, mu = self.model.forward(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
+        pi, sigma, mu = self.model(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
         samples = mdn.mdn_sample_mode(pi, mu).squeeze(0).cpu().detach().numpy()
 
         for i, sample in enumerate(samples):
@@ -96,7 +96,7 @@ class TestMDN(unittest.TestCase):
     def test_mdn_sample(self):
         self.test_mdn_loss()
             
-        pi, sigma, mu = self.model.forward(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
+        pi, sigma, mu = self.model(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
         samples = mdn.mdn_sample(pi, sigma, mu).squeeze(0).cpu().detach().numpy()
 
         for i, sample in enumerate(samples):

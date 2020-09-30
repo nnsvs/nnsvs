@@ -84,32 +84,32 @@ class LSTMRNN(nn.Module):
         return out
 
 class RMDN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0, num_gaussians=30):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0, num_gaussians=8):
         super(RMDN, self).__init__()
+        self.linear = nn.Linear(in_dim, hidden_dim)
         self.num_direction=2 if bidirectional else 1
-        self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers, 
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers, 
                             bidirectional=bidirectional, batch_first=True, 
                             dropout=dropout)
         self.mdn = MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians=num_gaussians)
         self.prediction_type="probabilistic"
     def forward(self, x, lengths):
-        sequence = pack_padded_sequence(x, lengths, batch_first=True)
+        out = self.linear(x)
+        sequence = pack_padded_sequence(out, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = self.mdn(out)
         return out
 
 class MDN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0, num_gaussians=30):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0, num_gaussians=8):
         super(MDN, self).__init__()
-        self.first_linear = nn.Linear(in_dim, hidden_dim)
-        self.hidden_layers = nn.ModuleList(
-            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)])
-        self.tanh = nn.Tanh()
-        self.mdn = MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)
+        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
+        if num_layers > 1:
+            for _ in range(num_layers - 1):
+                model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+        model += [MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)]
+        self.model = nn.Sequential(*model)
         self.prediction_type="probabilistic"
     def forward(self, x, lengths=None):
-        out = self.tanh(self.first_linear(x))
-        for hl in self.hidden_layers:
-            out = self.tanh(hl(out))
-        return self.mdn(out)
+        return self.model(x)

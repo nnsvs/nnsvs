@@ -15,7 +15,7 @@ from nnsvs.io.hts import get_note_indices
 from nnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
 from nnsvs.multistream import select_streams, split_streams
 
-from nnsvs.mdn import mdn_sample_mode
+from nnsvs.mdn import mdn_sample
 
 def get_windows(num_window=1):
     windows = [(0, 0, np.array([1.0]))]
@@ -83,8 +83,8 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
     # Run model
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
     if timelag_model.prediction_type == "probabilistic":
-        pi, _, mu = timelag_model(x, [x.shape[1]])
-        y = mdn_sample_mode(pi, mu).squeeze(0).cpu()
+        pi, sigma, mu = timelag_model(x, [x.shape[1]])
+        y = mdn_sample(pi, sigma, mu).squeeze(0).cpu()
     else:
         y = timelag_model(x, [x.shape[1]]).squeeze(0).cpu()
 
@@ -167,8 +167,8 @@ def predict_duration(device, labels, duration_model, duration_in_scaler, duratio
     x = x.view(1, -1, x.size(-1))
 
     if duration_model.prediction_type == "probabilistic":
-        pi, _, mu = duration_model(x, [x.shape[1]])
-        pred_durations = mdn_sample_mode(pi, mu).squeeze(0).cpu().data.numpy()
+        pi, sigma, mu = duration_model(x, [x.shape[1]])
+        pred_durations = mdn_sample(pi,sigma, mu).squeeze(0).cpu().data.numpy()
     else:
         pred_durations = duration_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
@@ -210,8 +210,8 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
     x = x.view(1, -1, x.size(-1))
 
     if acoustic_model.prediction_type == "probabilistic":
-        pi, _, mu = acoustic_model(x, [x.shape[1]])
-        pred_acoustic = mdn_sample_mode(pi, mu).squeeze(0).cpu().data.numpy()
+        pi, sigma, mu = acoustic_model(x, [x.shape[1]])
+        pred_acoustic = mdn_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
     else:
         pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
