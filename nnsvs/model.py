@@ -71,6 +71,7 @@ class LSTMRNN(nn.Module):
         super(LSTMRNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
+        self.relu = nn.ReLU()
         self.num_direction =  2 if bidirectional else 1
         self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers,
             bidirectional=bidirectional, batch_first=True, dropout=dropout)
@@ -87,6 +88,7 @@ class RMDN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0, num_gaussians=8):
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
+        self.relu = nn.ReLU()
         self.num_direction=2 if bidirectional else 1
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers, 
                             bidirectional=bidirectional, batch_first=True, 
@@ -95,7 +97,7 @@ class RMDN(nn.Module):
         self.prediction_type="probabilistic"
     def forward(self, x, lengths):
         out = self.linear(x)
-        sequence = pack_padded_sequence(out, lengths, batch_first=True)
+        sequence = pack_padded_sequence(self.relu(out), lengths, batch_first=True)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = self.mdn(out)
