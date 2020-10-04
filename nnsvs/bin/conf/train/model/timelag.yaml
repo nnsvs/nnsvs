@@ -3,6 +3,7 @@
 stream_sizes: [1]
 has_dynamic_features: [false]
 stream_weights: [1]
+stream_wise_training: false
 
 netG:
   _target_: nnsvs.model.FeedForwardNet

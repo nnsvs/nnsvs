@@ -20,9 +20,9 @@ logger = None
 
 
 def synthesis(config, device, label_path, question_path,
-        timelag_model, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_in_scaler, acoustic_out_scaler):
+              timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+              duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+              acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler):
     # load labels and question
     labels = hts.load(label_path).round_()
     binary_dict, continuous_dict = hts.load_question_set(
@@ -40,34 +40,50 @@ def synthesis(config, device, label_path, question_path,
         duration_modified_labels = labels
     else:
         # Time-lag
-        lag = predict_timelag(device, labels, timelag_model, timelag_in_scaler,
-            timelag_out_scaler, binary_dict, continuous_dict, pitch_indices,
-            log_f0_conditioning, config.timelag.allowed_range)
+        lag = predict_timelag(device, labels, timelag_model, timelag_config,
+                              timelag_in_scaler, timelag_out_scaler, binary_dict,
+                              continuous_dict, pitch_indices, log_f0_conditioning,
+                              config.timelag.allowed_range)
 
         # Timelag predictions
-        durations = predict_duration(device, labels, duration_model,
-            duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
-            pitch_indices, log_f0_conditioning)
+        durations = predict_duration(device, labels, duration_model, duration_config,
+                                     duration_in_scaler, duration_out_scaler, lag, binary_dict,
+                                     continuous_dict, pitch_indices, log_f0_conditioning)
 
         # Normalize phoneme durations
         duration_modified_labels = postprocess_duration(labels, durations, lag)
 
     # Predict acoustic features
-    acoustic_features = predict_acoustic(device, duration_modified_labels, acoustic_model,
-        acoustic_in_scaler, acoustic_out_scaler, binary_dict, continuous_dict,
-        config.acoustic.subphone_features, pitch_indices, log_f0_conditioning)
+    acoustic_features = predict_acoustic(device, duration_modified_labels, acoustic_model, acoustic_config, 
+                                         acoustic_in_scaler, acoustic_out_scaler, binary_dict, continuous_dict,
+                                         config.acoustic.subphone_features, pitch_indices, log_f0_conditioning)
 
     # Waveform generation
     generated_waveform = gen_waveform(
         duration_modified_labels, acoustic_features, acoustic_out_scaler,
-        binary_dict, continuous_dict, config.acoustic.stream_sizes,
-        config.acoustic.has_dynamic_features,
+        binary_dict, continuous_dict, acoustic_config.stream_sizes,
+        acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features, log_f0_conditioning,
-        pitch_idx, config.acoustic.num_windows,
+        pitch_idx, acoustic_config.num_windows,
         config.acoustic.post_filter, config.sample_rate, config.frame_period,
         config.acoustic.relative_f0)
 
     return generated_waveform
+
+def resume(config, device, checkpoint, stream_id=None):
+    if stream_id is not None and\
+       len(config.stream_sizes) == len(checkpoint):
+        model = hydra.utils.instantiate(config.models[stream_id].netG).to(device)
+        cp = torch.load(to_absolute_path(checkpoint[stream_id]),
+                        map_location=lambda storage, loc: storage)
+    else:
+        model = hydra.utils.instantiate(config.netG).to(device)
+        cp = torch.load(to_absolute_path(checkpoint),
+                        map_location=lambda storage, loc: storage)
+
+    model.load_state_dict(cp["state_dict"])
+
+    return model
 
 
 @hydra.main(config_path="conf/synthesis/config.yaml")
@@ -83,33 +99,51 @@ def my_app(config : DictConfig) -> None:
 
     # timelag
     timelag_config = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
-    timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.timelag.checkpoint),
-        map_location=lambda storage, loc: storage)
-    timelag_model.load_state_dict(checkpoint["state_dict"])
+    if timelag_config.stream_wise_training and \
+       len(timelag_config.models) == len(timelag_config.stream_sizes) and \
+       len(config.timelag.checkpoint) == len(timelag_config.stream_sizes):
+        timelag_model = []
+        for stream_id in range(len(timelag_config.stream_sizes)):
+            model = resume(timelag_config, device, config.timelag.checkpoint, stream_id)
+            timelag_model.append(model.eval())
+    else:
+        timelag_model = resume(timelag_config, device, config.timelag.checkpoint, None)
+        timelag_model.eval()
+
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
     timelag_out_scaler = joblib.load(to_absolute_path(config.timelag.out_scaler_path))
-    timelag_model.eval()
 
     # duration
     duration_config = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
-    duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.duration.checkpoint),
-        map_location=lambda storage, loc: storage)
-    duration_model.load_state_dict(checkpoint["state_dict"])
+    if duration_config.stream_wise_training and \
+       len(duration_config.models) == len(duration_config.stream_sizes) and \
+       len(config.duration.checkpoint) == len(duration_config.stream_sizes):
+        duration_model = []
+        for stream_id in range(len(duration_config.stream_sizes)):
+            model = resume(duration_config, device, config.duration.checkpoint, stream_id)
+            duration_model.append(model.eval())
+    else:
+        duration_model = resume(duration_config, device, config.duration.checkpoint, None)
+        duration_model.eval()
+
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
     duration_out_scaler = joblib.load(to_absolute_path(config.duration.out_scaler_path))
-    duration_model.eval()
-
+        
     # acoustic model
     acoustic_config = OmegaConf.load(to_absolute_path(config.acoustic.model_yaml))
-    acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
-    checkpoint = torch.load(to_absolute_path(config.acoustic.checkpoint),
-        map_location=lambda storage, loc: storage)
-    acoustic_model.load_state_dict(checkpoint["state_dict"])
+    if acoustic_config.stream_wise_training and \
+       len(acoustic_config.models) == len(acoustic_config.stream_sizes) and \
+       len(config.acoustic.checkpoint) == len(acoustic_config.stream_sizes):
+        acoustic_model = []
+        for stream_id in range(len(acoustic_config.stream_sizes)):
+            model = resume(acoustic_config, device, config.acoustic.checkpoint, stream_id)
+            acoustic_model.append(model.eval())
+    else:
+        acoustic_model = resume(acoustic_config, device, config.acoustic.checkpoint, None)
+        acoustic_model.eval()
+        
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
     acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
-    acoustic_model.eval()
 
     # Run synthesis for each utt.
     question_path = to_absolute_path(config.question_path)
@@ -128,9 +162,9 @@ def my_app(config : DictConfig) -> None:
                     raise RuntimeError(f"Label file does not exist: {label_path}")
 
                 wav = synthesis(config, device, label_path, question_path,
-                    timelag_model, timelag_in_scaler, timelag_out_scaler,
-                    duration_model, duration_in_scaler, duration_out_scaler,
-                    acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+                                timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+                                duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+                                acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
                 wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
 
                 out_wav_path = join(out_dir, f"{utt_id}.wav")

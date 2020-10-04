@@ -1,0 +1,42 @@
+# @package _group_
+# (mgc, lf0, vuv, bap)
+stream_sizes: [180, 3, 1, 15]
+has_dynamic_features: [true, true, false, true]
+num_windows: 3
+# If None, automatically set based on stream sizes
+stream_weights:
+stream_wise_training: true
+
+models:
+  # mgc
+  - netG:
+      _target_: nnsvs.model.Conv1dResnet
+      in_dim: 424
+      out_dim: 180
+      hidden_dim: 128
+      num_layers: 6
+      dropout: 0.1
+  # f0
+  - netG:
+      _target_: nnsvs.model.LSTMRNN
+      in_dim: 424
+      out_dim: 3
+      hidden_dim: 64
+      num_layers: 2
+      dropout: 0.1
+  # vuv
+  - netG:
+      _target_: nnsvs.model.Conv1dResnet
+      in_dim: 424
+      out_dim: 1
+      hidden_dim: 128
+      num_layers: 6
+      dropout: 0.1
+  # bap
+  - netG:
+      _target_: nnsvs.model.Conv1dResnet
+      in_dim: 424
+      out_dim: 15
+      hidden_dim: 128
+      num_layers: 6
+      dropout: 0.1

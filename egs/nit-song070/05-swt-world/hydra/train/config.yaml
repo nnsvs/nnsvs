@@ -1,0 +1,52 @@
+# @package _global_
+
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+  - model: acoustic
+
+verbose: 100
+
+data:
+  # training set
+  train_no_dev:
+    in_dir:
+    out_dir:
+
+  # development set
+  dev:
+    in_dir:
+    out_dir:
+
+  # data loader
+  num_workers: 2
+  batch_size: 8
+  pin_memory: true
+
+optim:
+  optimizer:
+    name: Adam
+    params:
+      lr: 0.001
+      betas: [0.5, 0.999]
+      weight_decay: 0.0
+  lr_scheduler:
+    name: StepLR
+    params:
+      step_size: 20
+      gamma: 0.5
+
+train:
+  out_dir: exp
+  nepochs: 50
+  checkpoint_epoch_interval: 20
+
+  stream_wise_loss: false
+
+resume:
+  checkpoint:
+  load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: false

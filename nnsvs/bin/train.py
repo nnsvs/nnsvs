@@ -2,7 +2,7 @@
 
 import hydra
 from hydra.utils import to_absolute_path
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 import numpy as np
 from glob import glob
 from tqdm import tqdm
@@ -104,24 +104,33 @@ def get_data_loaders(config):
     return data_loaders
 
 
-def save_checkpoint(config, model, optimizer, lr_scheduler, epoch):
+def save_checkpoint(config, model, optimizer, lr_scheduler, epoch, stream_id=None):
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
-    checkpoint_path = join(out_dir, "checkpoint_epoch{:04d}.pth".format(epoch))
+    if stream_id is not None:
+        checkpoint_path = join(out_dir, f"stream_{stream_id}_checkpoint_epoch{epoch:04d}.pth")
+        lastest_path = join(out_dir, f"stream_{stream_id}_latest.pth")
+    else:
+        checkpoint_path = join(out_dir, f"checkpoint_epoch{epoch:04d}.pth")
+        lastest_path = join(out_dir, "latest.pth")
+
     torch.save({
         "state_dict": model.state_dict(),
         "optimizer_state": optimizer.state_dict(),
         "lr_scheduler_state": lr_scheduler.state_dict(),
     }, checkpoint_path)
     logger.info(f"Checkpoint is saved at {checkpoint_path}")
-    lastest_path = join(out_dir, "latest.pth")
     shutil.copyfile(checkpoint_path, lastest_path)
 
 
-def save_best_checkpoint(config, model, optimizer, best_loss):
+def save_best_checkpoint(config, model, optimizer, best_loss, stream_id=None):
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
-    checkpoint_path = join(out_dir, "best_loss.pth")
+    if stream_id is not None:
+        checkpoint_path = join(out_dir, f"stream_{stream_id}_best_loss.pth")
+    else:
+        checkpoint_path = join(out_dir, "best_loss.pth")
+        
     torch.save({
         "state_dict": model.state_dict(),
         "optimizer_state": optimizer.state_dict(),
@@ -139,7 +148,7 @@ def get_stream_weight(stream_weights, stream_sizes):
     return w
 
 
-def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
+def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders, stream_id=None):
     criterion = nn.MSELoss(reduction="none")
     logger.info("Start utterance-wise training...")
 
@@ -157,6 +166,9 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 sorted_lengths, indices = torch.sort(lengths, dim=0, descending=True)
                 x, y = x[indices].to(device), y[indices].to(device)
 
+                if config.model.stream_wise_training and stream_id is not None:
+                    y = split_streams(y, config.model.stream_sizes)[stream_id]
+                    
                 optimizer.zero_grad()
 
                 # Run forwaard
@@ -165,7 +177,7 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 # Compute loss
                 mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
 
-                if config.train.stream_wise_loss:
+                if not config.model.stream_wise_training and config.train.stream_wise_loss:
                     # Strean-wise loss
                     streams = split_streams(y, config.model.stream_sizes)
                     streams_hat = split_streams(y_hat, config.model.stream_sizes)
@@ -189,20 +201,56 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
             logger.info(f"[{phase}] [Epoch {epoch}]: loss {ave_loss}")
             if not train and ave_loss < best_loss:
                 best_loss = ave_loss
-                save_best_checkpoint(config, model, optimizer, best_loss)
+                save_best_checkpoint(config, model, optimizer, best_loss, stream_id)
 
         # step per each epoch (may consider updating per iter.)
         lr_scheduler.step()
 
         if epoch % config.train.checkpoint_epoch_interval == 0:
-            save_checkpoint(config, model, optimizer, lr_scheduler, epoch)
+            save_checkpoint(config, model, optimizer, lr_scheduler, epoch, stream_id)
 
     # save at last epoch
-    save_checkpoint(config, model, optimizer, lr_scheduler, config.train.nepochs)
+    save_checkpoint(config, model, optimizer, lr_scheduler, config.train.nepochs, stream_id)
     logger.info(f"The best loss was {best_loss}")
 
     return model
 
+def setup(config, device, stream_id=None):
+
+    print(stream_id)
+    if stream_id is not None:
+        model = hydra.utils.instantiate(config.model.models[stream_id].netG).to(device)
+    else:
+        model = hydra.utils.instantiate(config.model.netG).to(device)
+        
+    # Optimizer
+    optimizer_class = getattr(optim, config.optim.optimizer.name)
+    optimizer = optimizer_class(model.parameters(), **config.optim.optimizer.params)
+
+    # Scheduler
+    lr_scheduler_class = getattr(optim.lr_scheduler, config.optim.lr_scheduler.name)
+    lr_scheduler = lr_scheduler_class(optimizer, **config.optim.lr_scheduler.params)
+
+    # Resume
+    checkpoint=None
+    if type(config.resume.checkpoint) is ListConfig and \
+       len(config.resume.checkpoint) == len(config.model.stream_sizes):
+        logger.info(f"Load weights from {config.resume.checkpoint[stream_id]}")
+        checkpoint = torch.load(to_absolute_path(config.resume.checkpoint[stream_id]))
+    elif type(config.resume.checkpoint) is str and \
+         len(config.resume.checkpoint) > 0:
+        logger.info(f"Load weights from {config.resume.checkpoint}")
+        checkpoint = torch.load(to_absolute_path(config.resume.checkpoint))
+
+    if checkpoint is not None:
+        model.load_state_dict(checkpoint["state_dict"])
+
+    if config.resume.load_optimizer:
+        logger.info("Load optimizer state")
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
+
+    return model, optimizer, lr_scheduler
 
 @hydra.main(config_path="conf/train/config.yaml")
 def my_app(config : DictConfig) -> None:
@@ -218,39 +266,27 @@ def my_app(config : DictConfig) -> None:
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
 
     device = torch.device("cuda" if use_cuda else "cpu")
-
-    # Model
-    model = hydra.utils.instantiate(config.model.netG).to(device)
-
-    # Optimizer
-    optimizer_class = getattr(optim, config.optim.optimizer.name)
-    optimizer = optimizer_class(model.parameters(), **config.optim.optimizer.params)
-
-    # Scheduler
-    lr_scheduler_class = getattr(optim.lr_scheduler, config.optim.lr_scheduler.name)
-    lr_scheduler = lr_scheduler_class(optimizer, **config.optim.lr_scheduler.params)
-
+    
     data_loaders = get_data_loaders(config)
 
-    # Resume
-    if config.resume.checkpoint is not None and len(config.resume.checkpoint) > 0:
-        logger.info("Load weights from {}".format(config.resume.checkpoint))
-        checkpoint = torch.load(to_absolute_path(config.resume.checkpoint))
-        model.load_state_dict(checkpoint["state_dict"])
-        if config.resume.load_optimizer:
-            logger.info("Load optimizer state")
-            optimizer.load_state_dict(checkpoint["optimizer_state"])
-            lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
-
+    if config.model.stream_wise_training and \
+    len(config.model.models) == len(config.model.stream_sizes):
+        logger.info(f"stream-wise training is enabled")
+        for stream_id in range(len(config.model.stream_sizes)):
+            model, optimizer, lr_scheduler = setup(config, device, stream_id)
+            # Run training loop
+            train_loop(config, device, model, optimizer, lr_scheduler, data_loaders, stream_id)
+            del model, optimizer, lr_scheduler
+    else:
+        model, optimizer, lr_scheduler = setup(config, device, None)
+        # Run training loop
+        train_loop(config, device, model, optimizer, lr_scheduler, data_loaders, None)
+        
     # Save model definition
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     with open(join(out_dir, "model.yaml"), "w") as f:
         OmegaConf.save(config.model, f)
-
-    # Run training loop
-    train_loop(config, device, model, optimizer, lr_scheduler, data_loaders)
-
 
 def entry():
     my_app()

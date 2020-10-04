@@ -5,6 +5,7 @@ has_dynamic_features: [true, true, false, true]
 num_windows: 3
 # If None, automatically set based on stream sizes
 stream_weights:
+stream_wise_training: false
 
 netG:
   _target_: nnsvs.model.Conv1dResnet
