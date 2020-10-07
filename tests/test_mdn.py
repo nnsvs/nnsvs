@@ -51,7 +51,6 @@ class TestMDN(unittest.TestCase):
         self.x_test = np.array([0.0, 0.2, 0.5, 0.8, 1.0]).astype(np.float32)
 
         # [lower_limit, upper_limit] corresponding to x_test
-        self.y_test_mode_range =np.array([[-0.5, 0.5], [0.0, 1.0], [0.4, 0.6], [0.85, 0.95], [0.9, 1.0]]).astype(np.float32)
         self.y_test_range = np.array([[-0.5, 1], [-0.5, 2.0], [0.2, 0.9], [0.8, 1.0], [0.85, 1.05]]).astype(np.float32)
         
         hidden_dim=50
@@ -81,23 +80,25 @@ class TestMDN(unittest.TestCase):
             loss.backward()
             self.opt.step()
         
-    def test_mdn_sample_mode(self):
+    def test_mdn_get_most_probable_sigma_and_mu(self):
         self.test_mdn_loss()
             
         pi, sigma, mu = self.model(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
-        samples = mdn.mdn_sample_mode(pi, mu).squeeze(0).cpu().detach().numpy()
+        _, max_mu = mdn.mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+        max_mu = max_mu.squeeze(0).cpu().detach().numpy()
+        print(max_mu.shape)
 
-        for i, sample in enumerate(samples):
-            lower_limit = self.y_test_mode_range[i][0]
-            upper_limit = self.y_test_mode_range[i][1]
+        for i, sample in enumerate(max_mu):
+            lower_limit = self.y_test_range[i][0]
+            upper_limit = self.y_test_range[i][1]
             assert lower_limit < sample and upper_limit > sample
             print(f"sample: {sample}, lower_limit: {lower_limit}, upper_limit: {upper_limit}")
             
-    def test_mdn_sample(self):
+    def test_mdn_get_sample(self):
         self.test_mdn_loss()
             
         pi, sigma, mu = self.model(torch.from_numpy(self.x_test.reshape(1,-1,self.d_in)).to(self.device))
-        samples = mdn.mdn_sample(pi, sigma, mu).squeeze(0).cpu().detach().numpy()
+        samples = mdn.mdn_get_sample(pi, sigma, mu).squeeze(0).cpu().detach().numpy()
 
         for i, sample in enumerate(samples):
             lower_limit = self.y_test_range[i][0]

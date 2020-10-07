@@ -104,41 +104,8 @@ def to_one_hot(tensor, n, fill_with=1.):
     one_hot.scatter_(len(tensor.size()), tensor.unsqueeze(-1), fill_with)
     return one_hot
 
-def mdn_sample_mode(pi, mu):
-    """ Returns the mean of the Gaussian component whose weight coefficient is the largest
-    as the most probable predictions.
-
-    Arguments:
-        pi (B, T, G): The multinomial distribution of the Gaussians(not Softmax-ed). 
-            B is the batch size, T is data length of this batch, 
-            G is num_gaussians of class MDNLayer.
-        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
-            MDNLayer.
-    Returns:
-        mode (B, T, D_out): The means of the Gaussians whose weight coefficient (pi) is the largest.
-    """
-    
-    batch_size, _, num_gaussians , out_dim = mu.shape
-    # Get the indexes of the largest pi
-    _, max_component = torch.max(pi, dim=2) # (B, T)
-
-    # Convert max_component to one_hot manner
-    # (B, T) -> (B, T, G)
-    one_hot = to_one_hot(max_component, num_gaussians)
-
-    # Expand the dim of one_hot as (B, T, G) -> (B, T, G, d_out)
-    one_hot = one_hot.unsqueeze(3).expand_as(mu)
-    
-    # Multply one_hot and sum to get mean(mu) of the Gaussians
-    # whose weight coefficient(pi) is the largest.
-    #  (B, T, G, d_out) -> (B, T, d_out)
-    max_mu = torch.sum(mu * one_hot, dim=2)
-
-    return max_mu
-
-
-def mdn_sample(pi, sigma, mu):
-    """ Sample from mixture of the Gaussian component whose weight coefficient is the largest
+def mdn_get_most_probable_sigma_and_mu(pi, sigma, mu):
+    """ Retrun the mean and variance of the Gaussian component whose weight coefficient is the largest
     as the most probable predictions.
 
     Arguments:
@@ -150,7 +117,7 @@ def mdn_sample(pi, sigma, mu):
         mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
             MDNLayer.
     Returns:
-        sample (B, T, D_out): Sample from mixture of the Gaussian component
+        sigma, mu (B, T, D_out), (B, T, D_out): the mean and variance of the most probabble Gaussian component
     """
     batch_size, _, num_gaussians , out_dim = mu.shape
     # Get the indexes of the largest pi
@@ -168,6 +135,25 @@ def mdn_sample(pi, sigma, mu):
     #  (B, T, G, d_out) -> (B, T, d_out)
     max_mu = torch.sum(mu * one_hot, dim=2)
     max_sigma = torch.sum(sigma * one_hot, dim=2)
+
+    return max_sigma, max_mu
+
+def mdn_get_sample(pi, sigma, mu):
+    """ Sample from mixture of the Gaussian component whose weight coefficient is the largest
+    as the most probable predictions.
+
+    Arguments:
+        pi (B, T, G): The multinomial distribution of the Gaussians(not Softmax-ed). 
+            B is the batch size, T is data length of this batch, 
+            G is num_gaussians of class MDNLayer.
+        sigma (B, T, G, D_out): The standard deviation of the Gaussians. D_out is out_dim of class 
+            MDNLayer.
+        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
+            MDNLayer.
+    Returns:
+        sample (B, T, D_out): Sample from mixture of the Gaussian component
+    """
+    max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
 
     # Create gaussians with mean=max_mu and variance=max_sigma^2
     dist= torch.distributions.Normal(loc=max_mu, scale=max_sigma)

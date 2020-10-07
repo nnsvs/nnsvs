@@ -20,7 +20,7 @@ pretrained_expdir=
 
 batch_size=4
 nepochs=50
-num_gaussians=2
+num_gaussians=4
 
 stage=0
 stop_stage=0
@@ -138,11 +138,10 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_timelag/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_timelag/ \
         model=timelag train.out_dir=$expdir/timelag \
-	model.netG._target_=nnsvs.model.RMDN \
-	model.netG.hidden_dim=256 \
-	model.netG.num_layers=2 \
+	model.netG._target_=nnsvs.model.MDN \
+	model.netG.hidden_dim=1024 \
+	model.netG.num_layers=4 \
 	+model.netG.num_gaussians=$num_gaussians \
-	+model.netG.bidirectional=True \
         data.batch_size=$batch_size \
 	train.nepochs=$nepochs \
         resume.checkpoint=$resume_checkpoint 
@@ -161,10 +160,11 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_duration/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
         model=duration train.out_dir=$expdir/duration \
-	model.netG._target_=nnsvs.model.RMDN \
-	model.netG.hidden_dim=256 \
-	model.netG.num_layers=2 \
+	model.netG._target_=nnsvs.model.MDN \
+	model.netG.hidden_dim=1024 \
+	model.netG.num_layers=4 \
 	+model.netG.num_gaussians=$num_gaussians \
+	~model.netG.bidirectional=True \
         data.batch_size=$batch_size \
 	train.nepochs=$nepochs \
         resume.checkpoint=$resume_checkpoint
@@ -183,11 +183,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         data.dev.in_dir=$dump_norm_dir/$dev_set/in_acoustic/ \
         data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
         model=acoustic train.out_dir=$expdir/acoustic \
-	model.netG._target_=nnsvs.model.RMDN \
-	model.netG.hidden_dim=256 \
-	model.netG.num_layers=2 \
+	model.netG._target_=nnsvs.model.MDN \
+	model.netG.hidden_dim=1024 \
+	model.netG.num_layers=4 \
 	+model.netG.num_gaussians=$num_gaussians \
-	+model.netG.bidirectional=True \
         data.batch_size=$batch_size \
 	train.nepochs=$nepochs \
         resume.checkpoint=$resume_checkpoint 

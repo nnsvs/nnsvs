@@ -17,7 +17,7 @@ from nnsvs.gen import get_windows
 from nnsvs.multistream import multi_stream_mlpg
 from nnsvs.bin.train import NpyFileSource
 from nnsvs.logger import getLogger
-from nnsvs.mdn import mdn_sample
+from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 
 logger = None
 
@@ -48,20 +48,36 @@ def my_app(config : DictConfig) -> None:
     with torch.no_grad():
         for idx in tqdm(range(len(in_feats))):
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
+
             if model.prediction_type == "probabilistic":
+
                 pi, sigma, mu = model(feats, [feats.shape[1]])
-                out = mdn_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+                
+                if np.any(model_config.has_dynamic_features):
+                    max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+                   
+                    # Apply denormalization
+                    # (B, T, D_out) -> (T, D_out)
+                    max_sigma = max_sigma.squeeze(0).cpu().data.numpy() * scaler.var_
+                    max_mu = scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+                    # Apply MLPG
+                    # (T, D_out) -> (T, static_dim)
+                    out = multi_stream_mlpg(max_mu, max_sigma, get_windows(model_config.num_windows),
+                                            model_config.stream_sizes, model_config.has_dynamic_features)
+
+                else:
+                    # (T, D_out)
+                    out = mdn_get_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+                    out = scaler.inverse_transform(out)
             else:
                 out = model(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
+                out = scaler.inverse_transform(out)
 
-            out = scaler.inverse_transform(out)
-
-            # Apply MLPG if necessary
-            if np.any(model_config.has_dynamic_features):
-                windows = get_windows(3)
-                out = multi_stream_mlpg(
-                    out, scaler.var_, windows, model_config.stream_sizes,
-                    model_config.has_dynamic_features)
+                # Apply MLPG if necessary
+                if np.any(model_config.has_dynamic_features):
+                    out = multi_stream_mlpg(
+                        out, scaler.var_, get_windows(model_config.num_windows),
+                        model_config.stream_sizes, model_config.has_dynamic_features)
 
             name = basename(in_feats.collected_files[idx][0])
             out_path = join(out_dir, name)
