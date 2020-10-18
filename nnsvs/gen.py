@@ -97,9 +97,9 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
             pred_timelag = multi_stream_mlpg(max_mu, max_sigma, get_windows(timelag_config.num_windows),
                                               timelag_config.stream_sizes, timelag_config.has_dynamic_features)
         else:
-            pred_timelag = mdn_get_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
             # Apply denormalization
-            pred_timelag = timelag_out_scaler.inverse_transform(pred_timelag)
+            pred_timelag = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
         pred_timelag = timelag_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
@@ -203,9 +203,9 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
             pred_durations = multi_stream_mlpg(max_mu, max_sigma, get_windows(duration_config.num_windows),
                                               duration_config.stream_sizes, duration_config.has_dynamic_features)
         else:
-            pred_durations = mdn_get_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
             # Apply denormalization
-            pred_durations = duration_out_scaler.inverse_transform(pred_durations)
+            pred_durations = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
         pred_durations = duration_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
@@ -266,9 +266,9 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
             pred_acoustic = multi_stream_mlpg(max_mu, max_sigma, get_windows(acoustic_config.num_windows),
                                               acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
         else:
-            pred_acoustic = mdn_get_sample(pi, sigma, mu).squeeze(0).cpu().data.numpy()
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
             # Apply denormalization
-            pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)
+            pred_acoustic = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
         pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
