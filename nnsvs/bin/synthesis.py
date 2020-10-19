@@ -142,9 +142,9 @@ def my_app(config : DictConfig) -> None:
         out_wav_path = to_absolute_path(config.out_wav_path)
 
         wav = synthesis(config, device, label_path, question_path,
-            timelag_model, timelag_in_scaler, timelag_out_scaler,
-            duration_model, duration_in_scaler, duration_out_scaler,
-            acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+                        timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+                        duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+                        acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
         wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
         wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
 
