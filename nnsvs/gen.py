@@ -86,18 +86,18 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
     # Run model
     if timelag_model.prediction_type == "probabilistic":
         # (B, T, D_out)
-        pi, sigma, mu = timelag_model(x, [x.shape[1]])
+        log_pi, log_sigma, mu = timelag_model(x, [x.shape[1]])
         if np.any(timelag_config.has_dynamic_features):
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
-            max_sigma = max_sigma.squeeze(0).cpu().data.numpy() * timelag_out_scaler.var_
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * timelag_out_scaler.var_
             max_mu = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
             # (T, D_out) -> (T, static_dim)
-            pred_timelag = multi_stream_mlpg(max_mu, max_sigma, get_windows(timelag_config.num_windows),
+            pred_timelag = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(timelag_config.num_windows),
                                               timelag_config.stream_sizes, timelag_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_timelag = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
@@ -191,19 +191,19 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
 
     if duration_model.prediction_type == "probabilistic":
         # (B, T, D_out)
-        pi, sigma, mu = duration_model(x, [x.shape[1]])
+        log_pi, log_sigma, mu = duration_model(x, [x.shape[1]])
         if np.any(duration_config.has_dynamic_features):
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
-            max_sigma = max_sigma.squeeze(0).cpu().data.numpy() * duration_out_scaler.var_
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
             max_mu = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
             
             # (T, D_out) -> (T, static_dim)
-            pred_durations = multi_stream_mlpg(max_mu, max_sigma, get_windows(duration_config.num_windows),
+            pred_durations = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(duration_config.num_windows),
                                               duration_config.stream_sizes, duration_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_durations = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
@@ -252,21 +252,21 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
     x = x.view(1, -1, x.size(-1))
 
     if acoustic_model.prediction_type == "probabilistic":
-        pi, sigma, mu = acoustic_model(x, [x.shape[1]])
+        log_pi, log_sigma, mu = acoustic_model(x, [x.shape[1]])
         if np.any(acoustic_config.has_dynamic_features):
             # (B, T, D_out)
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
 
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
-            max_sigma = max_sigma.squeeze(0).cpu().data.numpy() * acoustic_out_scaler.var_
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * acoustic_out_scaler.var_
             max_mu = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
             
             # (T, D_out) -> (T, static_dim)
-            pred_acoustic = multi_stream_mlpg(max_mu, max_sigma, get_windows(acoustic_config.num_windows),
+            pred_acoustic = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(acoustic_config.num_windows),
                                               acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_acoustic = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:

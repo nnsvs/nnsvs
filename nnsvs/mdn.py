@@ -58,6 +58,7 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
             MDNLayer.
         mu (B , T, G, D_out): The means of the Gaussians. 
         target (B, T, D_out): The target variables.
+        log_sigma_min: minimum value of log_sigma
         reduce: If True, the losses are averaged for each batch.
     Returns:
         loss (B) or (B, T): Negative Log Likelihood of Mixture Density Networks.
@@ -65,11 +66,10 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
 
     # Clip log_sigma with log_sigma_min for numerical stability
     log_sigma = torch.clamp(log_sigma, min=log_sigma_min)
-       
     # Expand the dim of target as (B, T, D_out) -> (B, T, 1, D_out) -> (B, T,G, D_out)
     target = target.unsqueeze(2).expand_as(log_sigma)
 
-    # Create gaussians with mean=mu and variance=sigma^2
+    # Create gaussians with mean=mu and variance=torch.exp(log_sigma)^2
     dist = torch.distributions.Normal(loc=mu, scale=torch.exp(log_sigma))
 
     # Use torch.log_sum_exp instead of the combination of torch.sum and torch.log
@@ -83,7 +83,6 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
     #                                             = \sum_{i=1}^{D_out} log N(y_i|mu(x),sigma(x))
     # (B, T, G, D_out) -> (B, T, G)
     loss = torch.sum(dist.log_prob(target), dim=3) + log_pi
-    
     # Calculate negative log likelihood.
     # (B, T, G) -> (B, T)
     loss = -torch.logsumexp(loss, dim=2)
@@ -107,8 +106,8 @@ def to_one_hot(tensor, n, fill_with=1.):
     return one_hot
 
 def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
-    """ Retrun the mean and variance of the Gaussian component whose weight coefficient is the largest
-    as the most probable predictions.
+    """ Retrun the mean and standard deviation of the Gaussian component whose weight coefficient is 
+    the largest as the most probable predictions.
 
     Arguments:
         log_pi (B, T, G): The log of multinomial distribution of the Gaussians. 
@@ -119,7 +118,7 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
         mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
             MDNLayer.
     Returns:
-        sigma, mu (B, T, D_out), (B, T, D_out): the variances and means of 
+        sigma, mu (B, T, D_out), (B, T, D_out): the standard deviation and means of 
             the most probabble Gaussian component
     """
     batch_size, _, num_gaussians , out_dim = mu.shape
@@ -133,7 +132,7 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
     # Expand the dim of one_hot as  (B, T, G) -> (B, T, G, d_out)
     one_hot = one_hot.unsqueeze(3).expand_as(mu)
 
-    # Multply one_hot and sum to get mean(mu) and variance(log_sigma) of the Gaussians
+    # Multply one_hot and sum to get mean(mu) and standard deviation(sigma) of the Gaussians
     # whose weight coefficient(log_pi) is the largest.
     #  (B, T, G, d_out) -> (B, T, d_out)
     max_mu = torch.sum(mu * one_hot, dim=2)
