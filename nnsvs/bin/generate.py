@@ -67,7 +67,8 @@ def my_app(config : DictConfig) -> None:
 
                 else:
                     # (T, D_out)
-                    _ out = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu).squeeze(0).cpu().data.numpy()
+                    _, out = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+                    out = out.squeeze(0).cpu().data.numpy()
                     out = scaler.inverse_transform(out)
             else:
                 out = model(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
