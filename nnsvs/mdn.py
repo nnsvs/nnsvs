@@ -47,7 +47,7 @@ class MDNLayer(nn.Module):
         mu = mu.view(len(minibatch), -1, self.num_gaussians, self.out_dim)
         return log_pi, log_sigma, mu
 
-def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
+def mdn_loss(log_pi, log_sigma, mu, target, log_clamp_min=-7.0, reduce=True):
     """Calculates the error, given the MoG parameters and the target.
     The loss is the negative log likelihood of the data given the MoG
     parameters.
@@ -58,14 +58,15 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
             MDNLayer.
         mu (B , T, G, D_out): The means of the Gaussians. 
         target (B, T, D_out): The target variables.
-        log_sigma_min: minimum value of log_sigma
+        log_clamp_min: minimum value of logged values(log_pi, log_sigma, and torch.distributions.Normal.log_prob)
         reduce: If True, the losses are averaged for each batch.
     Returns:
         loss (B) or (B, T): Negative Log Likelihood of Mixture Density Networks.
     """
 
-    # Clip log_sigma with log_sigma_min for numerical stability
-    log_sigma = torch.clamp(log_sigma, min=log_sigma_min)
+    # Clip log_sigma and log_pi with log_clamp_min for numerical stability
+    log_sigma = torch.clamp(log_sigma, min=log_clamp_min)
+    log_pi = torch.clamp(log_pi, min=log_clamp_min)
     # Expand the dim of target as (B, T, D_out) -> (B, T, 1, D_out) -> (B, T,G, D_out)
     target = target.unsqueeze(2).expand_as(log_sigma)
 
@@ -82,7 +83,9 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_sigma_min=-7.0, reduce=True):
     # log N(y_1,y_2,...,y_{D_out}|mu(x),sigma(x)) = log N(y_1|mu(x),sigma(x))...N(y_{D_out}|mu(x),sigma(x))
     #                                             = \sum_{i=1}^{D_out} log N(y_i|mu(x),sigma(x))
     # (B, T, G, D_out) -> (B, T, G)
-    loss = torch.sum(dist.log_prob(target), dim=3) + log_pi
+    log_prob = dist.log_prob(target)
+    log_prob = torch.clamp(log_prob, min=log_clamp_min)
+    loss = torch.sum(log_prob, dim=3) + log_pi
     # Calculate negative log likelihood.
     # (B, T, G) -> (B, T)
     loss = -torch.logsumexp(loss, dim=2)
