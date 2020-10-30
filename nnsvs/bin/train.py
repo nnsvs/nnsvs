@@ -219,6 +219,10 @@ def my_app(config : DictConfig) -> None:
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
+    if config.train.use_detect_anomaly:
+        torch.autograd.set_detect_anomaly(True)
+        logger.info("Set to use torch.autograd.detect_anomaly")
+
     # Model
     model = hydra.utils.instantiate(config.model.netG).to(device)
 
