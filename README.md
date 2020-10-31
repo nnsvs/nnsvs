@@ -37,6 +37,9 @@ to install the rest of dependencies.
 - Command line programs: [nnsvs/bin/](nnsvs/bin) and its configurations [nnsvs/bin/conf/](nnsvs/bin/conf/)
 - Recipes: [egs/](egs/)
 
+## Python docstring style
+
+https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
 
 ## Recipes
 
@@ -53,7 +56,7 @@ That being said, I was just curious to see if I can make a better one than NEUTR
 ## History
 
 See [HISTORY.md](HISTORY.md)
-
+]
 ## Known issues
 
 
