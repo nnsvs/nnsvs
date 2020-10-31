@@ -9,6 +9,10 @@ egs*/*/*/wav*
 egs*/*/*/outputs
 egs*/*/*/*.wav
 
+# misc
+notebooks
+demo
+
 # Created by https://www.gitignore.io/api/osx,vim,linux,emacs,python,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=osx,vim,linux,emacs,python,visualstudiocode
 
