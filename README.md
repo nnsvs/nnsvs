@@ -56,7 +56,6 @@ See [HISTORY.md](HISTORY.md)
 
 ## Known issues
 
-- Hydra configurations are not easily overrided by users, without manually editing configs in [nnsvs/bin/conf](nnsvs/bin/conf). See https://github.com/facebookresearch/hydra/issues/386 for details.
 
 ## References
 

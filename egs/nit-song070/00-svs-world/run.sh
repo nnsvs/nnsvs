@@ -14,6 +14,13 @@ question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst001_nnsvs.hed
 # speficy if you have it locally, otherwise it will be downloaded at stage -1
 hts_demo_root=downloads/HTS-demo_NIT-SONG070-F001
 
+# Models
+# To customize, put your config in conf/train/model/ and
+# specify the config name below
+timelag_model=timelag_fnn
+duraiton_model=duration_lstm
+acoustic_model=acoustic_conv
+
 # Pretrained model dir
 # leave empty to disable
 pretrained_expdir=../../kiritan_singing/00-svs-world/exp/kiritan
