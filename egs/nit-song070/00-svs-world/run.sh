@@ -17,9 +17,9 @@ hts_demo_root=downloads/HTS-demo_NIT-SONG070-F001
 # Models
 # To customize, put your config in conf/train/model/ and
 # specify the config name below
-timelag_model=timelag_default
-duraiton_model=duration_default
-acoustic_model=acoustic_default
+timelag_model=timelag_fnn
+duraiton_model=duration_lstm
+acoustic_model=acoustic_conv
 
 # Pretrained model dir
 # leave empty to disable
