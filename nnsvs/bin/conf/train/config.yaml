@@ -3,7 +3,7 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - model: acoustic
+  - model: acoustic_default
 
 verbose: 100
 
