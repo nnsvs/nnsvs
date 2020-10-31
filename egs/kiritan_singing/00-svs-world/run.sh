@@ -15,6 +15,13 @@ dumpdir=dump
 # HTS-style question used for extracting musical/linguistic context from musicxml files
 question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst001_nnsvs.hed
 
+# Models
+# To customize, put your config in conf/train/model/ and
+# specify the config name below
+timelag_model=timelag_default
+duraiton_model=duration_default
+acoustic_model=acoustic_default
+
 # Pretrained model dir
 # leave empty to disable
 pretrained_expdir=
