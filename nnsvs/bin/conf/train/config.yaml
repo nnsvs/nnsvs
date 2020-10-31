@@ -43,7 +43,7 @@ train:
 
   stream_wise_loss: false
   use_detect_anomaly: false
-  
+
 resume:
   checkpoint:
   load_optimizer: false
