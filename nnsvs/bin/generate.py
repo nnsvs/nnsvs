@@ -47,7 +47,7 @@ def my_app(config : DictConfig) -> None:
     with torch.no_grad():
         for idx in tqdm(range(len(in_feats))):
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
-            out = model(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
+            out = model.inference(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
 
             out = scaler.inverse_transform(out)
 

@@ -81,7 +81,7 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
     # Run model
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
-    y = timelag_model(x, [x.shape[1]]).squeeze(0).cpu()
+    y = timelag_model.inference(x, [x.shape[1]]).squeeze(0).cpu()
 
     # De-normalization and rounding
     lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()))
@@ -160,7 +160,7 @@ def predict_duration(device, labels, duration_model, duration_in_scaler, duratio
     # Apply model
     x = torch.from_numpy(duration_linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
-    pred_durations = duration_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+    pred_durations = duration_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
     # Apply denormalization
     pred_durations = duration_out_scaler.inverse_transform(pred_durations)
@@ -198,7 +198,7 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
     # Predict acoustic features
     x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
-    pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+    pred_acoustic = acoustic_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
     # Apply denormalization
     pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)

@@ -21,3 +21,8 @@ class AcousticModel(ABC):
     @abstractmethod
     def forward(self, feats, feats_lens=None):
         pass
+
+
+class BaseModel(nn.Module):
+    def inference(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
