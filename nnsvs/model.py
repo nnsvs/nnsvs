@@ -7,6 +7,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from torch.nn.utils import weight_norm
 
+from nnsvs.base import BaseModel
+
 
 def WNConv1d(*args, **kwargs):
     return weight_norm(nn.Conv1d(*args, **kwargs))
@@ -28,7 +30,7 @@ class ResnetBlock(nn.Module):
         return self.shortcut(x) + self.block(x)
 
 
-class Conv1dResnet(nn.Module):
+class Conv1dResnet(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0):
         super().__init__()
         model = [
@@ -49,7 +51,7 @@ class Conv1dResnet(nn.Module):
         return self.model(x.transpose(1,2)).transpose(1,2)
 
 
-class FeedForwardNet(torch.nn.Module):
+class FeedForwardNet(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
         super(FeedForwardNet, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
@@ -66,7 +68,7 @@ class FeedForwardNet(torch.nn.Module):
         return self.last_linear(h)
 
 
-class LSTMRNN(nn.Module):
+class LSTMRNN(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
             dropout=0.0):
         super(LSTMRNN, self).__init__()
