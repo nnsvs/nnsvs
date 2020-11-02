@@ -7,7 +7,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from torch.nn.utils import weight_norm
 
-from nnsvs.base import BaseModel
+from nnsvs.base import BaseModel, PredictionType
+from nnsvs.mdn import MDNLayer
 from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.multistream import split_streams
 
@@ -171,3 +172,43 @@ class LSTMRNNSAR(LSTMRNN):
     def inference(self, x, lengths=None):
         out = self.forward(x, lengths)
         return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)
+
+
+class RMDN(BaseModel):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0, num_gaussians=8):
+        super(RMDN, self).__init__()
+        self.linear = nn.Linear(in_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.num_direction=2 if bidirectional else 1
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers,
+                            bidirectional=bidirectional, batch_first=True,
+                            dropout=dropout)
+        self.mdn = MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians=num_gaussians)
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
+    def forward(self, x, lengths):
+        out = self.linear(x)
+        sequence = pack_padded_sequence(self.relu(out), lengths, batch_first=True)
+        out, _ = self.lstm(sequence)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+        out = self.mdn(out)
+        return out
+
+
+class MDN(BaseModel):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0, num_gaussians=8):
+        super(MDN, self).__init__()
+        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
+        if num_layers > 1:
+            for _ in range(num_layers - 1):
+                model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+        model += [MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)]
+        self.model = nn.Sequential(*model)
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
+    def forward(self, x, lengths=None):
+        return self.model(x)

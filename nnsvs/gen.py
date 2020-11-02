@@ -15,6 +15,8 @@ from nnsvs.io.hts import get_note_indices
 from nnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
 from nnsvs.multistream import select_streams, split_streams
 
+from nnsvs.base import PredictionType
+from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 
 def get_windows(num_window=1):
     windows = [(0, 0, np.array([1.0]))]
@@ -46,7 +48,7 @@ def _is_silence(l):
     return is_silence
 
 
-def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_out_scaler,
+def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
         binary_dict, continuous_dict,
         pitch_indices=None, log_f0_conditioning=True,
         allowed_range=[-20, 20], allowed_range_rest=[-40, 40]):
@@ -81,22 +83,49 @@ def predict_timelag(device, labels, timelag_model, timelag_in_scaler, timelag_ou
 
     # Run model
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
-    y = timelag_model.inference(x, [x.shape[1]]).squeeze(0).cpu()
 
-    # De-normalization and rounding
-    lag = np.round(timelag_out_scaler.inverse_transform(y.data.numpy()))
+    # Run model
+    if timelag_model.prediction_type() == PredictionType.PROBABILISTIC:
+        # (B, T, D_out)
+        log_pi, log_sigma, mu = timelag_model.inference(x, [x.shape[1]])
+        if np.any(timelag_config.has_dynamic_features):
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            # Apply denormalization
+            # (B, T, D_out) -> (T, D_out)
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * timelag_out_scaler.var_
+            max_mu = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+            # (T, D_out) -> (T, static_dim)
+            pred_timelag = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(timelag_config.num_windows),
+                                              timelag_config.stream_sizes, timelag_config.has_dynamic_features)
+        else:
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            # Apply denormalization
+            pred_timelag = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+    else:
+        # (T, D_out)
+        pred_timelag = timelag_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        # Apply denormalization
+        pred_timelag = timelag_out_scaler.inverse_transform(pred_timelag)
+        if np.any(timelag_config.has_dynamic_features):
+            # (T, D_out) -> (T, static_dim)
+            pred_timelag = multi_stream_mlpg(
+                pred_timelag, timelag_out_scaler.var_, get_windows(timelag_config.num_windows),
+                timelag_config.stream_sizes, timelag_config.has_dynamic_features)
+
+    # Rounding
+    pred_timelag = np.round(pred_timelag)
 
     # Clip to the allowed range
-    for idx in range(len(lag)):
+    for idx in range(len(pred_timelag)):
         if _is_silence(note_labels.contexts[idx]):
-            lag[idx] = np.clip(lag[idx], allowed_range_rest[0], allowed_range_rest[1])
+            pred_timelag[idx] = np.clip(pred_timelag[idx], allowed_range_rest[0], allowed_range_rest[1])
         else:
-            lag[idx] = np.clip(lag[idx], allowed_range[0], allowed_range[1])
+            pred_timelag[idx] = np.clip(pred_timelag[idx], allowed_range[0], allowed_range[1])
 
     # frames -> 100 ns
-    lag *= 50000
+    pred_timelag *= 50000
 
-    return lag
+    return pred_timelag
 
 
 def postprocess_duration(labels, pred_durations, lag):
@@ -136,7 +165,7 @@ def postprocess_duration(labels, pred_durations, lag):
     return output_labels
 
 
-def predict_duration(device, labels, duration_model, duration_in_scaler, duration_out_scaler,
+def predict_duration(device, labels, duration_model, duration_config, duration_in_scaler, duration_out_scaler,
         lag, binary_dict, continuous_dict, pitch_indices=None, log_f0_conditioning=True):
     # Extract musical/linguistic features
     duration_linguistic_features = fe.linguistic_features(
@@ -160,17 +189,41 @@ def predict_duration(device, labels, duration_model, duration_in_scaler, duratio
     # Apply model
     x = torch.from_numpy(duration_linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
-    pred_durations = duration_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
-    # Apply denormalization
-    pred_durations = duration_out_scaler.inverse_transform(pred_durations)
+    if duration_model.prediction_type() == PredictionType.PROBABILISTIC:
+        # (B, T, D_out)
+        log_pi, log_sigma, mu = duration_model.inference(x, [x.shape[1]])
+        if np.any(duration_config.has_dynamic_features):
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            # Apply denormalization
+            # (B, T, D_out) -> (T, D_out)
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
+            max_mu = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+            
+            # (T, D_out) -> (T, static_dim)
+            pred_durations = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(duration_config.num_windows),
+                                              duration_config.stream_sizes, duration_config.has_dynamic_features)
+        else:
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            # Apply denormalization
+            pred_durations = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+    else:
+        # (T, D_out)
+        pred_durations = duration_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        # Apply denormalization
+        pred_durations = duration_out_scaler.inverse_transform(pred_durations)
+        if np.any(duration_config.has_dynamic_features):
+            # (T, D_out) -> (T, static_dim)
+            pred_durations = multi_stream_mlpg(
+                pred_durations, duration_out_scaler.var_, get_windows(duration_config.num_windows),
+                duration_config.stream_sizes, duration_config.has_dynamic_features)
+
     pred_durations[pred_durations <= 0] = 1
     pred_durations = np.round(pred_durations)
 
     return pred_durations
 
-
-def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
+def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_in_scaler,
         acoustic_out_scaler, binary_dict, continuous_dict,
         subphone_features="coarse_coding",
         pitch_indices=None, log_f0_conditioning=True):
@@ -198,27 +251,48 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_in_scaler,
     # Predict acoustic features
     x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
-    pred_acoustic = acoustic_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
 
-    # Apply denormalization
-    pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)
+    if acoustic_model.prediction_type() == PredictionType.PROBABILISTIC:
+        log_pi, log_sigma, mu = acoustic_model.inference(x, [x.shape[1]])
+        if np.any(acoustic_config.has_dynamic_features):
+            # (B, T, D_out)
+            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+
+            # Apply denormalization
+            # (B, T, D_out) -> (T, D_out)
+            max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * acoustic_out_scaler.var_
+            max_mu = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+            
+            # (T, D_out) -> (T, static_dim)
+            pred_acoustic = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(acoustic_config.num_windows),
+                                              acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
+        else:
+            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            # Apply denormalization
+            pred_acoustic = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
+    else:
+        # (T, D_out)
+        pred_acoustic = acoustic_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        # Apply denormalization
+        pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)
+        if np.any(acoustic_config.has_dynamic_features):
+            # (T, D_out) -> (T, static_dim)
+            pred_acoustic = multi_stream_mlpg(
+                pred_acoustic, acoustic_out_scaler.var_, get_windows(acoustic_config.num_windows),
+                acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
 
     return pred_acoustic
 
 
-def gen_waveform(labels, acoustic_features, acoustic_out_scaler,
-        binary_dict, continuous_dict, stream_sizes, has_dynamic_features,
-        subphone_features="coarse_coding", log_f0_conditioning=True, pitch_idx=None,
-        num_windows=3, post_filter=True, sample_rate=48000, frame_period=5,
-        relative_f0=True):
-
+def gen_waveform(labels, acoustic_features, 
+                 binary_dict, continuous_dict, stream_sizes, has_dynamic_features,
+                 subphone_features="coarse_coding", log_f0_conditioning=True, pitch_idx=None,
+                 num_windows=3, post_filter=True, sample_rate=48000, frame_period=5,
+                 relative_f0=True):
     windows = get_windows(num_windows)
 
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
-        acoustic_features = multi_stream_mlpg(
-            acoustic_features, acoustic_out_scaler.var_, windows, stream_sizes,
-            has_dynamic_features)
         static_stream_sizes = get_static_stream_sizes(
             stream_sizes, has_dynamic_features, len(windows))
     else:

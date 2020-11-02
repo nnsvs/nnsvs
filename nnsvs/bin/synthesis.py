@@ -16,13 +16,15 @@ from nnsvs.gen import (
     predict_timelag, predict_duration, predict_acoustic, postprocess_duration,
     gen_waveform)
 from nnsvs.logger import getLogger
+from nnsvs.base import PredictionType
+
 logger = None
 
 
 def synthesis(config, device, label_path, question_path,
-        timelag_model, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_in_scaler, acoustic_out_scaler):
+              timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+              duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+              acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler):
     # load labels and question
     labels = hts.load(label_path).round_()
     binary_dict, continuous_dict = hts.load_question_set(
@@ -40,12 +42,12 @@ def synthesis(config, device, label_path, question_path,
         duration_modified_labels = labels
     else:
         # Time-lag
-        lag = predict_timelag(device, labels, timelag_model, timelag_in_scaler,
+        lag = predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_scaler,
             timelag_out_scaler, binary_dict, continuous_dict, pitch_indices,
             log_f0_conditioning, config.timelag.allowed_range)
 
         # Timelag predictions
-        durations = predict_duration(device, labels, duration_model,
+        durations = predict_duration(device, labels, duration_model, duration_config, 
             duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
             pitch_indices, log_f0_conditioning)
 
@@ -53,17 +55,17 @@ def synthesis(config, device, label_path, question_path,
         duration_modified_labels = postprocess_duration(labels, durations, lag)
 
     # Predict acoustic features
-    acoustic_features = predict_acoustic(device, duration_modified_labels, acoustic_model,
+    acoustic_features = predict_acoustic(device, duration_modified_labels, acoustic_model, acoustic_config,
         acoustic_in_scaler, acoustic_out_scaler, binary_dict, continuous_dict,
         config.acoustic.subphone_features, pitch_indices, log_f0_conditioning)
 
     # Waveform generation
     generated_waveform = gen_waveform(
-        duration_modified_labels, acoustic_features, acoustic_out_scaler,
-        binary_dict, continuous_dict, config.acoustic.stream_sizes,
-        config.acoustic.has_dynamic_features,
+        duration_modified_labels, acoustic_features,
+        binary_dict, continuous_dict, acoustic_config.stream_sizes,
+        acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features, log_f0_conditioning,
-        pitch_idx, config.acoustic.num_windows,
+        pitch_idx, acoustic_config.num_windows,
         config.acoustic.post_filter, config.sample_rate, config.frame_period,
         config.acoustic.relative_f0)
 
@@ -128,9 +130,9 @@ def my_app(config : DictConfig) -> None:
                     raise RuntimeError(f"Label file does not exist: {label_path}")
 
                 wav = synthesis(config, device, label_path, question_path,
-                    timelag_model, timelag_in_scaler, timelag_out_scaler,
-                    duration_model, duration_in_scaler, duration_out_scaler,
-                    acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+                                timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+                                duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+                                acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
                 wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
 
                 out_wav_path = join(out_dir, f"{utt_id}.wav")
@@ -142,9 +144,9 @@ def my_app(config : DictConfig) -> None:
         out_wav_path = to_absolute_path(config.out_wav_path)
 
         wav = synthesis(config, device, label_path, question_path,
-            timelag_model, timelag_in_scaler, timelag_out_scaler,
-            duration_model, duration_in_scaler, duration_out_scaler,
-            acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+                        timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+                        duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+                        acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
         wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
         wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
 
