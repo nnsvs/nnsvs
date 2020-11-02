@@ -6,7 +6,7 @@ stream_weights: [1]
 
 netG:
   _target_: nnsvs.model.LSTMRNN
-  in_dim: 420
+  in_dim: 295
   out_dim: 1
   hidden_dim: 64
   num_layers: 2
