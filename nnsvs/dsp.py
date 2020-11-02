@@ -57,7 +57,7 @@ class TrTimeInvFIRFilter(nn.Conv1d):
         # Initilize filt coef with small random values
         init_filt_coef = torch.randn(filt_dim) * (1 / filt_dim)
         # assert len(filt_coef) % 2 == 1
-        kernel_size = len(filt_coef)
+        kernel_size = len(init_filt_coef)
         self.causal = causal
         if causal:
             padding = (kernel_size - 1) * 1
