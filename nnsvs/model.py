@@ -24,6 +24,7 @@ class ResnetBlock(nn.Module):
             WNConv1d(dim, dim, kernel_size=1),
         )
         self.shortcut = WNConv1d(dim, dim, kernel_size=1)
+        
     def forward(self, x):
         return self.shortcut(x) + self.block(x)
 
@@ -44,6 +45,7 @@ class Conv1dResnet(BaseModel):
         ]
 
         self.model = nn.Sequential(*model)
+        
     def forward(self, x, lengths=None):
         return self.model(x.transpose(1,2)).transpose(1,2)
 
@@ -57,6 +59,7 @@ class FeedForwardNet(BaseModel):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
+        
     def forward(self, x, lengths=None):
         h = self.relu(self.first_linear(x))
         for hl in self.hidden_layers:
@@ -70,11 +73,11 @@ class LSTMRNN(BaseModel):
         super(LSTMRNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.relu = nn.ReLU()
         self.num_direction =  2 if bidirectional else 1
         self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers,
             bidirectional=bidirectional, batch_first=True, dropout=dropout)
         self.hidden2out = nn.Linear(self.num_direction*self.hidden_dim, out_dim)
+        
     def forward(self, sequence, lengths):
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
