@@ -13,14 +13,14 @@ spk="kiritan"
 dumpdir=dump
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst001_nnsvs.hed
+question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst003_nnsvs.hed
 
 # Models
 # To customize, put your config in conf/train/model/ and
 # specify the config name below
-timelag_model=timelag_default
-duraiton_model=duration_default
-acoustic_model=acoustic_default
+timelag_model=timelag_ffn
+duraiton_model=duration_lstm
+acoustic_model=acoustic_conv
 
 # Pretrained model dir
 # leave empty to disable
@@ -52,7 +52,7 @@ train_set="train_no_dev"
 dev_set="dev"
 eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
-testsets=($dev_set $eval_set)
+testsets=($eval_set)
 
 dump_org_dir=$dumpdir/$spk/org
 dump_norm_dir=$dumpdir/$spk/norm
