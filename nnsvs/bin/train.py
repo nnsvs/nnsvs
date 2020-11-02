@@ -162,6 +162,10 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 # Run forwaard
                 y_hat = model(x, sorted_lengths)
 
+                # Apply preprocess if required (e.g., FIR filter for shallow AR)
+                # defaults to no-op
+                y = model.preprocess_target(y)
+
                 # Compute loss
                 mask = make_non_pad_mask(sorted_lengths).unsqueeze(-1).to(device)
 
