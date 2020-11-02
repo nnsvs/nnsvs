@@ -4,7 +4,11 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from abc import ABC, abstractmethod
+from enum import Enum
 
+class PredictionType(Enum):
+    DETERMINISTIC = 1
+    PROBABILISTIC = 2
 
 class TimeLagModel(ABC):
     @abstractmethod
@@ -26,3 +30,6 @@ class AcousticModel(ABC):
 class BaseModel(nn.Module):
     def inference(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
+
+    def prediction_type(self):
+        return PredictionType.DETERMINISTIC

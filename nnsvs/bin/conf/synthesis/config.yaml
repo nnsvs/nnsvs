@@ -41,7 +41,7 @@ timelag:
   model_yaml:
   stream_sizes: [1]
   has_dynamic_features: [false]
-
+  
   allowed_range: [-20, 20] # in frames
   allowed_range_rest: [-40, 40]
 
@@ -53,7 +53,7 @@ duration:
   model_yaml:
   stream_sizes: [1]
   has_dynamic_features: [false]
-
+  
 acoustic:
   question_path:
   checkpoint:
@@ -64,6 +64,6 @@ acoustic:
   # (mgc, lf0, vuv, bap)
   stream_sizes: [180, 3, 1, 15]
   has_dynamic_features: [true, true, false, true]
-  num_windows: 3
+  num_windows: 3  
   relative_f0: true
   post_filter: true

@@ -1,0 +1,14 @@
+# @package _group_
+
+stream_sizes: [1]
+has_dynamic_features: [false]
+stream_weights: [1]
+
+netG:
+  _target_: nnsvs.model.MDN
+  in_dim: 420
+  out_dim: 1
+  hidden_dim: 1024
+  num_layers: 4
+  dropout: 0.5
+  num_gaussians: 4
