@@ -23,7 +23,7 @@ acoustic_model=acoustic_conv
 
 # Pretrained model dir
 # leave empty to disable
-pretrained_expdir=../../kiritan_singing/00-svs-world/exp/kiritan
+pretrained_expdir=
 
 batch_size=4
 
