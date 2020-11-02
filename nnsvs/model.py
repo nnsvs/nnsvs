@@ -53,6 +53,32 @@ class Conv1dResnet(BaseModel):
         return self.model(x.transpose(1,2)).transpose(1,2)
 
 
+@torch.no_grad()
+def _shallow_ar_inference(out, stream_sizes, analysis_filts):
+    from torchaudio.functional import lfilter
+
+    out_streams = split_streams(out, stream_sizes)
+    # back to conv1d friendly (B, C, T) format
+    out_streams = map(lambda x: x.transpose(1, 2), out_streams)
+
+    out_syn = []
+    for sidx, os in enumerate(out_streams):
+        out_stream_syn = torch.zeros_like(os)
+        a = analysis_filts[sidx].get_filt_coefs()
+        # apply IIR filter for each dimiesion
+        for idx in range(os.shape[1]):
+            # NOTE: scipy.signal.lfilter accespts b, a in order,
+            # but torchaudio expect the oppsite; a, b in order
+            ai = a[idx].view(-1).flip(0)
+            bi = torch.zeros_like(ai)
+            bi[0] = 1
+            out_stream_syn[:, idx, :] = lfilter(os[:, idx, :], ai, bi, clamp=False)
+        out_syn += [out_stream_syn]
+
+    out_syn = torch.cat(out_syn, 1)
+    return out_syn.transpose(1, 2)
+
+
 class Conv1dResnetSAR(Conv1dResnet):
     """Conv1dResnet with shallow AR structure
 
@@ -77,29 +103,8 @@ class Conv1dResnetSAR(Conv1dResnet):
         return torch.cat(ys, -1)
 
     def inference(self, x, lengths=None):
-        from torchaudio.functional import lfilter
-        out = self.model(x.transpose(1, 2))
-        out_streams = split_streams(out.transpose(1, 2), self.stream_sizes)
-        # back to conv1d friendly (B, C, T) format
-        out_streams = map(lambda x: x.transpose(1, 2), out_streams)
-
-        out_syn = []
-        for sidx, os in enumerate(out_streams):
-            out_stream_syn = torch.zeros_like(os)
-            a = self.analysis_filts[sidx].get_filt_coefs()
-            with torch.no_grad():
-                # apply IIR filter for each dimiesion
-                for idx in range(os.shape[1]):
-                    # NOTE: scipy.signal.lfilter accespts b, a in order,
-                    # but torchaudio expect the oppsite; a, b in order
-                    ai = a[idx].view(-1).flip(0)
-                    bi = torch.zeros_like(ai)
-                    bi[0] = 1
-                    out_stream_syn[:, idx, :] = lfilter(os[:, idx, :], ai, bi, clamp=False)
-                out_syn += [out_stream_syn]
-
-        out_syn = torch.cat(out_syn, 1)
-        return out_syn.transpose(1, 2)
+        out = self.model(x.transpose(1, 2)).transpose(1, 2)
+        return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)
 
 
 class FeedForwardNet(BaseModel):
