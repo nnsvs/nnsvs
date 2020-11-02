@@ -15,6 +15,7 @@ from nnsvs.io.hts import get_note_indices
 from nnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
 from nnsvs.multistream import select_streams, split_streams
 
+from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 
 def get_windows(num_window=1):
@@ -84,9 +85,9 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
     x = torch.from_numpy(timelag_linguistic_features).unsqueeze(0).to(device)
 
     # Run model
-    if timelag_model.prediction_type == "probabilistic":
+    if timelag_model.prediction_type() == PredictionType.PROBABILISTIC:
         # (B, T, D_out)
-        log_pi, log_sigma, mu = timelag_model(x, [x.shape[1]])
+        log_pi, log_sigma, mu = timelag_model.inference(x, [x.shape[1]])
         if np.any(timelag_config.has_dynamic_features):
             max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
@@ -102,7 +103,7 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
             pred_timelag = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
-        pred_timelag = timelag_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        pred_timelag = timelag_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
         # Apply denormalization
         pred_timelag = timelag_out_scaler.inverse_transform(pred_timelag)
         if np.any(timelag_config.has_dynamic_features):
@@ -189,9 +190,9 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
     x = torch.from_numpy(duration_linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
 
-    if duration_model.prediction_type == "probabilistic":
+    if duration_model.prediction_type() == PredictionType.PROBABILISTIC:
         # (B, T, D_out)
-        log_pi, log_sigma, mu = duration_model(x, [x.shape[1]])
+        log_pi, log_sigma, mu = duration_model.inference(x, [x.shape[1]])
         if np.any(duration_config.has_dynamic_features):
             max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
@@ -208,7 +209,7 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
             pred_durations = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
-        pred_durations = duration_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        pred_durations = duration_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
         # Apply denormalization
         pred_durations = duration_out_scaler.inverse_transform(pred_durations)
         if np.any(duration_config.has_dynamic_features):
@@ -251,8 +252,8 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
     x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
 
-    if acoustic_model.prediction_type == "probabilistic":
-        log_pi, log_sigma, mu = acoustic_model(x, [x.shape[1]])
+    if acoustic_model.prediction_type() == PredictionType.PROBABILISTIC:
+        log_pi, log_sigma, mu = acoustic_model.inference(x, [x.shape[1]])
         if np.any(acoustic_config.has_dynamic_features):
             # (B, T, D_out)
             max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
@@ -271,7 +272,7 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
             pred_acoustic = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
         # (T, D_out)
-        pred_acoustic = acoustic_model(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
+        pred_acoustic = acoustic_model.inference(x, [x.shape[1]]).squeeze(0).cpu().data.numpy()
         # Apply denormalization
         pred_acoustic = acoustic_out_scaler.inverse_transform(pred_acoustic)
         if np.any(acoustic_config.has_dynamic_features):

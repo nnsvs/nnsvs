@@ -16,18 +16,11 @@ class MDNLayer(nn.Module):
     3. sagelywizard/pytorch-mdn https://github.com/sagelywizard/pytorch-mdn
     4. sksq96/pytorch-mdn https://github.com/sksq96/pytorch-mdn
 
-    Arguments:
+    Attributes:
         in_dim (int): the number of dimensions in the input
         out_dim (int): the number of dimensions in the output
         num_gaussians (int): the number of mixture component
-    Input:
-        minibatch (B, T, D_in): B is the batch size and T is data lengths of this batch, 
-            and D_in is in_dim.
-    Output:
-        log_pi, log_sigma, mu (B, T, G), (B, T, G, D_out), (B, T, G, D_out): 
-            G is num_gaussians and D_out is out_dim.
-            log_pi is log of a multinomial distribution of the Gaussians. 
-            mu and log_sigma are the mean and the log of standard deviation of each Gaussian.
+
     """
     def __init__(self, in_dim, out_dim, num_gaussians=30):
         super(MDNLayer, self).__init__()
@@ -40,6 +33,18 @@ class MDNLayer(nn.Module):
         self.mu = nn.Linear(in_dim, out_dim * num_gaussians)
 
     def forward(self, minibatch):
+        """
+        Args:
+            minibatch (B, T, D_in): B is the batch size and T is data lengths of this batch, 
+                and D_in is in_dim.
+
+        Returns:
+            log_pi (B, T, G): Log of a multinomial distribution of the Gaussians. 
+                G is num_gaussians and D_out is out_dim.
+            log_sigma (B, T, G, D_out): mean of each Gaussians
+            mu (B, T, G, D_out): the log of standard deviation of each Gaussians.
+        """
+
         log_pi = F.log_softmax(self.log_pi(minibatch), dim=2)
         log_sigma = self.log_sigma(minibatch)
         log_sigma = log_sigma.view(len(minibatch), -1, self.num_gaussians, self.out_dim)        
@@ -47,26 +52,29 @@ class MDNLayer(nn.Module):
         mu = mu.view(len(minibatch), -1, self.num_gaussians, self.out_dim)
         return log_pi, log_sigma, mu
 
-def mdn_loss(log_pi, log_sigma, mu, target, log_clamp_min=-7.0, reduce=True):
+def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0, log_prob_min=-7.0, reduce=True):
     """Calculates the error, given the MoG parameters and the target.
     The loss is the negative log likelihood of the data given the MoG
     parameters.
-    Arguments:
+
+    Args:
         log_pi (B, T, G): The log of multinomial distribution of the Gaussians. B is the batch size,
             T is data length of this batch, and G is num_gaussians of class MDNLayer.
         log_sigma (B, T , G ,D_out): The log standard deviation of the Gaussians. D_out is out_dim of class 
             MDNLayer.
         mu (B , T, G, D_out): The means of the Gaussians. 
         target (B, T, D_out): The target variables.
-        log_clamp_min: minimum value of logged values(log_pi, log_sigma, and torch.distributions.Normal.log_prob)
+        log_pi_min (float): Minimum value of log_pi (for numerical stability)
+        log_sigma_min (float): Minimum value of log_sigma (for numerical stability)
+        log_prob_min (float): Minimum value of torch.distributions.Normal.log_prob
         reduce: If True, the losses are averaged for each batch.
     Returns:
         loss (B) or (B, T): Negative Log Likelihood of Mixture Density Networks.
     """
 
     # Clip log_sigma and log_pi with log_clamp_min for numerical stability
-    log_sigma = torch.clamp(log_sigma, min=log_clamp_min)
-    log_pi = torch.clamp(log_pi, min=log_clamp_min)
+    log_sigma = torch.clamp(log_sigma, min=log_sigma_min)
+    log_pi = torch.clamp(log_pi, min=log_pi_min)
     # Expand the dim of target as (B, T, D_out) -> (B, T, 1, D_out) -> (B, T,G, D_out)
     target = target.unsqueeze(2).expand_as(log_sigma)
 
@@ -84,7 +92,7 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_clamp_min=-7.0, reduce=True):
     #                                             = \sum_{i=1}^{D_out} log N(y_i|mu(x),sigma(x))
     # (B, T, G, D_out) -> (B, T, G)
     log_prob = dist.log_prob(target)
-    log_prob = torch.clamp(log_prob, min=log_clamp_min)
+    log_prob = torch.clamp(log_prob, min=log_prob_min)
     loss = torch.sum(log_prob, dim=3) + log_pi
     # Calculate negative log likelihood.
     # (B, T, G) -> (B, T)
@@ -112,7 +120,7 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
     """ Retrun the mean and standard deviation of the Gaussian component whose weight coefficient is 
     the largest as the most probable predictions.
 
-    Arguments:
+    Args:
         log_pi (B, T, G): The log of multinomial distribution of the Gaussians. 
             B is the batch size, T is data length of this batch, 
             G is num_gaussians of class MDNLayer.
@@ -122,7 +130,7 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
             MDNLayer.
     Returns:
         sigma, mu (B, T, D_out), (B, T, D_out): the standard deviation and means of 
-            the most probabble Gaussian component
+            the most probabble Gaussian component.
     """
     batch_size, _, num_gaussians , out_dim = mu.shape
     # Get the indexes of the largest log_pi
@@ -147,8 +155,8 @@ def mdn_get_sample(log_pi, log_sigma, mu):
     """ Sample from mixture of the Gaussian component whose weight coefficient is the largest
     as the most probable predictions.
 
-    Arguments:
-        log_pi (B, T, G): The multinomial distribution of the Gaussians(not Softmax-ed). 
+    Args:
+        log_pi (B, T, G): The log of multinomial distribution of the Gaussians.
             B is the batch size, T is data length of this batch, 
             G is num_gaussians of class MDNLayer.
         log_sigma (B, T, G, D_out): The log of standard deviation of the Gaussians. 
@@ -156,7 +164,7 @@ def mdn_get_sample(log_pi, log_sigma, mu):
         mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
             MDNLayer.
     Returns:
-        sample (B, T, D_out): Sample from mixture of the Gaussian component
+        sample (B, T, D_out): Sample from mixture of the Gaussian component.
     """
     max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
 

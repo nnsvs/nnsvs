@@ -1,0 +1,16 @@
+# @package _group_
+# (mgc, lf0, vuv, bap)
+stream_sizes: [180, 3, 1, 15]
+has_dynamic_features: [true, true, false, true]
+num_windows: 3
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.model.MDN
+  in_dim: 424
+  out_dim: 199
+  hidden_dim: 1024
+  num_layers: 4
+  dropout: 0.1
+  num_gaussians: 4

@@ -19,6 +19,7 @@ from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheData
 from nnsvs.util import make_non_pad_mask
 from nnsvs.multistream import split_streams
 from nnsvs.logger import getLogger
+from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_loss
 
 logger = None
@@ -161,7 +162,7 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 optimizer.zero_grad()
 
                 # Run forwaard
-                if model.prediction_type == "probabilistic":
+                if model.prediction_type() == PredictionType.PROBABILISTIC:
                     pi, sigma, mu = model(x, sorted_lengths)
 
                     # (B, max(T))
@@ -228,6 +229,10 @@ def my_app(config : DictConfig) -> None:
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
 
     device = torch.device("cuda" if use_cuda else "cpu")
+
+    if config.train.use_detect_anomaly:
+        torch.autograd.set_detect_anomaly(True)
+        logger.info("Set to use torch.autograd.detect_anomaly")
 
     # Model
     model = hydra.utils.instantiate(config.model.netG).to(device)

@@ -17,6 +17,7 @@ from nnsvs.gen import get_windows
 from nnsvs.multistream import multi_stream_mlpg
 from nnsvs.bin.train import NpyFileSource
 from nnsvs.logger import getLogger
+from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 
 logger = None
@@ -49,9 +50,9 @@ def my_app(config : DictConfig) -> None:
         for idx in tqdm(range(len(in_feats))):
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
 
-            if model.prediction_type == "probabilistic":
+            if model.prediction_type() == PredictionType.PROBABILISTIC:
 
-                log_pi, log_sigma, mu = model(feats, [feats.shape[1]])
+                log_pi, log_sigma, mu = model.inference(feats, [feats.shape[1]])
                 
                 if np.any(model_config.has_dynamic_features):
                     max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
@@ -71,7 +72,7 @@ def my_app(config : DictConfig) -> None:
                     out = out.squeeze(0).cpu().data.numpy()
                     out = scaler.inverse_transform(out)
             else:
-                out = model(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
+                out = model.inference(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()
                 out = scaler.inverse_transform(out)
 
                 # Apply MLPG if necessary

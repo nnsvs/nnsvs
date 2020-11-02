@@ -16,6 +16,8 @@ from nnsvs.gen import (
     predict_timelag, predict_duration, predict_acoustic, postprocess_duration,
     gen_waveform)
 from nnsvs.logger import getLogger
+from nnsvs.base import PredictionType
+
 logger = None
 
 

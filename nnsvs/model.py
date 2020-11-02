@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from torch.nn.utils import weight_norm
+from nnsvs.base import BaseModel, PredictionType
 from nnsvs.mdn import MDNLayer
 
 def WNConv1d(*args, **kwargs):
@@ -27,7 +28,7 @@ class ResnetBlock(nn.Module):
         return self.shortcut(x) + self.block(x)
 
 
-class Conv1dResnet(nn.Module):
+class Conv1dResnet(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0):
         super().__init__()
         model = [
@@ -43,12 +44,11 @@ class Conv1dResnet(nn.Module):
         ]
 
         self.model = nn.Sequential(*model)
-        self.prediction_type="deterministic"
     def forward(self, x, lengths=None):
         return self.model(x.transpose(1,2)).transpose(1,2)
 
 
-class FeedForwardNet(torch.nn.Module):
+class FeedForwardNet(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
         super(FeedForwardNet, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
@@ -57,7 +57,6 @@ class FeedForwardNet(torch.nn.Module):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        self.prediction_type="deterministic"
     def forward(self, x, lengths=None):
         h = self.relu(self.first_linear(x))
         for hl in self.hidden_layers:
@@ -65,7 +64,7 @@ class FeedForwardNet(torch.nn.Module):
         return self.last_linear(h)
 
 
-class LSTMRNN(nn.Module):
+class LSTMRNN(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
             dropout=0.0):
         super(LSTMRNN, self).__init__()
@@ -76,7 +75,6 @@ class LSTMRNN(nn.Module):
         self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers,
             bidirectional=bidirectional, batch_first=True, dropout=dropout)
         self.hidden2out = nn.Linear(self.num_direction*self.hidden_dim, out_dim)
-        self.prediction_type="deterministic"
     def forward(self, sequence, lengths):
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
@@ -84,7 +82,7 @@ class LSTMRNN(nn.Module):
         out = self.hidden2out(out)
         return out
 
-class RMDN(nn.Module):
+class RMDN(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0, num_gaussians=8):
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
@@ -94,7 +92,10 @@ class RMDN(nn.Module):
                             bidirectional=bidirectional, batch_first=True, 
                             dropout=dropout)
         self.mdn = MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians=num_gaussians)
-        self.prediction_type="probabilistic"
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+    
     def forward(self, x, lengths):
         out = self.linear(x)
         sequence = pack_padded_sequence(self.relu(out), lengths, batch_first=True)
@@ -103,7 +104,7 @@ class RMDN(nn.Module):
         out = self.mdn(out)
         return out
 
-class MDN(nn.Module):
+class MDN(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0, num_gaussians=8):
         super(MDN, self).__init__()
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
@@ -112,6 +113,9 @@ class MDN(nn.Module):
                 model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
         model += [MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)]
         self.model = nn.Sequential(*model)
-        self.prediction_type="probabilistic"
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
     def forward(self, x, lengths=None):
         return self.model(x)
