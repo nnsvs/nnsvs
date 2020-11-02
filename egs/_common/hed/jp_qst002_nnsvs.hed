@@ -24,7 +24,6 @@ QS "L-Phone_Han_Sema_Boin"         {*^e-*,*^o-*,*^E-*,*^O-*}
 QS "L-Phone_Yuusei_Han_Sema_Boin"  {*^e-*,*^o-*}
 QS "L-Phone_Museika_Han_Sema_Boin" {*^E-*,*^O-*}
 QS "L-Phone_Hiro_Boin"             {*^a-*,*^A-*}
-QS "L-Phone_Yuusei_Hiro_Boin"      {*^a-*}
 QS "L-Phone_Museika_Hiro_Boin"     {*^A-*}
 
 QS "L-Phone_Boin_A" {*^a-*,*^A-*}
@@ -127,7 +126,6 @@ QS "C-Phone_Han_Sema_Boin"         {*-e+*,*-o+*,*-E+*,*-O+*}
 QS "C-Phone_Yuusei_Han_Sema_Boin"  {*-e+*,*-o+*}
 QS "C-Phone_Museika_Han_Sema_Boin" {*-E+*,*-O+*}
 QS "C-Phone_Hiro_Boin"             {*-a+*,*-A+*}
-QS "C-Phone_Yuusei_Hiro_Boin"      {*-a+*}
 QS "C-Phone_Museika_Hiro_Boin"     {*-A+*}
 
 QS "C-Phone_Boin_A" {*-a+*,*-A+*}
@@ -230,7 +228,6 @@ QS "R-Phone_Han_Sema_Boin"         {*+e=*,*+o=*,*+E=*,*+O=*}
 QS "R-Phone_Yuusei_Han_Sema_Boin"  {*+e=*,*+o=*}
 QS "R-Phone_Museika_Han_Sema_Boin" {*+E=*,*+O=*}
 QS "R-Phone_Hiro_Boin"             {*+a=*,*+A=*}
-QS "R-Phone_Yuusei_Hiro_Boin"      {*+a=*}
 QS "R-Phone_Museika_Hiro_Boin"     {*+A=*}
 
 QS "R-Phone_Boin_A" {*+a=*,*+A=*}
