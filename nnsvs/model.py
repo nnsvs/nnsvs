@@ -8,6 +8,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torch.nn.utils import weight_norm
 
 from nnsvs.base import BaseModel
+from nnsvs.dsp import TrTimeInvFIRFilter
+from nnsvs.multistream import split_streams
 
 
 def WNConv1d(*args, **kwargs):
@@ -49,6 +51,55 @@ class Conv1dResnet(BaseModel):
 
     def forward(self, x, lengths=None):
         return self.model(x.transpose(1,2)).transpose(1,2)
+
+
+class Conv1dResnetSAR(Conv1dResnet):
+    """Conv1dResnet with shallow AR structure
+
+    Args:
+        stream_sizes (list): Stream sizes
+        ar_orders (list): Filter dimensions for each stream.
+    """
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0,
+            stream_sizes=[180, 3, 1, 15], ar_orders=[20, 200, 20, 20]):
+        super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout)
+        self.stream_sizes = stream_sizes
+
+        self.analysis_filts = nn.ModuleList()
+        for s, K in zip(stream_sizes, ar_orders):
+            self.analysis_filts += [TrTimeInvFIRFilter(s, K+1)]
+
+    def preprocess_target(self, y):
+        assert sum(self.stream_sizes) == y.shape[-1]
+        ys = split_streams(y, self.stream_sizes)
+        for idx, yi in enumerate(ys):
+            ys[idx] = self.analysis_filts[idx](yi.transpose(1,2)).transpose(1,2)
+        return torch.cat(ys, -1)
+
+    def inference(self, x, lengths=None):
+        from torchaudio.functional import lfilter
+        out = self.model(x.transpose(1, 2))
+        out_streams = split_streams(out.transpose(1, 2), self.stream_sizes)
+        # back to conv1d friendly (B, C, T) format
+        out_streams = map(lambda x: x.transpose(1, 2), out_streams)
+
+        out_syn = []
+        for sidx, os in enumerate(out_streams):
+            out_stream_syn = torch.zeros_like(os)
+            a = self.analysis_filts[sidx].get_filt_coefs()
+            with torch.no_grad():
+                # apply IIR filter for each dimiesion
+                for idx in range(os.shape[1]):
+                    # NOTE: scipy.signal.lfilter accespts b, a in order,
+                    # but torchaudio expect the oppsite; a, b in order
+                    ai = a[idx].view(-1).flip(0)
+                    bi = torch.zeros_like(ai)
+                    bi[0] = 1
+                    out_stream_syn[:, idx, :] = lfilter(os[:, idx, :], ai, bi, clamp=False)
+                out_syn += [out_stream_syn]
+
+        out_syn = torch.cat(out_syn, 1)
+        return out_syn.transpose(1, 2)
 
 
 class FeedForwardNet(BaseModel):
