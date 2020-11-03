@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class MDNLayer(nn.Module):
     """ Mixture Density Network layer
 
-    The input maps to the parameters of a Mixture of Gaussians (MoG) probability 
+    The input maps to the parameters of a Mixture of Gaussians (MoG) probability
     distribution, where each Gaussian has out_dim dimensions and diagonal covariance.
 
     Implementation references:
@@ -35,11 +35,11 @@ class MDNLayer(nn.Module):
     def forward(self, minibatch):
         """
         Args:
-            minibatch (B, T, D_in): B is the batch size and T is data lengths of this batch, 
+            minibatch (B, T, D_in): B is the batch size and T is data lengths of this batch,
                 and D_in is in_dim.
 
         Returns:
-            log_pi (B, T, G): Log of a multinomial distribution of the Gaussians. 
+            log_pi (B, T, G): Log of a multinomial distribution of the Gaussians.
                 G is num_gaussians and D_out is out_dim.
             log_sigma (B, T, G, D_out): mean of each Gaussians
             mu (B, T, G, D_out): the log of standard deviation of each Gaussians.
@@ -47,7 +47,7 @@ class MDNLayer(nn.Module):
 
         log_pi = F.log_softmax(self.log_pi(minibatch), dim=2)
         log_sigma = self.log_sigma(minibatch)
-        log_sigma = log_sigma.view(len(minibatch), -1, self.num_gaussians, self.out_dim)        
+        log_sigma = log_sigma.view(len(minibatch), -1, self.num_gaussians, self.out_dim)
         mu = self.mu(minibatch)
         mu = mu.view(len(minibatch), -1, self.num_gaussians, self.out_dim)
         return log_pi, log_sigma, mu
@@ -60,9 +60,9 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0,
     Args:
         log_pi (B, T, G): The log of multinomial distribution of the Gaussians. B is the batch size,
             T is data length of this batch, and G is num_gaussians of class MDNLayer.
-        log_sigma (B, T , G ,D_out): The log standard deviation of the Gaussians. D_out is out_dim of class 
+        log_sigma (B, T , G ,D_out): The log standard deviation of the Gaussians. D_out is out_dim of class
             MDNLayer.
-        mu (B , T, G, D_out): The means of the Gaussians. 
+        mu (B , T, G, D_out): The means of the Gaussians.
         target (B, T, D_out): The target variables.
         log_pi_min (float): Minimum value of log_pi (for numerical stability)
         log_sigma_min (float): Minimum value of log_sigma (for numerical stability)
@@ -105,7 +105,7 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0,
         # not averaged (for applying mask later)
         # (B, T)
         return loss
-    return 
+    return
 
 # from r9y9/wavenet_vocoder/wavenet_vocoder/mixture.py
 def to_one_hot(tensor, n, fill_with=1.):
@@ -117,19 +117,19 @@ def to_one_hot(tensor, n, fill_with=1.):
     return one_hot
 
 def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
-    """ Retrun the mean and standard deviation of the Gaussian component whose weight coefficient is 
+    """ Retrun the mean and standard deviation of the Gaussian component whose weight coefficient is
     the largest as the most probable predictions.
 
     Args:
-        log_pi (B, T, G): The log of multinomial distribution of the Gaussians. 
-            B is the batch size, T is data length of this batch, 
+        log_pi (B, T, G): The log of multinomial distribution of the Gaussians.
+            B is the batch size, T is data length of this batch,
             G is num_gaussians of class MDNLayer.
-        log_sigma (B, T, G, D_out): The standard deviation of the Gaussians. D_out is out_dim of class 
+        log_sigma (B, T, G, D_out): The standard deviation of the Gaussians. D_out is out_dim of class
             MDNLayer.
-        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
+        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class
             MDNLayer.
     Returns:
-        sigma, mu (B, T, D_out), (B, T, D_out): the standard deviation and means of 
+        sigma, mu (B, T, D_out), (B, T, D_out): the standard deviation and means of
             the most probabble Gaussian component.
     """
     batch_size, _, num_gaussians , out_dim = mu.shape
@@ -157,11 +157,11 @@ def mdn_get_sample(log_pi, log_sigma, mu):
 
     Args:
         log_pi (B, T, G): The log of multinomial distribution of the Gaussians.
-            B is the batch size, T is data length of this batch, 
+            B is the batch size, T is data length of this batch,
             G is num_gaussians of class MDNLayer.
-        log_sigma (B, T, G, D_out): The log of standard deviation of the Gaussians. 
+        log_sigma (B, T, G, D_out): The log of standard deviation of the Gaussians.
             D_out is out_dim of class MDNLayer.
-        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class 
+        mu (B, T, G, D_out): The means of the Gaussians. D_out is out_dim of class
             MDNLayer.
     Returns:
         sample (B, T, D_out): Sample from mixture of the Gaussian component.
@@ -173,5 +173,5 @@ def mdn_get_sample(log_pi, log_sigma, mu):
 
     # Sample from normal distribution
     sample = dist.sample()
-    
+
     return sample
