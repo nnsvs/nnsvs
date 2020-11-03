@@ -199,7 +199,7 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
             # (B, T, D_out) -> (T, D_out)
             max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
             max_mu = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
-            
+
             # (T, D_out) -> (T, static_dim)
             pred_durations = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(duration_config.num_windows),
                                               duration_config.stream_sizes, duration_config.has_dynamic_features)
@@ -262,7 +262,7 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
             # (B, T, D_out) -> (T, D_out)
             max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * acoustic_out_scaler.var_
             max_mu = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
-            
+
             # (T, D_out) -> (T, static_dim)
             pred_acoustic = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(acoustic_config.num_windows),
                                               acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
@@ -284,7 +284,7 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
     return pred_acoustic
 
 
-def gen_waveform(labels, acoustic_features, 
+def gen_waveform(labels, acoustic_features,
                  binary_dict, continuous_dict, stream_sizes, has_dynamic_features,
                  subphone_features="coarse_coding", log_f0_conditioning=True, pitch_idx=None,
                  num_windows=3, post_filter=True, sample_rate=48000, frame_period=5,
