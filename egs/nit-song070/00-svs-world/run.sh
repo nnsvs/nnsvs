@@ -9,7 +9,7 @@ spk="yoko"
 dumpdir=dump
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst003_nnsvs.hed
+question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst001_nnsvs.hed
 
 # speficy if you have it locally, otherwise it will be downloaded at stage -1
 hts_demo_root=downloads/HTS-demo_NIT-SONG070-F001

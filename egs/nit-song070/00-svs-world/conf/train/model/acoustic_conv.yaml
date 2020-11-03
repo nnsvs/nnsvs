@@ -8,7 +8,7 @@ stream_weights:
 
 netG:
   _target_: nnsvs.model.Conv1dResnet
-  in_dim: 299
+  in_dim: 424
   out_dim: 199
   hidden_dim: 128
   num_layers: 6
