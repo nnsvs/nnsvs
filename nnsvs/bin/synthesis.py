@@ -47,7 +47,7 @@ def synthesis(config, device, label_path, question_path,
             log_f0_conditioning, config.timelag.allowed_range)
 
         # Timelag predictions
-        durations = predict_duration(device, labels, duration_model, duration_config, 
+        durations = predict_duration(device, labels, duration_model, duration_config,
             duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
             pitch_indices, log_f0_conditioning)
 
@@ -133,7 +133,9 @@ def my_app(config : DictConfig) -> None:
                                 timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
                                 duration_model, duration_config, duration_in_scaler, duration_out_scaler,
                                 acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
-                wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
+                wav = np.clip(wav, -32768, 32767)
+                if config.gain_normalize:
+                    wav = wav / np.max(np.abs(wav)) * 32767
 
                 out_wav_path = join(out_dir, f"{utt_id}.wav")
                 wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
