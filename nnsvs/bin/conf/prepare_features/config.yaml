@@ -4,6 +4,18 @@ defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
 
+  # Musical/linguistic context -> time-lag (onset fluctuations)
+  - timelag: defaults
+
+  # Musical/linguistic context -> phoneme durations
+  - duration: defaults
+
+  # Musical/linguistic context -> acoustic parameters (f0, mgc, bap, vuv)
+  - acoustic: static_deltadelta
+
+
+# Common settings for timelag/duration/acoustic features
+
 verbose: 100
 
 utt_list: path/to/list.txt
@@ -15,45 +27,3 @@ question_path:
 
 # Musical/linguistic feature extraction common settings
 log_f0_conditioning: true
-
-# Musical/linguistic context -> time-lag (onset fluctuations)
-timelag:
-  enabled: true
-  question_path:
-  label_phone_score_dir: data/timelag/label_phone_score
-  label_phone_align_dir: data/timelag/label_phone_align
-
-# Musical/linguistic context -> phoneme durations
-duration:
-  enabled: true
-  question_path:
-  label_dir: data/duration/label_phone_align
-
-# Musical/linguistic context -> acoustic parameters (f0, mgc, bap, vuv)
-acoustic:
-  enabled: true
-  question_path:
-  wav_dir: data/acoustic/wav
-  label_dir: data/acoustic/label_phone_align
-
-  subphone_features: coarse_coding
-
-  # kiritan
-  # min 174.61411571650194
-  # max 659.2551138257398
-  f0_floor: 150
-  f0_ceil: 700
-
-  use_harvest: true
-
-  frame_period: 5 # ms
-  mgc_order: 59
-
-  # windows to compute delta and delta-delta features
-  # set 1 to disable
-  num_windows: 3
-
-  # Use relative f0 modeling.
-  relative_f0: true
-
-  interp_unvoiced_aperiodicity: true

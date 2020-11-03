@@ -1,0 +1,5 @@
+# @package _group_
+
+enabled: true
+question_path:
+label_dir: data/duration/label_phone_align
