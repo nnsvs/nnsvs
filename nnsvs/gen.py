@@ -335,6 +335,9 @@ def gen_waveform(labels, acoustic_features,
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
     else:
         f0 = target_f0
+        f0[vuv < 0.5] = 0
+        f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
+
 
     generated_waveform = pyworld.synthesize(f0.flatten().astype(np.float64),
                                             spectrogram.astype(np.float64),
