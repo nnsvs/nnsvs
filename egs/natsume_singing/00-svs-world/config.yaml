@@ -3,7 +3,7 @@
 spk: "natsumeyuuri"
 
 ## exp tag(for managing experiments)
-tag: 
+tag:
 
 ## Directory of Unzipped singing voice database
 # PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
@@ -68,4 +68,9 @@ pretrained_expdir:
 # batch size
 batch_size: 8
 
-
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults

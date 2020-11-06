@@ -3,7 +3,7 @@
 spk: "ofuton_p"
 
 ## exp tag(for managing experiments)
-tag: 
+tag:
 
 ## Directory of Unzipped singing voice database
 # PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
@@ -21,7 +21,7 @@ exclude_songs: []
 ## Sinsy dictionary directory
 # This singing voice database contains the unvoiced vowels "I" and "U".
 # To enable the unvoiced vowels, modified version of sinsy dictionary files
-# are needed. 
+# are needed.
 sinsy_dic: "../../_common/no2/dic"
 
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
@@ -65,4 +65,9 @@ pretrained_expdir:
 # batch size
 batch_size: 8
 
-
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults
