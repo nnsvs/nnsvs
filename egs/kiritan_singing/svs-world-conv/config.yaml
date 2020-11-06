@@ -8,12 +8,8 @@ tag:
 #                DATA PREPARATION SETTING                 #
 ###########################################################
 
-# Directory of Unzipped singing voice database
-# PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
-db_root: "downloads/HTS-demo_NIT-SONG070-F001"
-
-# Output directory
-out_dir: "./data"
+# **CHANGE** this to your database path
+wav_root: "/home/ryuichi/data/kiritan_singing/wav"
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #

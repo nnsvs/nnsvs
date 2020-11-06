@@ -8,12 +8,6 @@ tag:
 #                DATA PREPARATION SETTING                 #
 ###########################################################
 
-# Directory of Unzipped singing voice database
-# PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
-db_root: "downloads/HTS-demo_NIT-SONG070-F001"
-
-# Output directory
-out_dir: "./data"
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
