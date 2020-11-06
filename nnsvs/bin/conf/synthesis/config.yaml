@@ -4,6 +4,10 @@ defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
 
+  - timelag: defaults
+  - duration: defaults
+  - acoustic: defaults
+
 verbose: 100
 
 device: cuda # or cpu
@@ -34,31 +38,3 @@ log_f0_conditioning: true
 ground_truth_duration: false
 
 gain_normalize: false
-
-timelag:
-  question_path:
-  checkpoint:
-  in_scaler_path:
-  out_scaler_path:
-  model_yaml:
-
-  allowed_range: [-20, 20] # in frames
-  allowed_range_rest: [-40, 40]
-
-duration:
-  question_path:
-  checkpoint:
-  in_scaler_path:
-  out_scaler_path:
-  model_yaml:
-
-acoustic:
-  question_path:
-  checkpoint:
-  in_scaler_path:
-  out_scaler_path:
-  model_yaml:
-  subphone_features: coarse_coding
-  # (mgc, lf0, vuv, bap)
-  relative_f0: true
-  post_filter: true
