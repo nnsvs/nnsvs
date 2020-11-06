@@ -1,9 +1,13 @@
 # NOTE: the script is supposed to be used called from nnsvs recipes.
 # Please don't try to run the shell script directry.
 
+if [ -z $eval_checkpoint ]; then
+    eval_checkpoint=latest.pth
+fi
+
 for s in ${testsets[@]}; do
     for typ in timelag duration acoustic; do
-        checkpoint=$expdir/$typ/latest.pth
+        checkpoint=$expdir/$typ/${eval_checkpoint}
         name=$(basename $checkpoint)
         xrun nnsvs-generate model.checkpoint=$checkpoint \
             model.model_yaml=$expdir/$typ/model.yaml \
