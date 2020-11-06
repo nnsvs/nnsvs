@@ -1,4 +1,4 @@
-# 00-svs-world
+# svs-world-conv
 
 A recipe to build a statistical parametric singing voice synthesis system. The system consists of three trainable networks:
 
