@@ -1,0 +1,10 @@
+# @package _group_
+
+question_path:
+checkpoint:
+in_scaler_path:
+out_scaler_path:
+model_yaml:
+
+allowed_range: [-20, 20] # in frames
+allowed_range_rest: [-40, 40]
