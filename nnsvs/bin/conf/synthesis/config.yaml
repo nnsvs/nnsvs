@@ -27,7 +27,6 @@ out_dir:
 label_path:
 out_wav_path:
 
-
 sample_rate: 48000
 frame_period: 5
 question_path: path/to/qst.hed
@@ -38,3 +37,9 @@ log_f0_conditioning: true
 ground_truth_duration: false
 
 gain_normalize: false
+
+# If not empty, try to search statisics in the directory
+stats_dir:
+# If not empty, try to search models in the directory
+model_dir:
+model_checkpoint: latest.pth
