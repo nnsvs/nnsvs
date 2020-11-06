@@ -142,7 +142,7 @@ def get_stream_weight(stream_weights, stream_sizes):
 
 def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
     criterion = nn.MSELoss(reduction="none")
-    
+
     logger.info("Start utterance-wise training...")
 
     stream_weights = get_stream_weight(
@@ -161,6 +161,10 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
 
                 optimizer.zero_grad()
 
+                # Apply preprocess if required (e.g., FIR filter for shallow AR)
+                # defaults to no-op
+                y = model.preprocess_target(y)
+
                 # Run forwaard
                 if model.prediction_type() == PredictionType.PROBABILISTIC:
                     pi, sigma, mu = model(x, sorted_lengths)
@@ -169,7 +173,7 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                     mask = make_non_pad_mask(sorted_lengths).to(device)
                     # Compute loss and apply mask
                     loss = mdn_loss(pi, sigma, mu, y, reduce=False).masked_select(mask).mean()
-                    
+
                 else:
                     y_hat = model(x, sorted_lengths)
 

@@ -6,7 +6,7 @@ stream_weights: [1]
 
 netG:
   _target_: nnsvs.model.FeedForwardNet
-  in_dim: 420
+  in_dim: 295
   out_dim: 1
   hidden_dim: 128
   num_layers: 2

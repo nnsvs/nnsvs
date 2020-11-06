@@ -43,6 +43,7 @@ else
 fi
 expdir=exp/$expname
 
+
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -e downloads/HTS-demo_NIT-SONG070-F001 ]; then
         echo "stage -1: Downloading data"

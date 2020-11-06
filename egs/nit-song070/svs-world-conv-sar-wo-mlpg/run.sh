@@ -69,6 +69,21 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     grep -v _003 data/list/utt_list.txt | grep -v _004 > data/list/$train_set.list
 fi
 
+if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
+    echo "stage 0: Data preparation"
+    # the following three directories will be created
+    # 1) data/timelag 2) data/duration 3) data/acoustic
+    python local/data_prep.py $db_root $out_dir --gain-normalize
+
+    echo "train/dev/eval split"
+    mkdir -p data/list
+    find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
+        | sort > data/list/utt_list.txt
+    grep _003 data/list/utt_list.txt > data/list/$eval_set.list
+    grep _004 data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v _003 data/list/utt_list.txt | grep -v _004 > data/list/$train_set.list
+fi
+
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "stage 1: Feature generation"
     . $NNSVS_COMMON_ROOT/feature_generation.sh
