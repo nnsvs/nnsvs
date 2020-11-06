@@ -1,40 +1,5 @@
 #!/bin/bash
 
-script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
-NNSVS_ROOT=$script_dir/../../..
-NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
-
-spk="yoko"
-
-dumpdir=dump
-
-# HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path=$NNSVS_ROOT/egs/_common/hed/jp_qst003_nnsvs.hed
-
-# speficy if you have it locally, otherwise it will be downloaded at stage -1
-hts_demo_root=downloads/HTS-demo_NIT-SONG070-F001
-
-# Models
-# To customize, put your config in conf/train/model/ and
-# specify the config name below
-timelag_model=timelag_ffn
-duraiton_model=duration_lstm
-acoustic_model=acoustic_conv
-
-# Pretrained model dir
-# leave empty to disable
-pretrained_expdir=
-
-batch_size=4
-
-stage=0
-stop_stage=0
-
-# exp tag
-tag="" # tag for managing experiments.
-
-. $NNSVS_ROOT/utils/parse_options.sh || exit 1;
-
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
@@ -47,22 +12,37 @@ function xrun () {
     set +x
 }
 
+script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
+NNSVS_ROOT=$script_dir/../../../
+NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
+. $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
+
+eval $(parse_yaml "./config.yaml" "")
+
 train_set="train_no_dev"
 dev_set="dev"
 eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
 testsets=($eval_set)
 
+dumpdir=dump
+
 dump_org_dir=$dumpdir/$spk/org
 dump_norm_dir=$dumpdir/$spk/norm
 
+stage=0
+stop_stage=0
+
+. $NNSVS_ROOT/utils/parse_options.sh || exit 1;
+
 # exp name
-if [ -z ${tag} ]; then
+if [ -z ${tag:=} ]; then
     expname=${spk}
 else
     expname=${spk}_${tag}
 fi
 expdir=exp/$expname
+
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -e downloads/HTS-demo_NIT-SONG070-F001 ]; then
@@ -79,7 +59,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     # the following three directories will be created
     # 1) data/timelag 2) data/duration 3) data/acoustic
-    python local/data_prep.py $hts_demo_root ./data --gain-normalize
+    python local/data_prep.py $db_root $out_dir --gain-normalize
 
     echo "train/dev/eval split"
     mkdir -p data/list
