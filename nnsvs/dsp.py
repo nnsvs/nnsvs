@@ -84,5 +84,6 @@ class TrTimeInvFIRFilter(nn.Conv1d):
         b = self.get_filt_coefs()
         out = F.conv1d(
             x, b, self.bias, self.stride, self.padding, self.dilation, self.groups)
-        out = out[:, :, :-self.padding[0]] if self.causal else out
+        if self.padding[0] > 0:
+            out = out[:, :, :-self.padding[0]] if self.causal else out
         return out
