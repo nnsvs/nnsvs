@@ -50,12 +50,11 @@ timelag_allowed_range_rest: [-40, 39]
 # DO NOT CHANGE this unless you know the relationship between the dim of bap and sample_rate.
 sample_rate: 48000
 
-
 ### Training related settings.
 ## Models
 # To customize, put your config in conf/train/model/ and
 # specify the config name below
-timelag_model: timelag_fnn
+timelag_model: timelag_ffn
 duraiton_model: duration_lstm
 acoustic_model: acoustic_conv
 

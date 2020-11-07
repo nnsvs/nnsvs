@@ -54,7 +54,7 @@ sample_rate: 48000
 ## Models
 # To customize, put your config in conf/train/model/ and
 # specify the config name below
-timelag_model: timelag_fnn
+timelag_model: timelag_ffn
 duraiton_model: duration_lstm
 acoustic_model: acoustic_conv
 
