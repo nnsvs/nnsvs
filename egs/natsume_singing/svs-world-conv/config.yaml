@@ -54,7 +54,18 @@ timelag_allowed_range_rest: [-40, 39]
 # DO NOT CHANGE this unless you know the relationship between the dim of bap and sample_rate.
 sample_rate: 48000
 
-### Training related settings.
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+
+timelag_features: defaults
+duration_features: defaults
+acoustic_features: static_deltadelta
+
+###########################################################
+#                TRAINING SETTING                         #
+###########################################################
+
 ## Models
 # To customize, put your config in conf/train/model/ and
 # specify the config name below
