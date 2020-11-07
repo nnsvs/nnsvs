@@ -14,5 +14,5 @@ netG:
   num_layers: 6
   dropout: 0.1
 
-  stream_sizes: [180, 3, 1, 15]
-  ar_orders: [20, 200, 20, 20]
+  stream_sizes: [1, 59, 1, 59, 1, 59, 3, 1, 15]
+  ar_orders: [200, 20, 200, 20, 200, 20, 200, 20, 20]
