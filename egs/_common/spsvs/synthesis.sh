@@ -7,8 +7,14 @@ else
     ext=""
 fi
 
-if [ -z $eval_checkpoint ]; then
-    eval_checkpoint=latest.pth
+if [ -z $timelag_eval_checkpoint ]; then
+    timelag_eval_checkpoint=best_loss.pth
+fi
+if [ -z $duration_eval_checkpoint ]; then
+    duration_eval_checkpoint=best_loss.pth
+fi
+if [ -z $acoustic_eval_checkpoint ]; then
+    acoustic_eval_checkpoint=latest.pth
 fi
 
 for s in ${testsets[@]}; do
@@ -23,21 +29,21 @@ for s in ${testsets[@]}; do
             timelag=$timelag_synthesis \
             duration=$duration_synthesis \
             acoustic=$acoustic_synthesis \
-            timelag.checkpoint=$expdir/timelag/$eval_checkpoint \
+            timelag.checkpoint=$expdir/timelag/$timelag_eval_checkpoint \
             timelag.in_scaler_path=$dump_norm_dir/in_timelag_scaler.joblib \
             timelag.out_scaler_path=$dump_norm_dir/out_timelag_scaler.joblib \
             timelag.model_yaml=$expdir/timelag/model.yaml \
-            duration.checkpoint=$expdir/duration/$eval_checkpoint \
+            duration.checkpoint=$expdir/duration/$duration_eval_checkpoint \
             duration.in_scaler_path=$dump_norm_dir/in_duration_scaler.joblib \
             duration.out_scaler_path=$dump_norm_dir/out_duration_scaler.joblib \
             duration.model_yaml=$expdir/duration/model.yaml \
-            acoustic.checkpoint=$expdir/acoustic/$eval_checkpoint \
+            acoustic.checkpoint=$expdir/acoustic/$acoustic_eval_checkpoint \
             acoustic.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
             acoustic.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
             acoustic.model_yaml=$expdir/acoustic/model.yaml \
             utt_list=./data/list/$s.list \
             in_dir=data/acoustic/$input/ \
-            out_dir=$expdir/synthesis/$s/${eval_checkpoint/.pth/}/$input \
+            out_dir=$expdir/synthesis/$s/${acoustic_eval_checkpoint/.pth/}/$input \
             ground_truth_duration=$ground_truth_duration
     done
 done
