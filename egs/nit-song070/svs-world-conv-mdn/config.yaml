@@ -1,0 +1,65 @@
+# General settings.
+spk: "yoko"
+
+# exp tag(for managing experiments)
+tag:
+
+###########################################################
+#                DATA PREPARATION SETTING                 #
+###########################################################
+
+# Directory of Unzipped singing voice database
+# PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
+db_root: "downloads/HTS-demo_NIT-SONG070-F001"
+
+# Output directory
+out_dir: "./data"
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+
+# HTS-style question used for extracting musical/linguistic context from musicxml files
+question_path: "../../_common/hed/jp_qst003_nnsvs.hed"
+
+timelag_features: defaults
+duration_features: defaults
+acoustic_features: static_deltadelta
+
+###########################################################
+#                TRAINING SETTING                         #
+###########################################################
+
+# Models
+# To customize, put your config or change ones in
+# conf/train/{timelag,duration,acoustic}/ and
+# specify the config name below
+# NOTE: *_model: model definition, *_train: general train configs,
+# *_data: data configs (e.g., batch size)
+
+timelag_model: timelag_mdn
+timelag_train: myconfig
+timelag_data: myconfig
+
+duration_model: duration_mdn
+duration_train: myconfig
+duration_data: myconfig
+
+acoustic_model: acoustic_mdn
+acoustic_train: myconfig
+acoustic_data: myconfig
+
+# Pretrained model dir (leave empty to disable)
+pretrained_expdir:
+
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults
+
+# latest.pth or best.pth
+timelag_eval_checkpoint: latest.pth
+duration_eval_checkpoint: latest.pth
+acoustic_eval_checkpoint: latest.pth
