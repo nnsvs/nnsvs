@@ -2,7 +2,7 @@
 # Please don't try to run the shell script directry.
 
 if [ -d conf/train ]; then
-    ext="--config-dir conf/train"
+    ext="--config-dir conf/train/timelag"
 else
     ext=""
 fi
@@ -13,10 +13,10 @@ else
     resume_checkpoint=
 fi
 xrun nnsvs-train $ext \
+    model=$timelag_model train=$timelag_train data=$timelag_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_timelag/ \
     data.dev.in_dir=$dump_norm_dir/$dev_set/in_timelag/ \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_timelag/ \
-    model=$timelag_model train.out_dir=$expdir/timelag \
-    data.batch_size=$batch_size \
-    resume.checkpoint=$resume_checkpoint
+    train.out_dir=$expdir/timelag \
+    train.resume.checkpoint=$resume_checkpoint

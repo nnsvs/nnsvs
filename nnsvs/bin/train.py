@@ -227,8 +227,8 @@ def my_app(config : DictConfig) -> None:
 
     if use_cuda:
         from torch.backends import cudnn
-        cudnn.benchmark = config.cudnn.benchmark
-        cudnn.deterministic = config.cudnn.deterministic
+        cudnn.benchmark = config.train.cudnn.benchmark
+        cudnn.deterministic = config.train.cudnn.deterministic
         logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
 
@@ -242,21 +242,21 @@ def my_app(config : DictConfig) -> None:
     model = hydra.utils.instantiate(config.model.netG).to(device)
 
     # Optimizer
-    optimizer_class = getattr(optim, config.optim.optimizer.name)
-    optimizer = optimizer_class(model.parameters(), **config.optim.optimizer.params)
+    optimizer_class = getattr(optim, config.train.optim.optimizer.name)
+    optimizer = optimizer_class(model.parameters(), **config.train.optim.optimizer.params)
 
     # Scheduler
-    lr_scheduler_class = getattr(optim.lr_scheduler, config.optim.lr_scheduler.name)
-    lr_scheduler = lr_scheduler_class(optimizer, **config.optim.lr_scheduler.params)
+    lr_scheduler_class = getattr(optim.lr_scheduler, config.train.optim.lr_scheduler.name)
+    lr_scheduler = lr_scheduler_class(optimizer, **config.train.optim.lr_scheduler.params)
 
     data_loaders = get_data_loaders(config)
 
     # Resume
-    if config.resume.checkpoint is not None and len(config.resume.checkpoint) > 0:
-        logger.info("Load weights from {}".format(config.resume.checkpoint))
-        checkpoint = torch.load(to_absolute_path(config.resume.checkpoint))
+    if config.train.resume.checkpoint is not None and len(config.train.resume.checkpoint) > 0:
+        logger.info("Load weights from {}".format(config.train.resume.checkpoint))
+        checkpoint = torch.load(to_absolute_path(config.train.resume.checkpoint))
         model.load_state_dict(checkpoint["state_dict"])
-        if config.resume.load_optimizer:
+        if config.train.resume.load_optimizer:
             logger.info("Load optimizer state")
             optimizer.load_state_dict(checkpoint["optimizer_state"])
             lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
