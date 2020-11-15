@@ -212,3 +212,18 @@ class MDN(BaseModel):
 
     def forward(self, x, lengths=None):
         return self.model(x)
+
+
+class Conv1dResnetMDN(BaseModel):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0, num_gaussians=8):
+        super().__init__()
+        model = [Conv1dResnet(in_dim, hidden_dim, hidden_dim, num_layers, dropout),
+                 nn.ReLU(),
+                 MDNLayer(hidden_dim, out_dim, num_gaussians=num_gaussians)]
+        self.model = nn.Sequential(*model)
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
+    def forward(self, x, lengths=None):
+        return self.model(x)
