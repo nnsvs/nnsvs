@@ -169,11 +169,12 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 if model.prediction_type() == PredictionType.PROBABILISTIC:
                     pi, sigma, mu = model(x, sorted_lengths)
 
-                    # (B, max(T))
+                    # (B, max(T)) or (B, max(T), D_out)
                     mask = make_non_pad_mask(sorted_lengths).to(device)
+                    mask = mask.unsqueeze(-1) if len(pi.shape) == 4 else mask
                     # Compute loss and apply mask
-                    loss = mdn_loss(pi, sigma, mu, y, reduce=False).masked_select(mask).mean()
-
+                    loss = mdn_loss(pi, sigma, mu, y, reduce=False)
+                    loss = loss.masked_select(mask).mean()
                 else:
                     y_hat = model(x, sorted_lengths)
 
