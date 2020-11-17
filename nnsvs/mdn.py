@@ -70,7 +70,7 @@ class MDNLayer(nn.Module):
         return log_pi, log_sigma, mu
 
 
-def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-20.0, log_sigma_min=-20.0, reduce=True):
+def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-9.0, reduce=True):
     """Calculates the error, given the MoG parameters and the target.
     The loss is the negative log likelihood of the data given the MoG
     parameters.
