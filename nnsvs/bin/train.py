@@ -16,7 +16,7 @@ from torch.nn import functional as F
 from torch import optim
 from torch.backends import cudnn
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
-from nnsvs.util import make_non_pad_mask
+from nnsvs.util import make_non_pad_mask, init_seed
 from nnsvs.multistream import split_streams
 from nnsvs.logger import getLogger
 from nnsvs.base import PredictionType
@@ -232,6 +232,9 @@ def my_app(config : DictConfig) -> None:
         cudnn.deterministic = config.train.cudnn.deterministic
         logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
+
+    logger.info(f"Random seed: {config.seed}")
+    init_seed(config.seed)
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
