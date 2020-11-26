@@ -30,7 +30,7 @@ class TimeInvFIRFilter(nn.Conv1d):
         super(TimeInvFIRFilter, self).__init__(
             channels, channels, kernel_size, padding=padding,
             groups=channels, bias=None)
-        self.weight.data[:, :, :] = filt_coef.flip(0)
+        self.weight.data[:, :, :] = filt_coef.flip(-1)
         self.weight.requires_grad = requires_grad
 
     def forward(self, x):
@@ -67,7 +67,7 @@ class TrTimeInvFIRFilter(nn.Conv1d):
         super(TrTimeInvFIRFilter, self).__init__(
             channels, channels, kernel_size, padding=padding,
             groups=channels, bias=None)
-        self.weight.data[:, :, :] = init_filt_coef.flip(0)
+        self.weight.data[:, :, :] = init_filt_coef.flip(-1)
         self.weight.requires_grad = True
         self.tanh = tanh
         self.fixed_0th = fixed_0th
