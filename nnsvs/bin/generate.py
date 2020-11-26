@@ -52,11 +52,9 @@ def my_app(config : DictConfig) -> None:
 
             if model.prediction_type() == PredictionType.PROBABILISTIC:
 
-                log_pi, log_sigma, mu = model.inference(feats, [feats.shape[1]])
-                
+                max_mu, max_sigma = model.inference(feats, [feats.shape[1]])
+
                 if np.any(model_config.has_dynamic_features):
-                    max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
-                   
                     # Apply denormalization
                     # (B, T, D_out) -> (T, D_out)
                     max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * scaler.var_
@@ -68,8 +66,7 @@ def my_app(config : DictConfig) -> None:
 
                 else:
                     # (T, D_out)
-                    _, out = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
-                    out = out.squeeze(0).cpu().data.numpy()
+                    out = max_mu.squeeze(0).cpu().data.numpy()
                     out = scaler.inverse_transform(out)
             else:
                 out = model.inference(feats, [feats.shape[1]]).squeeze(0).cpu().data.numpy()

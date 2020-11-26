@@ -16,7 +16,7 @@ from torch.nn import functional as F
 from torch import optim
 from torch.backends import cudnn
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
-from nnsvs.util import make_non_pad_mask
+from nnsvs.util import make_non_pad_mask, init_seed
 from nnsvs.multistream import split_streams
 from nnsvs.logger import getLogger
 from nnsvs.base import PredictionType
@@ -169,11 +169,12 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
                 if model.prediction_type() == PredictionType.PROBABILISTIC:
                     pi, sigma, mu = model(x, sorted_lengths)
 
-                    # (B, max(T))
+                    # (B, max(T)) or (B, max(T), D_out)
                     mask = make_non_pad_mask(sorted_lengths).to(device)
+                    mask = mask.unsqueeze(-1) if len(pi.shape) == 4 else mask
                     # Compute loss and apply mask
-                    loss = mdn_loss(pi, sigma, mu, y, reduce=False).masked_select(mask).mean()
-
+                    loss = mdn_loss(pi, sigma, mu, y, reduce=False)
+                    loss = loss.masked_select(mask).mean()
                 else:
                     y_hat = model(x, sorted_lengths)
 
@@ -231,6 +232,9 @@ def my_app(config : DictConfig) -> None:
         cudnn.deterministic = config.train.cudnn.deterministic
         logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
+
+    logger.info(f"Random seed: {config.seed}")
+    init_seed(config.seed)
 
     device = torch.device("cuda" if use_cuda else "cpu")
 

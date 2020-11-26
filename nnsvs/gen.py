@@ -16,7 +16,7 @@ from nnsvs.multistream import multi_stream_mlpg, get_static_stream_sizes
 from nnsvs.multistream import select_streams, split_streams
 
 from nnsvs.base import PredictionType
-from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
+
 
 def get_windows(num_window=1):
     windows = [(0, 0, np.array([1.0]))]
@@ -87,9 +87,8 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
     # Run model
     if timelag_model.prediction_type() == PredictionType.PROBABILISTIC:
         # (B, T, D_out)
-        log_pi, log_sigma, mu = timelag_model.inference(x, [x.shape[1]])
+        max_mu, max_sigma = timelag_model.inference(x, [x.shape[1]])
         if np.any(timelag_config.has_dynamic_features):
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
             max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * timelag_out_scaler.var_
@@ -98,7 +97,6 @@ def predict_timelag(device, labels, timelag_model, timelag_config, timelag_in_sc
             pred_timelag = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(timelag_config.num_windows),
                                               timelag_config.stream_sizes, timelag_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_timelag = timelag_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
@@ -192,9 +190,8 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
 
     if duration_model.prediction_type() == PredictionType.PROBABILISTIC:
         # (B, T, D_out)
-        log_pi, log_sigma, mu = duration_model.inference(x, [x.shape[1]])
+        max_mu, max_sigma = duration_model.inference(x, [x.shape[1]])
         if np.any(duration_config.has_dynamic_features):
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
             max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
@@ -204,7 +201,6 @@ def predict_duration(device, labels, duration_model, duration_config, duration_i
             pred_durations = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(duration_config.num_windows),
                                               duration_config.stream_sizes, duration_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_durations = duration_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
@@ -253,11 +249,9 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
     x = x.view(1, -1, x.size(-1))
 
     if acoustic_model.prediction_type() == PredictionType.PROBABILISTIC:
-        log_pi, log_sigma, mu = acoustic_model.inference(x, [x.shape[1]])
+        # (B, T, D_out)
+        max_mu, max_sigma = acoustic_model.inference(x, [x.shape[1]])
         if np.any(acoustic_config.has_dynamic_features):
-            # (B, T, D_out)
-            max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
-
             # Apply denormalization
             # (B, T, D_out) -> (T, D_out)
             max_sigma_sq = max_sigma.squeeze(0).cpu().data.numpy() ** 2 * acoustic_out_scaler.var_
@@ -267,7 +261,6 @@ def predict_acoustic(device, labels, acoustic_model, acoustic_config, acoustic_i
             pred_acoustic = multi_stream_mlpg(max_mu, max_sigma_sq, get_windows(acoustic_config.num_windows),
                                               acoustic_config.stream_sizes, acoustic_config.has_dynamic_features)
         else:
-            _, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
             # Apply denormalization
             pred_acoustic = acoustic_out_scaler.inverse_transform(max_mu.squeeze(0).cpu().data.numpy())
     else:
