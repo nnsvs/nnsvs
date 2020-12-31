@@ -25,7 +25,7 @@ jobs:
     - name: install hts_engine_API
       run: |
         git clone https://github.com/r9y9/hts_engine_API
-        cd hts_engine_API/src && ./waf configure build && sudo ./waf install
+        cd hts_engine_API/src && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON .. && sudo make install
         cd ../../ && rm -rf hts_engine_API
 
     - name: install sinsy
