@@ -61,7 +61,6 @@ def _prepare_acoustic_feature(in_acoustic_root, out_acoustic_root,
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
-    # logger.info(config.pretty())
     logger.info(OmegaConf.to_yaml(config))
 
     utt_list = to_absolute_path(config.utt_list)
