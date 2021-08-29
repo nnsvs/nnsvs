@@ -3,6 +3,7 @@ import os
 from os.path import basename, join, splitext
 
 import hydra
+import joblib
 import numpy as np
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
@@ -156,25 +157,35 @@ def my_app(config: DictConfig) -> None:
     if config.timelag.enabled:
         logger.info("Timelag linguistic feature dim: {}".format(in_timelag[0].shape[1]))
         logger.info("Timelag feature dim: {}".format(out_timelag[0].shape[1]))
-        for idx, _ in enumerate(tqdm(in_timelag)):
-            _prepare_timelag_feature(in_timelag_root, out_timelag_root,
-                                     in_timelag, out_timelag, idx)
+        joblib.Parallel(n_jobs=-2)(
+            joblib.delayed(_prepare_timelag_feature)(
+                in_timelag_root, out_timelag_root, in_timelag, out_timelag, idx
+            )
+            for idx in tqdm(range(len(in_duration)))
+        )
 
     # Save features for duration model
     if config.duration.enabled:
         logger.info("Duration linguistic feature dim: {}".format(in_duration[0].shape[1]))
         logger.info("Duration feature dim: {}".format(out_duration[0].shape[1]))
-        for idx, _ in enumerate(tqdm(in_duration)):
-            _prepare_duration_feature(in_duration_root, out_duration_root,
-                                      in_duration, out_duration, idx)
+        joblib.Parallel(n_jobs=-2)(
+            joblib.delayed(_prepare_duration_feature)(
+                in_duration_root, out_duration_root, in_duration, out_duration, idx
+            )
+            for idx in tqdm(range(len(in_duration)))
+        )
 
     # Save features for acoustic model
     if config.acoustic.enabled:
         logger.info("Acoustic linguistic feature dim: {}".format(in_acoustic[0].shape[1]))
         logger.info("Acoustic feature dim: {}".format(out_acoustic[0][0].shape[1]))
-        for idx, _ in enumerate(tqdm(in_acoustic)):
-            _prepare_acoustic_feature(in_acoustic_root, out_acoustic_root,
-                                      in_acoustic, out_acoustic, idx)
+        joblib.Parallel(n_jobs=-2)(
+            joblib.delayed(_prepare_acoustic_feature)(
+                in_acoustic_root, out_acoustic_root, in_acoustic, out_acoustic, idx
+            )
+            for idx in tqdm(range(len(in_duration)))
+        )
+
 
 
 def entry():
