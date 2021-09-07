@@ -15,41 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
-    - name: LD library path
-      run: export LD_LIBRARY_PATH=/usr/local/lib
-
-    - name: install hts_engine_API
-      run: |
-        git clone https://github.com/r9y9/hts_engine_API
-        cd hts_engine_API/src && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON .. && sudo make install
-        cd ../../ && rm -rf hts_engine_API
-
-    - name: install sinsy
-      run: |
-        git clone https://github.com/r9y9/sinsy
-        cd sinsy/src/ && mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON  .. && make -j && sudo make install
-        cd ../../../ && rm -rf sinsy
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pysinsy
         pip install -e .
-
-    - name: install pysinsy
-      run: |
-        git clone https://github.com/r9y9/pysinsy
-        cd pysinsy && python setup.py install
 
     - name: Lint with flake8
       run: |
