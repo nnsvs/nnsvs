@@ -149,13 +149,13 @@ def my_app(config: DictConfig) -> None:
     for d in [in_timelag_root, out_timelag_root, in_duration_root, out_duration_root,
               in_acoustic_root, out_acoustic_root]:
         if not os.path.exists(d):
-            logger.info("mkdirs: {}".format(d))
+            logger.info("mkdirs: %s", format(d))
             os.makedirs(d)
 
     # Save features for timelag model
     if config.timelag.enabled:
-        logger.info("Timelag linguistic feature dim: {}".format(in_timelag[0].shape[1]))
-        logger.info("Timelag feature dim: {}".format(out_timelag[0].shape[1]))
+        logger.info("Timelag linguistic feature dim: %s", str(in_timelag[0].shape[1]))
+        logger.info("Timelag feature dim: %s", str(out_timelag[0].shape[1]))
         joblib.Parallel(n_jobs=-2)(
             joblib.delayed(_prepare_timelag_feature)(
                 in_timelag_root, out_timelag_root, in_timelag, out_timelag, idx
@@ -165,8 +165,8 @@ def my_app(config: DictConfig) -> None:
 
     # Save features for duration model
     if config.duration.enabled:
-        logger.info("Duration linguistic feature dim: {}".format(in_duration[0].shape[1]))
-        logger.info("Duration feature dim: {}".format(out_duration[0].shape[1]))
+        logger.info("Duration linguistic feature dim: %s", str(in_duration[0].shape[1]))
+        logger.info("Duration feature dim: %s", str(out_duration[0].shape[1]))
         joblib.Parallel(n_jobs=-2)(
             joblib.delayed(_prepare_duration_feature)(
                 in_duration_root, out_duration_root, in_duration, out_duration, idx
@@ -176,8 +176,8 @@ def my_app(config: DictConfig) -> None:
 
     # Save features for acoustic model
     if config.acoustic.enabled:
-        logger.info("Acoustic linguistic feature dim: {}".format(in_acoustic[0].shape[1]))
-        logger.info("Acoustic feature dim: {}".format(out_acoustic[0][0].shape[1]))
+        logger.info("Acoustic linguistic feature dim: %s", str(in_acoustic[0].shape[1]))
+        logger.info("Acoustic feature dim: %s", str(out_acoustic[0][0].shape[1]))
         joblib.Parallel(n_jobs=-2)(
             joblib.delayed(_prepare_acoustic_feature)(
                 in_acoustic_root, out_acoustic_root, in_acoustic, out_acoustic, idx
