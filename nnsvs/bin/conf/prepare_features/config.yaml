@@ -22,6 +22,10 @@ utt_list: path/to/list.txt
 
 out_dir: dump
 
+# Number of processes using ProcessPoolExecutor (1 <= max_workers <= 61)
+# If null, it will default to the number of processors on the machine.
+max_workers: null
+
 # question path used for timelag, duration and acoustic models
 question_path:
 
