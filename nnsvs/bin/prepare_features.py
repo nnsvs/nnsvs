@@ -172,7 +172,7 @@ def my_app(config: DictConfig) -> None:
                 future.result()
 
     # Save features for duration model
-    if config.timelag.enabled:
+    if config.duration.enabled:
         logger.info("Duration linguistic feature dim: %s", str(in_duration[0].shape[1]))
         logger.info("Duration feature dim: %s", str(out_duration[0].shape[1]))
         with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
