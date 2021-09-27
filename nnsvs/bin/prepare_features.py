@@ -191,7 +191,7 @@ def my_app(config: DictConfig) -> None:
                 future.result()
 
     # Save features for duration model
-    if config.timelag.enabled:
+    if config.acoustic.enabled:
         logger.info("Acoustic linguistic feature dim: %s", str(in_acoustic[0].shape[1]))
         logger.info("Acoustic feature dim: %s", str(out_acoustic[0][0].shape[1]))
         with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
