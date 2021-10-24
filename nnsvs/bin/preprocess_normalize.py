@@ -1,28 +1,23 @@
 # coding: utf-8
 
-import hydra
-from hydra.utils import to_absolute_path
-from omegaconf import DictConfig
-import numpy as np
-import joblib
-from sklearn.preprocessing import StandardScaler
-
 import os
-from os.path import join, exists, basename, splitext
-from multiprocessing import cpu_count
-from tqdm import tqdm
-from nnmnkwii import preprocessing as P
-import numpy as np
-import json
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-from shutil import copyfile
-
-import joblib
 from glob import glob
 from itertools import zip_longest
+from os.path import basename, exists, join, splitext
+
+import hydra
+import joblib
+import numpy as np
+from hydra.utils import to_absolute_path
+from nnmnkwii import preprocessing as P
+from omegaconf import DictConfig, OmegaConf
+# from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 
 from nnsvs.logger import getLogger
+
 logger = None
 
 
@@ -61,11 +56,11 @@ def apply_normalization_dir2dir(in_dir, out_dir, scaler, inverse, num_workers):
         future.result()
 
 
-@hydra.main(config_path="conf/preprocess_normalize/config.yaml")
-def my_app(config : DictConfig) -> None:
+@hydra.main(config_path="conf/preprocess_normalize", config_name="config")
+def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
-    logger.info(config.pretty())
+    logger.info(OmegaConf.to_yaml(config))
 
     in_dir = to_absolute_path(config.in_dir)
     out_dir = to_absolute_path(config.out_dir)
