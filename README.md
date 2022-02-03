@@ -59,7 +59,7 @@ See [HISTORY.md](HISTORY.md)
 
 ## Related projects
 
-- English support for nnsvs: :https://github.com/DynamiVox/nnsvs-english-support
+- English support for nnsvs: https://github.com/DynamiVox/nnsvs-english-support
 
 ## References
 
