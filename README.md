@@ -56,9 +56,10 @@ That being said, I was just curious to see if I can make a better one than NEUTR
 ## History
 
 See [HISTORY.md](HISTORY.md)
-]
-## Known issues
 
+## Related projects
+
+- English support for nnsvs: :https://github.com/DynamiVox/nnsvs-english-support
 
 ## References
 
