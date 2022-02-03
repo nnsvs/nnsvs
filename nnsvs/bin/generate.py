@@ -1,35 +1,36 @@
 # coding: utf-8
 
-import hydra
-from hydra.utils import to_absolute_path
-from omegaconf import DictConfig, OmegaConf
-import numpy as np
-import joblib
-from tqdm import tqdm
-from os.path import basename, splitext, exists, join
 import os
+from os.path import basename, join
+
+import hydra
+import joblib
+import numpy as np
 import torch
+from hydra.utils import to_absolute_path
+from nnmnkwii.datasets import FileSourceDataset
+from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from torch.nn import functional as F
-from nnmnkwii.datasets import FileSourceDataset
+from tqdm import tqdm
 
-from nnsvs.gen import get_windows
-from nnsvs.multistream import multi_stream_mlpg
-from nnsvs.bin.train import NpyFileSource
-from nnsvs.logger import getLogger
 from nnsvs.base import PredictionType
+from nnsvs.bin.train import NpyFileSource
+from nnsvs.gen import get_windows
+from nnsvs.logger import getLogger
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_get_sample
+from nnsvs.multistream import multi_stream_mlpg
 
 logger = None
 
 use_cuda = torch.cuda.is_available()
 
 
-@hydra.main(config_path="conf/generate/config.yaml")
-def my_app(config : DictConfig) -> None:
+@hydra.main(config_path="conf/generate", config_name="config")
+def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
-    logger.info(config.pretty())
+    logger.info(OmegaConf.to_yaml(config))
 
     device = torch.device("cuda" if use_cuda else "cpu")
     in_dir = to_absolute_path(config.in_dir)
@@ -39,7 +40,7 @@ def my_app(config : DictConfig) -> None:
     model_config = OmegaConf.load(to_absolute_path(config.model.model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
     checkpoint = torch.load(to_absolute_path(config.model.checkpoint),
-        map_location=lambda storage, loc: storage)
+                            map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint["state_dict"])
 
     scaler = joblib.load(to_absolute_path(config.out_scaler_path))

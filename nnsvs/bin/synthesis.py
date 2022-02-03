@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import os
+from os.path import join, exists
 import hydra
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig, OmegaConf
@@ -7,8 +9,6 @@ import numpy as np
 import joblib
 import torch
 from scipy.io import wavfile
-from os.path import join, basename, exists
-import os
 from tqdm import tqdm
 from nnmnkwii.io import hts
 
@@ -16,7 +16,6 @@ from nnsvs.gen import (
     predict_timelag, predict_duration, predict_acoustic, postprocess_duration,
     gen_waveform)
 from nnsvs.logger import getLogger
-from nnsvs.base import PredictionType
 
 logger = None
 
@@ -98,11 +97,11 @@ def synthesis(config, device, label_path, question_path,
     return generated_waveform
 
 
-@hydra.main(config_path="conf/synthesis/config.yaml")
+@hydra.main(config_path="conf/synthesis", config_name="config")
 def my_app(config : DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
-    logger.info(config.pretty())
+    logger.info(OmegaConf.to_yaml(config))
 
     if not torch.cuda.is_available():
         device = torch.device("cpu")
@@ -151,7 +150,7 @@ def my_app(config : DictConfig) -> None:
         os.makedirs(out_dir, exist_ok=True)
         with open(to_absolute_path(config.utt_list)) as f:
             lines = list(filter(lambda s : len(s.strip()) > 0, f.readlines()))
-            logger.info(f"Processes {len(lines)} utterances...")
+            logger.info("Processes %s utterances...", len(lines))
             for idx in tqdm(range(len(lines))):
                 utt_id = lines[idx].strip()
                 label_path = join(in_dir, f"{utt_id}.lab")
@@ -170,7 +169,7 @@ def my_app(config : DictConfig) -> None:
                 wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
     else:
         assert config.label_path is not None
-        logger.info(f"Process the label file: {config.label_path}")
+        logger.info("Process the label file: %s", config.label_path)
         label_path = to_absolute_path(config.label_path)
         out_wav_path = to_absolute_path(config.out_wav_path)
 
@@ -183,8 +182,8 @@ def my_app(config : DictConfig) -> None:
 
 
 def entry():
-    my_app()
+    my_app()  # pylint: disable=no-value-for-parameter
 
 
 if __name__ == "__main__":
-    my_app()
+    my_app()  # pylint: disable=no-value-for-parameter

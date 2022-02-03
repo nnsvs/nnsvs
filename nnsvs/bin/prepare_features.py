@@ -7,11 +7,12 @@ import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
-from nnsvs.data import (DurationFeatureSource, MusicalLinguisticSource,
-                        TimeLagFeatureSource, WORLDAcousticSource)
-from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
+
+from nnsvs.data import (DurationFeatureSource, MusicalLinguisticSource,
+TimeLagFeatureSource, WORLDAcousticSource)
+from nnsvs.logger import getLogger
 
 logger = None
 
@@ -57,7 +58,7 @@ def _prepare_acoustic_feature(in_acoustic_root, out_acoustic_root,
     np.save(wpath, wave, allow_pickle=False)
 
 
-@hydra.main(config_path="conf/prepare_features/config.yaml")
+@hydra.main(config_path="conf/prepare_features", config_name="config")
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)

@@ -1,29 +1,31 @@
 # coding: utf-8
 
-import hydra
-from hydra.utils import to_absolute_path
-from omegaconf import DictConfig, OmegaConf
-import numpy as np
-from glob import glob
-from tqdm import tqdm
-from os.path import basename, splitext, exists, join
 import os
 import shutil
+from glob import glob
+from os.path import join
+
+import hydra
+import numpy as np
 import torch
-from torch import nn
-from torch.utils import data as data_utils
-from torch.nn import functional as F
-from torch import optim
-from torch.backends import cudnn
-from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
-from nnsvs.util import make_non_pad_mask, init_seed
-from nnsvs.multistream import split_streams
-from nnsvs.logger import getLogger
+from hydra.utils import to_absolute_path
+from nnmnkwii.datasets import (FileDataSource, FileSourceDataset,
+                               MemoryCacheDataset)
 from nnsvs.base import PredictionType
+from nnsvs.logger import getLogger
 from nnsvs.mdn import mdn_loss
+from nnsvs.multistream import split_streams
+from nnsvs.util import init_seed, make_non_pad_mask
+from omegaconf import DictConfig, OmegaConf
+from torch import nn, optim
+# from torch.backends import cudnn
+from torch.nn import functional as F
+from torch.utils import data as data_utils
+from tqdm import tqdm
 
 logger = None
 use_cuda = torch.cuda.is_available()
+
 
 class NpyFileSource(FileDataSource):
     def __init__(self, data_root):
@@ -100,7 +102,7 @@ def get_data_loaders(config):
             num_workers=config.data.num_workers, shuffle=train)
 
         for x, y, l in data_loaders[phase]:
-            logger.info(f"{x.shape}, {y.shape}, {l.shape}")
+            logger.info("%s, %s, %s", x.shape, y.shape, l.shape)
 
     return data_loaders
 
@@ -114,7 +116,7 @@ def save_checkpoint(config, model, optimizer, lr_scheduler, epoch):
         "optimizer_state": optimizer.state_dict(),
         "lr_scheduler_state": lr_scheduler.state_dict(),
     }, checkpoint_path)
-    logger.info(f"Checkpoint is saved at {checkpoint_path}")
+    logger.info("Checkpoint is saved at %s", checkpoint_path)
     lastest_path = join(out_dir, "latest.pth")
     shutil.copyfile(checkpoint_path, lastest_path)
 
@@ -127,7 +129,7 @@ def save_best_checkpoint(config, model, optimizer, best_loss):
         "state_dict": model.state_dict(),
         "optimizer_state": optimizer.state_dict(),
     }, checkpoint_path)
-    logger.info(f"[Best loss {best_loss}: checkpoint is saved at {checkpoint_path}")
+    logger.info("[Best loss %s: checkpoint is saved at %s", best_loss, checkpoint_path)
 
 
 def get_stream_weight(stream_weights, stream_sizes):
@@ -202,7 +204,7 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
 
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
-            logger.info(f"[{phase}] [Epoch {epoch}]: loss {ave_loss}")
+            logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
             if not train and ave_loss < best_loss:
                 best_loss = ave_loss
                 save_best_checkpoint(config, model, optimizer, best_loss)
@@ -215,25 +217,25 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
 
     # save at last epoch
     save_checkpoint(config, model, optimizer, lr_scheduler, config.train.nepochs)
-    logger.info(f"The best loss was {best_loss}")
+    logger.info("The best loss was {%s}", best_loss)
 
     return model
 
 
-@hydra.main(config_path="conf/train/config.yaml")
-def my_app(config : DictConfig) -> None:
+@hydra.main(config_path="conf/train", config_name="config")
+def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
-    logger.info(config.pretty())
+    logger.info(OmegaConf.to_yaml(config))
 
     if use_cuda:
         from torch.backends import cudnn
         cudnn.benchmark = config.train.cudnn.benchmark
         cudnn.deterministic = config.train.cudnn.deterministic
-        logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
-        logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
+        logger.info("cudnn.deterministic: %s", cudnn.deterministic)
+        logger.info("cudnn.benchmark: %s", cudnn.benchmark)
 
-    logger.info(f"Random seed: {config.seed}")
+    logger.info("Random seed: %s", config.seed)
     init_seed(config.seed)
 
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -257,7 +259,7 @@ def my_app(config : DictConfig) -> None:
 
     # Resume
     if config.train.resume.checkpoint is not None and len(config.train.resume.checkpoint) > 0:
-        logger.info("Load weights from {}".format(config.train.resume.checkpoint))
+        logger.info("Load weights from %s", config.train.resume.checkpoint)
         checkpoint = torch.load(to_absolute_path(config.train.resume.checkpoint))
         model.load_state_dict(checkpoint["state_dict"])
         if config.train.resume.load_optimizer:
