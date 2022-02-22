@@ -2,8 +2,7 @@
 verbose: 100
 
 scaler:
-  class: sklearn.preprocessing.StandardScaler
-  params: {}
+  _target_: sklearn.preprocessing.StandardScaler
 
 list_path: list.txt
 out_path: scaler.joblib
