@@ -1,34 +1,31 @@
-# coding: utf-8
-import os
-
 import argparse
-from glob import glob
-from os.path import join, basename, splitext, exists, expanduser
-from nnmnkwii.io import hts
-from scipy.io import wavfile
-import librosa
-import soundfile as sf
+import os
 import sys
+from glob import glob
+from os.path import basename, join, splitext
+
+import librosa
 import numpy as np
 import pysinsy
-
+import soundfile as sf
+from nnmnkwii.io import hts
 from nnsvs.io.hts import get_note_indices
 
 
-def _is_silence(l):
-    is_full_context = "@" in l
+def _is_silence(label):
+    is_full_context = "@" in label
     if is_full_context:
-        is_silence = ("-sil" in l or "-pau" in l)
+        is_silence = "-sil" in label or "-pau" in label
     else:
-        is_silence = (l == "sil" or l == "pau")
+        is_silence = label == "sil" or label == "pau"
     return is_silence
 
 
 def remove_sil_and_pau(lab):
     newlab = hts.HTSLabelFile()
-    for l in lab:
-        if "-sil" not in l[-1] and "-pau" not in l[-1]:
-            newlab.append(l, strict=False)
+    for label in lab:
+        if "-sil" not in label[-1] and "-pau" not in label[-1]:
+            newlab.append(label, strict=False)
 
     return newlab
 
@@ -40,8 +37,9 @@ def get_parser():
     )
     parser.add_argument("pjs_root", type=str, help="PJS song dir")
     parser.add_argument("out_dir", type=str, help="Output directory")
-    parser.add_argument("--gain-normalize", action='store_true')
+    parser.add_argument("--gain-normalize", action="store_true")
     return parser
+
 
 args = get_parser().parse_args(sys.argv[1:])
 
@@ -55,7 +53,7 @@ timelag_allowed_range_rest = (-40, 39)
 offset_correction_threshold = 0.01
 
 
-### Make aligned full context labels
+# Make aligned full context labels
 
 full_align_dir = join(out_dir, "label_phone_align")
 full_score_dir = join(out_dir, "label_phone_score")
@@ -76,23 +74,25 @@ for mono_path, xml_path in zip(mono_lab_files, muxicxml_files):
     # check if sinsy's phoneme output is same as the provided alignment format
     sinsy_labels = sinsy.createLabelData(True, 1, 1).getData()
     sinsy_mono_lab = hts.HTSLabelFile()
-    for l in sinsy_labels:
-        sinsy_mono_lab.append(l.split(), strict=False)
+    for label in sinsy_labels:
+        sinsy_mono_lab.append(label.split(), strict=False)
 
     assert len(align_mono_lab) == len(sinsy_mono_lab)
-    assert (np.asarray(align_mono_lab.contexts) == np.asarray(sinsy_mono_lab.contexts)).all()
+    assert (
+        np.asarray(align_mono_lab.contexts) == np.asarray(sinsy_mono_lab.contexts)
+    ).all()
 
     # rounding
     has_too_short_ph = False
     for idx in range(len(align_mono_lab)):
-        b,e = align_mono_lab.start_times[idx], align_mono_lab.end_times[idx]
-        bb,ee = round(b / 50000) * 50000, round(e / 50000) * 50000
-        ## TODO: better way
+        b, e = align_mono_lab.start_times[idx], align_mono_lab.end_times[idx]
+        bb, ee = round(b / 50000) * 50000, round(e / 50000) * 50000
+        # TODO: better way
         if bb == ee:
             # ensure mininum frame length 1
             align_mono_lab.end_times[idx] = align_mono_lab.start_times[idx] + 50000
-            align_mono_lab.start_times[idx+1] = align_mono_lab.end_times[idx]
-            print(align_mono_lab[idx-1:idx+2])
+            align_mono_lab.start_times[idx + 1] = align_mono_lab.end_times[idx]
+            print(align_mono_lab[idx - 1 : idx + 2])
             has_too_short_ph = True
 
     if has_too_short_ph:
@@ -102,18 +102,19 @@ for mono_path, xml_path in zip(mono_lab_files, muxicxml_files):
         sinsy_labels = sinsy.createLabelData(False, 1, 1).getData()
         align_full_lab = hts.HTSLabelFile()
         score_full_lab = hts.HTSLabelFile()
-        for idx, l in enumerate(sinsy_labels):
-            b,e = align_mono_lab.start_times[idx], align_mono_lab.end_times[idx]
+        for idx, label in enumerate(sinsy_labels):
+            b, e = align_mono_lab.start_times[idx], align_mono_lab.end_times[idx]
             try:
-                align_full_lab.append((b,e,l.split()[-1]), strict=True)
-            except:
+                align_full_lab.append((b, e, label.split()[-1]), strict=True)
+            except BaseException:
                 # TODO
-                import ipdb; ipdb.set_trace()
-                pass
-            b,e,c = l.split()
-            b,e = round(int(b) / 50000) * 50000, round(int(e) / 50000) * 50000
+                import ipdb
+
+                ipdb.set_trace()
+            b, e, c = label.split()
+            b, e = round(int(b) / 50000) * 50000, round(int(e) / 50000) * 50000
             assert b != e
-            score_full_lab.append((b,e,c), strict=False)
+            score_full_lab.append((b, e, c), strict=False)
 
         with open(join(full_score_dir, name), "w") as of:
             of.write(str(score_full_lab))
@@ -122,11 +123,11 @@ for mono_path, xml_path in zip(mono_lab_files, muxicxml_files):
         sinsy.clearScore()
 
 
-### Prepare data for time-lag models
+# Prepare data for time-lag models
 
 dst_dir = join(out_dir, "timelag")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -167,7 +168,10 @@ for lab_align_path, lab_score_path in zip(full_lab_align_files, full_lab_score_f
         note_idx = note_indices[idx]
         lag = np.abs(a - b) / 50000
         if _is_silence(lab_score.contexts[note_idx]):
-            if lag >= timelag_allowed_range_rest[0] and lag <= timelag_allowed_range_rest[1]:
+            if (
+                lag >= timelag_allowed_range_rest[0]
+                and lag <= timelag_allowed_range_rest[1]
+            ):
                 valid_note_indices.append(note_idx)
         else:
             if lag >= timelag_allowed_range[0] and lag <= timelag_allowed_range[1]:
@@ -190,10 +194,10 @@ for lab_align_path, lab_score_path in zip(full_lab_align_files, full_lab_score_f
     with open(lab_score_dst_path, "w") as of:
         of.write(str(lab_score))
 
-### Prepare data for duration models
+# Prepare data for duration models
 
 dst_dir = join(out_dir, "duration")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
 
 for d in [lab_align_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -211,12 +215,12 @@ for lab_align_path in full_lab_align_files:
         of.write(str(lab_align))
 
 
-### Prepare data for acoustic models
+# Prepare data for acoustic models
 
 dst_dir = join(out_dir, "acoustic")
-wav_dst_dir  = join(dst_dir, "wav")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+wav_dst_dir = join(dst_dir, "wav")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [wav_dst_dir, lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)

@@ -1,33 +1,30 @@
-# coding: utf-8
-import os
-
 import argparse
-from glob import glob
-from os.path import join, basename, splitext, exists, expanduser
-from nnmnkwii.io import hts
-from scipy.io import wavfile
-import librosa
-import soundfile as sf
+import os
 import sys
-import numpy as np
+from glob import glob
+from os.path import basename, exists, join, splitext
 
+import librosa
+import numpy as np
+import soundfile as sf
+from nnmnkwii.io import hts
 from nnsvs.io.hts import get_note_indices
 
 
-def _is_silence(l):
-    is_full_context = "@" in l
+def _is_silence(label):
+    is_full_context = "@" in label
     if is_full_context:
-        is_silence = ("-sil" in l or "-pau" in l)
+        is_silence = "-sil" in label or "-pau" in label
     else:
-        is_silence = (l == "sil" or l == "pau")
+        is_silence = label == "sil" or label == "pau"
     return is_silence
 
 
 def remove_sil_and_pau(lab):
     newlab = hts.HTSLabelFile()
-    for l in lab:
-        if "-sil" not in l[-1] and "-pau" not in l[-1]:
-            newlab.append(l, strict=False)
+    for label in lab:
+        if "-sil" not in label[-1] and "-pau" not in label[-1]:
+            newlab.append(label, strict=False)
 
     return newlab
 
@@ -39,8 +36,9 @@ def get_parser():
     )
     parser.add_argument("hts_demo_root", type=str, help="HTS demo root")
     parser.add_argument("out_dir", type=str, help="Output directory")
-    parser.add_argument("--gain-normalize", action='store_true')
+    parser.add_argument("--gain-normalize", action="store_true")
     return parser
+
 
 args = get_parser().parse_args(sys.argv[1:])
 
@@ -58,7 +56,7 @@ offset_correction_threshold = 0.005
 mono_dir = join(hts_label_root, "mono")
 full_dir = join(hts_label_root, "full")
 
-### Make aligned full context labels
+# Make aligned full context labels
 
 # Note: this will be saved under hts_label_root directory
 full_align_dir = join(hts_label_root, "full_align")
@@ -77,11 +75,11 @@ for m, f in zip(mono_lab_files, full_lab_files):
     with open(dst_path, "w") as of:
         of.write(str(full_lab))
 
-### Prepare data for time-lag models
+# Prepare data for time-lag models
 
 dst_dir = join(out_dir, "timelag")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -119,7 +117,10 @@ for lab_align_path in full_lab_align_files:
         note_idx = note_indices[idx]
         lag = np.abs(a - b) / 50000
         if _is_silence(lab_score.contexts[note_idx]):
-            if lag >= timelag_allowed_range_rest[0] and lag <= timelag_allowed_range_rest[1]:
+            if (
+                lag >= timelag_allowed_range_rest[0]
+                and lag <= timelag_allowed_range_rest[1]
+            ):
                 valid_note_indices.append(note_idx)
         else:
             if lag >= timelag_allowed_range[0] and lag <= timelag_allowed_range[1]:
@@ -142,10 +143,10 @@ for lab_align_path in full_lab_align_files:
     with open(lab_score_dst_path, "w") as of:
         of.write(str(lab_score))
 
-### Prepare data for duration models
+# Prepare data for duration models
 
 dst_dir = join(out_dir, "duration")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
 
 for d in [lab_align_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -163,12 +164,12 @@ for lab_align_path in full_lab_align_files:
         of.write(str(lab_align))
 
 
-### Prepare data for acoustic models
+# Prepare data for acoustic models
 
 dst_dir = join(out_dir, "acoustic")
-wav_dst_dir  = join(dst_dir, "wav")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+wav_dst_dir = join(dst_dir, "wav")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [wav_dst_dir, lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -189,7 +190,7 @@ for lab_align_path in full_lab_align_files:
     else:
         assert raw_path
         wav = np.fromfile(raw_path, dtype=np.int16)
-        wav = wav.astype(np.float32) / 2**15
+        wav = wav.astype(np.float32) / 2 ** 15
         sr = 48000
 
     if gain_normalize:
