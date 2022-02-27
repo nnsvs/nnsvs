@@ -84,7 +84,7 @@ class TestMDN(unittest.TestCase):
         ).to(
             self.device
         )  # (B, max(T), D_out)
-        for e in range(3000):
+        for e in range(500):
             self.model.zero_grad()
             pi, sigma, mu = self.model(x)
             loss = mdn.mdn_loss(pi, sigma, mu, y).mean()
