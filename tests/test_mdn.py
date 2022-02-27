@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from nnsvs import mdn
+from nnsvs.util import init_seed
 from torch import nn
 
 
@@ -27,9 +28,7 @@ class MDN(nn.Module):
 class TestMDN(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        np.random.seed(42)
-        torch.manual_seed(0)
-        torch.cuda.manual_seed(0)
+        init_seed(42)
 
         # generate data
         # Inverse model written in PRML Book p. 273
@@ -84,7 +83,7 @@ class TestMDN(unittest.TestCase):
         ).to(
             self.device
         )  # (B, max(T), D_out)
-        for e in range(500):
+        for e in range(1000):
             self.model.zero_grad()
             pi, sigma, mu = self.model(x)
             loss = mdn.mdn_loss(pi, sigma, mu, y).mean()
