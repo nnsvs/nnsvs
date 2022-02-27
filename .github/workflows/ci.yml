@@ -30,10 +30,9 @@ jobs:
         pip install pysinsy
         pip install -e .
 
-    - name: Lint with flake8
+    - name: Lint with pysen
       run: |
-        pip install flake8
-        # flake8
+        pysen run lint
 
     - name: Test with pytest
       run: |
