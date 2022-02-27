@@ -1,10 +1,9 @@
 # coding: utf-8
 
-import torch
-from torch import nn
-from torch.nn import functional as F
 from abc import ABC, abstractmethod
 from enum import Enum
+
+from torch import nn
 
 
 class PredictionType(Enum):

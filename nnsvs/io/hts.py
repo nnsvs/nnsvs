@@ -1,5 +1,6 @@
 # coding: utf-8
 
+
 def get_note_indices(lab):
     note_indices = [0]
     last_start_time = lab.start_times[0]

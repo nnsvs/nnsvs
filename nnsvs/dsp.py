@@ -15,8 +15,8 @@ class TimeInvFIRFilter(nn.Conv1d):
         causal (bool): causal
         requires_grad (bool): trainable kernel or not
     """
-    def __init__(self, channels, filt_coef,
-                 causal=True, requires_grad=False):
+
+    def __init__(self, channels, filt_coef, causal=True, requires_grad=False):
         # assuming 1-D filter coef vector and odd num taps
         assert len(filt_coef.shape) == 1
         # assert len(filt_coef) % 2 == 1
@@ -28,21 +28,21 @@ class TimeInvFIRFilter(nn.Conv1d):
             padding = (kernel_size - 1) // 2 * 1
         # channel-wise filtering (groups=channels)
         super(TimeInvFIRFilter, self).__init__(
-            channels, channels, kernel_size, padding=padding,
-            groups=channels, bias=None)
+            channels, channels, kernel_size, padding=padding, groups=channels, bias=None
+        )
         self.weight.data[:, :, :] = filt_coef.flip(-1)
         self.weight.requires_grad = requires_grad
 
     def forward(self, x):
         out = super(TimeInvFIRFilter, self).forward(x)
-        out = out[:, :, :-self.padding[0]] if self.causal else out
+        out = out[:, :, : -self.padding[0]] if self.causal else out
         return out
 
 
 class TrTimeInvFIRFilter(nn.Conv1d):
     """Trainable Time-invatiant FIR filter implementation
 
-    H(z) = \sigma_{k=0}^{filt_dim} b_{k}z_{-k}
+    H(z) = \\sigma_{k=0}^{filt_dim} b_{k}z_{-k}
 
     Note that b_{0} is fixed to 1 if fixed_0th is True.
 
@@ -53,6 +53,7 @@ class TrTimeInvFIRFilter(nn.Conv1d):
         tanh (bool): apply tanh to filter coef or not.
         fixed_0th (bool): fix the first filt coef to 1 or not.
     """
+
     def __init__(self, channels, filt_dim, causal=True, tanh=True, fixed_0th=True):
         # Initilize filt coef with small random values
         init_filt_coef = torch.randn(filt_dim) * (1 / filt_dim)
@@ -65,8 +66,8 @@ class TrTimeInvFIRFilter(nn.Conv1d):
             padding = (kernel_size - 1) // 2 * 1
         # channel-wise filtering (groups=channels)
         super(TrTimeInvFIRFilter, self).__init__(
-            channels, channels, kernel_size, padding=padding,
-            groups=channels, bias=None)
+            channels, channels, kernel_size, padding=padding, groups=channels, bias=None
+        )
         self.weight.data[:, :, :] = init_filt_coef.flip(-1)
         self.weight.requires_grad = True
         self.tanh = tanh
@@ -83,7 +84,8 @@ class TrTimeInvFIRFilter(nn.Conv1d):
     def forward(self, x):
         b = self.get_filt_coefs()
         out = F.conv1d(
-            x, b, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            x, b, self.bias, self.stride, self.padding, self.dilation, self.groups
+        )
         if self.padding[0] > 0:
-            out = out[:, :, :-self.padding[0]] if self.causal else out
+            out = out[:, :, : -self.padding[0]] if self.causal else out
         return out

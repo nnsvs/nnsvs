@@ -1,16 +1,13 @@
 # coding: utf-8
 
 import torch
-from torch import nn
-from torch.nn import functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-
-from torch.nn.utils import weight_norm
-
 from nnsvs.base import BaseModel, PredictionType
-from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.dsp import TrTimeInvFIRFilter
+from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
+from torch import nn
+from torch.nn.utils import weight_norm
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 def WNConv1d(*args, **kwargs):
@@ -41,7 +38,7 @@ class Conv1dResnet(BaseModel):
             WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
         ]
         for n in range(num_layers):
-            model.append(ResnetBlock(hidden_dim, dilation=2**n))
+            model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
         model += [
             nn.LeakyReLU(0.2),
             nn.ReflectionPad1d(3),
@@ -51,7 +48,7 @@ class Conv1dResnet(BaseModel):
         self.model = nn.Sequential(*model)
 
     def forward(self, x, lengths=None):
-        return self.model(x.transpose(1,2)).transpose(1,2)
+        return self.model(x.transpose(1, 2)).transpose(1, 2)
 
 
 @torch.no_grad()
@@ -87,20 +84,33 @@ class Conv1dResnetSAR(Conv1dResnet):
         stream_sizes (list): Stream sizes
         ar_orders (list): Filter dimensions for each stream.
     """
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0,
-            stream_sizes=[180, 3, 1, 15], ar_orders=[20, 200, 20, 20]):
+
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=4,
+        dropout=0.0,
+        stream_sizes=None,
+        ar_orders=None,
+    ):
         super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout)
+        if stream_sizes is None:
+            stream_sizes = [180, 3, 1, 15]
+        if ar_orders is None:
+            ar_orders = [20, 200, 20, 20]
         self.stream_sizes = stream_sizes
 
         self.analysis_filts = nn.ModuleList()
         for s, K in zip(stream_sizes, ar_orders):
-            self.analysis_filts += [TrTimeInvFIRFilter(s, K+1)]
+            self.analysis_filts += [TrTimeInvFIRFilter(s, K + 1)]
 
     def preprocess_target(self, y):
         assert sum(self.stream_sizes) == y.shape[-1]
         ys = split_streams(y, self.stream_sizes)
         for idx, yi in enumerate(ys):
-            ys[idx] = self.analysis_filts[idx](yi.transpose(1,2)).transpose(1,2)
+            ys[idx] = self.analysis_filts[idx](yi.transpose(1, 2)).transpose(1, 2)
         return torch.cat(ys, -1)
 
     def inference(self, x, lengths=None):
@@ -113,7 +123,8 @@ class FeedForwardNet(BaseModel):
         super(FeedForwardNet, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
         self.hidden_layers = nn.ModuleList(
-            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)])
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)]
+        )
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
@@ -126,15 +137,22 @@ class FeedForwardNet(BaseModel):
 
 
 class LSTMRNN(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
-            dropout=0.0):
+    def __init__(
+        self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0
+    ):
         super(LSTMRNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.num_direction =  2 if bidirectional else 1
-        self.lstm = nn.LSTM(in_dim, hidden_dim, num_layers,
-            bidirectional=bidirectional, batch_first=True, dropout=dropout)
-        self.hidden2out = nn.Linear(self.num_direction*self.hidden_dim, out_dim)
+        self.num_direction = 2 if bidirectional else 1
+        self.lstm = nn.LSTM(
+            in_dim,
+            hidden_dim,
+            num_layers,
+            bidirectional=bidirectional,
+            batch_first=True,
+            dropout=dropout,
+        )
+        self.hidden2out = nn.Linear(self.num_direction * self.hidden_dim, out_dim)
 
     def forward(self, sequence, lengths):
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
@@ -144,7 +162,6 @@ class LSTMRNN(BaseModel):
         return out
 
 
-
 class LSTMRNNSAR(LSTMRNN):
     """LSTM-RNN with shallow AR structure
 
@@ -152,21 +169,36 @@ class LSTMRNNSAR(LSTMRNN):
         stream_sizes (list): Stream sizes
         ar_orders (list): Filter dimensions for each stream.
     """
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
-            dropout=0.0, stream_sizes=[180, 3, 1, 15], ar_orders=[20, 200, 20, 20]):
-        super().__init__(in_dim, hidden_dim, out_dim, num_layers,
-            bidirectional, dropout)
+
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=1,
+        bidirectional=True,
+        dropout=0.0,
+        stream_sizes=None,
+        ar_orders=None,
+    ):
+        super().__init__(
+            in_dim, hidden_dim, out_dim, num_layers, bidirectional, dropout
+        )
+        if stream_sizes is None:
+            stream_sizes = [180, 3, 1, 15]
+        if ar_orders is None:
+            ar_orders = [20, 200, 20, 20]
 
         self.stream_sizes = stream_sizes
         self.analysis_filts = nn.ModuleList()
         for s, K in zip(stream_sizes, ar_orders):
-            self.analysis_filts += [TrTimeInvFIRFilter(s, K+1)]
+            self.analysis_filts += [TrTimeInvFIRFilter(s, K + 1)]
 
     def preprocess_target(self, y):
         assert sum(self.stream_sizes) == y.shape[-1]
         ys = split_streams(y, self.stream_sizes)
         for idx, yi in enumerate(ys):
-            ys[idx] = self.analysis_filts[idx](yi.transpose(1,2)).transpose(1,2)
+            ys[idx] = self.analysis_filts[idx](yi.transpose(1, 2)).transpose(1, 2)
         return torch.cat(ys, -1)
 
     def inference(self, x, lengths=None):
@@ -175,16 +207,32 @@ class LSTMRNNSAR(LSTMRNN):
 
 
 class RMDN(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True,
-            dropout=0.0, num_gaussians=8, dim_wise=False):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=1,
+        bidirectional=True,
+        dropout=0.0,
+        num_gaussians=8,
+        dim_wise=False,
+    ):
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
         self.relu = nn.ReLU()
-        self.num_direction=2 if bidirectional else 1
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers,
-                            bidirectional=bidirectional, batch_first=True,
-                            dropout=dropout)
-        self.mdn = MDNLayer(self.num_direction*hidden_dim, out_dim, num_gaussians, dim_wise)
+        self.num_direction = 2 if bidirectional else 1
+        self.lstm = nn.LSTM(
+            hidden_dim,
+            hidden_dim,
+            num_layers,
+            bidirectional=bidirectional,
+            batch_first=True,
+            dropout=dropout,
+        )
+        self.mdn = MDNLayer(
+            self.num_direction * hidden_dim, out_dim, num_gaussians, dim_wise
+        )
 
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
@@ -204,8 +252,16 @@ class RMDN(BaseModel):
 
 
 class MDN(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=1, dropout=0.0,
-            num_gaussians=8, dim_wise=False):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=1,
+        dropout=0.0,
+        num_gaussians=8,
+        dim_wise=False,
+    ):
         super(MDN, self).__init__()
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         if num_layers > 1:
@@ -227,12 +283,22 @@ class MDN(BaseModel):
 
 
 class Conv1dResnetMDN(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0,
-            num_gaussians=8, dim_wise=False):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=4,
+        dropout=0.0,
+        num_gaussians=8,
+        dim_wise=False,
+    ):
         super().__init__()
-        model = [Conv1dResnet(in_dim, hidden_dim, hidden_dim, num_layers, dropout),
-                 nn.ReLU(),
-                 MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)]
+        model = [
+            Conv1dResnet(in_dim, hidden_dim, hidden_dim, num_layers, dropout),
+            nn.ReLU(),
+            MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise),
+        ]
         self.model = nn.Sequential(*model)
 
     def prediction_type(self):

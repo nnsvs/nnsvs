@@ -9,8 +9,7 @@ import hydra
 import numpy as np
 import torch
 from hydra.utils import to_absolute_path
-from nnmnkwii.datasets import (FileDataSource, FileSourceDataset,
-                               MemoryCacheDataset)
+from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
 from nnsvs.base import PredictionType
 from nnsvs.logger import getLogger
 from nnsvs.mdn import mdn_loss
@@ -18,8 +17,8 @@ from nnsvs.multistream import split_streams
 from nnsvs.util import init_seed, make_non_pad_mask
 from omegaconf import DictConfig, OmegaConf
 from torch import nn, optim
+
 # from torch.backends import cudnn
-from torch.nn import functional as F
 from torch.utils import data as data_utils
 from tqdm import tqdm
 
@@ -52,8 +51,12 @@ class Dataset(torch.utils.data.Dataset):
 
 
 def _pad_2d(x, max_len, b_pad=0, constant_values=0):
-    x = np.pad(x, [(b_pad, max_len - len(x) - b_pad), (0, 0)],
-               mode="constant", constant_values=constant_values)
+    x = np.pad(
+        x,
+        [(b_pad, max_len - len(x) - b_pad), (0, 0)],
+        mode="constant",
+        constant_values=constant_values,
+    )
     return x
 
 
@@ -97,9 +100,13 @@ def get_data_loaders(config):
 
         dataset = Dataset(in_feats, out_feats)
         data_loaders[phase] = data_utils.DataLoader(
-            dataset, batch_size=config.data.batch_size, collate_fn=collate_fn,
+            dataset,
+            batch_size=config.data.batch_size,
+            collate_fn=collate_fn,
             pin_memory=config.data.pin_memory,
-            num_workers=config.data.num_workers, shuffle=train)
+            num_workers=config.data.num_workers,
+            shuffle=train,
+        )
 
         for x, y, l in data_loaders[phase]:
             logger.info("%s, %s, %s", x.shape, y.shape, l.shape)
@@ -111,11 +118,14 @@ def save_checkpoint(config, model, optimizer, lr_scheduler, epoch):
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     checkpoint_path = join(out_dir, "checkpoint_epoch{:04d}.pth".format(epoch))
-    torch.save({
-        "state_dict": model.state_dict(),
-        "optimizer_state": optimizer.state_dict(),
-        "lr_scheduler_state": lr_scheduler.state_dict(),
-    }, checkpoint_path)
+    torch.save(
+        {
+            "state_dict": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "lr_scheduler_state": lr_scheduler.state_dict(),
+        },
+        checkpoint_path,
+    )
     logger.info("Checkpoint is saved at %s", checkpoint_path)
     lastest_path = join(out_dir, "latest.pth")
     shutil.copyfile(checkpoint_path, lastest_path)
@@ -125,10 +135,13 @@ def save_best_checkpoint(config, model, optimizer, best_loss):
     out_dir = to_absolute_path(config.train.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     checkpoint_path = join(out_dir, "best_loss.pth")
-    torch.save({
-        "state_dict": model.state_dict(),
-        "optimizer_state": optimizer.state_dict(),
-    }, checkpoint_path)
+    torch.save(
+        {
+            "state_dict": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+        },
+        checkpoint_path,
+    )
     logger.info("[Best loss %s: checkpoint is saved at %s", best_loss, checkpoint_path)
 
 
@@ -148,7 +161,8 @@ def train_loop(config, device, model, optimizer, lr_scheduler, data_loaders):
     logger.info("Start utterance-wise training...")
 
     stream_weights = get_stream_weight(
-        config.model.stream_weights, config.model.stream_sizes).to(device)
+        config.model.stream_weights, config.model.stream_sizes
+    ).to(device)
 
     best_loss = 10000000
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
@@ -230,6 +244,7 @@ def my_app(config: DictConfig) -> None:
 
     if use_cuda:
         from torch.backends import cudnn
+
         cudnn.benchmark = config.train.cudnn.benchmark
         cudnn.deterministic = config.train.cudnn.deterministic
         logger.info("cudnn.deterministic: %s", cudnn.deterministic)
@@ -249,16 +264,25 @@ def my_app(config: DictConfig) -> None:
 
     # Optimizer
     optimizer_class = getattr(optim, config.train.optim.optimizer.name)
-    optimizer = optimizer_class(model.parameters(), **config.train.optim.optimizer.params)
+    optimizer = optimizer_class(
+        model.parameters(), **config.train.optim.optimizer.params
+    )
 
     # Scheduler
-    lr_scheduler_class = getattr(optim.lr_scheduler, config.train.optim.lr_scheduler.name)
-    lr_scheduler = lr_scheduler_class(optimizer, **config.train.optim.lr_scheduler.params)
+    lr_scheduler_class = getattr(
+        optim.lr_scheduler, config.train.optim.lr_scheduler.name
+    )
+    lr_scheduler = lr_scheduler_class(
+        optimizer, **config.train.optim.lr_scheduler.params
+    )
 
     data_loaders = get_data_loaders(config)
 
     # Resume
-    if config.train.resume.checkpoint is not None and len(config.train.resume.checkpoint) > 0:
+    if (
+        config.train.resume.checkpoint is not None
+        and len(config.train.resume.checkpoint) > 0
+    ):
         logger.info("Load weights from %s", config.train.resume.checkpoint)
         checkpoint = torch.load(to_absolute_path(config.train.resume.checkpoint))
         model.load_state_dict(checkpoint["state_dict"])
