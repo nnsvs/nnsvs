@@ -33,8 +33,16 @@ setup(name='nnsvs',
         "nnmnkwii",
     ],
     extras_require={
-        "test": [
+        "lint": [
+            "pysen",
+            "types-setuptools",
+            "mypy<=0.910",
+            "black>=19.19b0,<=20.8",
+            "flake8>=3.7,<4",
+            "flake8-bugbear",
+            "isort>=4.3,<5.2.0",
         ],
+        "test": [],
     },
     entry_points={
         "console_scripts": [
