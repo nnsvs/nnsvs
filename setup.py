@@ -44,7 +44,7 @@ setup(
             "flake8-bugbear",
             "isort>=4.3,<5.2.0",
         ],
-        "test": [],
+        "test": ["pytest"],
     },
     entry_points={
         "console_scripts": [
