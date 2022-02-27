@@ -1,9 +1,9 @@
-# coding: utf-8
 from os.path import join
+
 import jaconv
 import numpy as np
 from nnmnkwii.io import hts
-from tqdm import tqdm
+
 
 def merge_sil(lab):
     N = len(lab)
@@ -11,27 +11,29 @@ def merge_sil(lab):
     f.append(lab[0], strict=False)
     is_full_context = "@" in lab[0][-1]
     for i in range(1, N):
-        if (is_full_context and "-sil" in f[-1][-1] and "-sil" in lab[i][-1]) \
-            or (not is_full_context and f[-1][-1] == "sil" and lab[i][-1] == "sil"):
+        if (is_full_context and "-sil" in f[-1][-1] and "-sil" in lab[i][-1]) or (
+            not is_full_context and f[-1][-1] == "sil" and lab[i][-1] == "sil"
+        ):
             # extend sil
             f.end_times[-1] = lab[i][1]
         else:
             f.append(lab[i], strict=False)
     return f
 
-def _is_silence(l):
-    is_full_context = "@" in l
+
+def _is_silence(label):
+    is_full_context = "@" in label
     if is_full_context:
-        is_silence = ("-sil" in l or "-pau" in l)
+        is_silence = "-sil" in label or "-pau" in label
     else:
-        is_silence = (l == "sil" or l == "pau")
+        is_silence = label == "sil" or label == "pau"
     return is_silence
 
 
 def trim_long_sil_and_pau(lab, return_indices=False, threshold=10.0):
     forward = 0
     while True:
-        d  = (lab.end_times[forward] - lab.start_times[forward]) * 1e-7
+        d = (lab.end_times[forward] - lab.start_times[forward]) * 1e-7
         if _is_silence(lab.contexts[forward]) and d > threshold:
             forward += 1
         else:
@@ -39,27 +41,27 @@ def trim_long_sil_and_pau(lab, return_indices=False, threshold=10.0):
 
     backward = len(lab) - 1
     while True:
-        d  = (lab.end_times[backward] - lab.start_times[backward]) * 1e-7
+        d = (lab.end_times[backward] - lab.start_times[backward]) * 1e-7
         if _is_silence(lab.contexts[backward]) and d > threshold:
             backward -= 1
         else:
             break
 
     if return_indices:
-        return lab[forward:backward+1], forward, backward
+        return lab[forward : backward + 1], forward, backward
     else:
-        return lab[forward:backward+1]
+        return lab[forward : backward + 1]
 
 
 def compute_nosil_duration(lab, threshold=5.0):
     is_full_context = "@" in lab[0][-1]
     sum_d = 0
-    for s,e,l in lab:
+    for s, e, label in lab:
         d = (e - s) * 1e-7
         if is_full_context:
-            is_silence = ("-sil" in l or "-pau" in l)
+            is_silence = "-sil" in label or "-pau" in label
         else:
-            is_silence = (l == "sil" or l == "pau")
+            is_silence = label == "sil" or label == "pau"
         if is_silence and d > threshold:
             pass
         else:
@@ -67,8 +69,9 @@ def compute_nosil_duration(lab, threshold=5.0):
     return sum_d
 
 
-def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
-        force_split_threshold=10.0):
+def segment_labels(
+    lab, strict=True, threshold=1.0, min_duration=5.0, force_split_threshold=10.0
+):
     """Segment labels based on sil/pau
 
     Example:
@@ -85,9 +88,9 @@ def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
     si = 0
     large_silence_detected = False
 
-    for idx, (s, e, l) in enumerate(lab):
-        d = (e-s) * 1e-7
-        is_silence = _is_silence(l)
+    for idx, (s, e, label) in enumerate(lab):
+        d = (e - s) * 1e-7
+        is_silence = _is_silence(label)
 
         if len(seg) > 0:
             # Compute duration except for long silences
@@ -97,8 +100,10 @@ def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
 
         # let's try to split
         # if we find large silence, force split regardless min_duration
-        if (d > force_split_threshold) or (is_silence and d > threshold and seg_d > min_duration):
-            if idx == len(lab)-1:
+        if (d > force_split_threshold) or (
+            is_silence and d > threshold and seg_d > min_duration
+        ):
+            if idx == len(lab) - 1:
                 continue
             elif len(seg) > 0:
                 if d > force_split_threshold:
@@ -114,7 +119,7 @@ def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
         else:
             if len(seg) == 0:
                 si = idx
-            seg.append((s, e, l), strict)
+            seg.append((s, e, label), strict)
 
     if len(seg) > 0:
         seg_d = compute_nosil_duration(seg)
@@ -129,15 +134,15 @@ def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
     segments2 = []
     start_indices_new, end_indices_new = [], []
     for s, e in zip(start_indices, end_indices):
-        seg = lab[s:e+1]
+        seg = lab[s : e + 1]
 
         # ignore "sil" or "pau" only segment
-        if len(seg) ==1 and _is_silence(seg.contexts[0]):
+        if len(seg) == 1 and _is_silence(seg.contexts[0]):
             continue
         seg2, forward, backward = trim_long_sil_and_pau(seg, return_indices=True)
 
-        start_indices_new.append(s+forward)
-        end_indices_new.append(s+backward)
+        start_indices_new.append(s + forward)
+        end_indices_new.append(s + backward)
 
         segments2.append(seg2)
 
@@ -147,8 +152,8 @@ def segment_labels(lab, strict=True, threshold=1.0, min_duration=5.0,
 def prep_ph2num(sinsy_dic):
     sinsy_phone_mapping = {}
     with open(join(sinsy_dic, "japanese.utf_8.table"), encoding="UTF-8") as f:
-        for l in f:
-            s = l.strip().split()
+        for label in f:
+            s = label.strip().split()
             key = jaconv.hira2kata(s[0])
             sinsy_phone_mapping[key] = s[1:]
     ph2num = {}
@@ -156,7 +161,7 @@ def prep_ph2num(sinsy_dic):
     for p in ["sil", "pau", "br"]:
         ph2num[p] = counter
         counter += 1
-    for k, v in sinsy_phone_mapping.items():
+    for _, v in sinsy_phone_mapping.items():
         for p in v:
             if p not in ph2num:
                 ph2num[p] = counter
@@ -183,14 +188,14 @@ def trim_sil_and_pau(lab, return_indices=False):
     while "-sil" in lab.contexts[forward] or "-pau" in lab.contexts[forward]:
         forward += 1
 
-    backward = len(lab)-1
+    backward = len(lab) - 1
     while "-sil" in lab.contexts[backward] or "-pau" in lab.contexts[backward]:
         backward -= 1
 
     if return_indices:
-        return lab[forward:backward+1], forward, backward
+        return lab[forward : backward + 1], forward, backward
     else:
-        return lab[forward:backward+1]
+        return lab[forward : backward + 1]
 
 
 def get_note_indices(lab):
@@ -204,57 +209,76 @@ def get_note_indices(lab):
             pass
     return note_indices
 
+
 def fix_mono_lab_before_align(lab, spk):
     # There is nothing to do
     return lab
-              
+
+
 def fix_mono_lab_after_align(lab, spk):
-    if (spk == "natsumeyuuri"):
+    if spk == "natsumeyuuri":
         return _fix_mono_lab_after_align_natsume_singing(lab)
     else:
         return _fix_mono_lab_after_align_default(lab)
+
 
 def _fix_mono_lab_after_align_natsume_singing(lab):
     f = hts.HTSLabelFile()
     f.append(lab[0])
     for i in range(1, len(lab)):
         # fix consecutive pau/sil
-        if((f.contexts[-1] == "pau" or f.contexts[-1] == "sil")
-           and (lab.contexts[i] == "pau" or lab.contexts[i] == "sil")):
+        if (f.contexts[-1] == "pau" or f.contexts[-1] == "sil") and (
+            lab.contexts[i] == "pau" or lab.contexts[i] == "sil"
+        ):
             print("Consecutive pau/sil-s are detected.")
             d = round((f.end_times[-1] - f.start_times[-1]) / 2)
             f.end_times[-1] = f.start_times[-1] + d
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
-        elif(f.contexts[-1] == lab.contexts[i]
-             and f.start_times[-1] == lab.start_times[i]
-             and f.end_times[-1] == lab.end_times[i]):
+        elif (
+            f.contexts[-1] == lab.contexts[i]
+            and f.start_times[-1] == lab.start_times[i]
+            and f.end_times[-1] == lab.end_times[i]
+        ):
             # duplicated vowel before "cl"?
-            print("{} and {} have the same start_time {} and end_time {}. There seems to be a missing phoneme in mono_dtw.".format(f.contexts[-1], lab.contexts[i], f.start_times[-1], f.end_times[-1]))
-            print()
+            print(
+                "{} and {} have the same start_time {} and end_time {}.".format(
+                    f.contexts[-1], lab.contexts[i], f.start_times[-1], f.end_times[-1]
+                )
+            )
+            print("There seems to be a missing phoneme in mono_dtw.")
             d = round((lab.end_times[i] - lab.start_times[i]) / 2)
             f.end_times[-1] = f.start_times[-1] + d
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
-        elif(f.end_times[-1] != lab.start_times[i]):
-            # There is a gap between the end_times of the last phoneme and the start_times of the next phoneme
-            print("end_time {} of the phoneme {} and start_time {} of the phoneme {} is not the same. There seems to be a missing phoneme in sinsy_mono_round.".format(f.end_times[-1], f.contexts[-1], lab.start_times[i], lab.contexts[i]))
+        elif f.end_times[-1] != lab.start_times[i]:
+            # There is a gap between the end_times of the last phoneme and
+            # the start_times of the next phoneme
+            print(
+                "end_time {} of the phoneme {} and start_time {} of the phoneme {} is not the same.".format(  # noqa
+                    f.end_times[-1], f.contexts[-1], lab.start_times[i], lab.contexts[i]
+                )
+            )
+            print("There seems to be a missing phoneme in sinsy_mono_round.")
             # expand lab.start_times[i] to f.end_times[-1]
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
-        else:        
+        else:
             f.append(lab[i], strict=False)
-    return(f)
-    
+    return f
+
+
 def _fix_mono_lab_after_align_default(lab):
     f = hts.HTSLabelFile()
     f.append(lab[0])
     for i in range(1, len(lab)):
         # fix contigous pau
-        if(f.contexts[-1] == "pau" and lab.contexts[i] == "pau"
-           and f.start_times[-1] == lab.start_times[i]
-           and f.end_times[-1] == lab.end_times[i]):
+        if (
+            f.contexts[-1] == "pau"
+            and lab.contexts[i] == "pau"
+            and f.start_times[-1] == lab.start_times[i]
+            and f.end_times[-1] == lab.end_times[i]
+        ):
             d = round((lab.end_times[i] - lab.start_times[i]) / 2)
             f.end_times[-1] = f.start_times[-1] + d
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
-        else:        
+        else:
             f.append(lab[i], strict=False)
     return f
-

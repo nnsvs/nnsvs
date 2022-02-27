@@ -1,27 +1,26 @@
-# coding: utf-8
 import os
 import sys
 from glob import glob
-from os.path import join, basename, splitext
-from nnmnkwii.io import hts
-from fastdtw import fastdtw
-import sys
-from util import prep_ph2num, ph2numeric, fix_mono_lab_after_align
-from tqdm import tqdm
+from os.path import basename, join
+
 import yaml
+from fastdtw import fastdtw
+from nnmnkwii.io import hts
+from tqdm import tqdm
+from util import fix_mono_lab_after_align, ph2numeric, prep_ph2num
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")
     sys.exit(-1)
 
 config = None
-with open(sys.argv[1], 'r') as yml:
+with open(sys.argv[1], "r") as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 if config is None:
     print(f"Cannot read config file: {sys.argv[1]}.")
     sys.exit(-1)
 
-with open(sys.argv[1], 'r') as yml:
+with open(sys.argv[1], "r") as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 
 # Get rough alignment between
@@ -46,8 +45,11 @@ for (path1, path2) in tqdm(zip(sinsy_files, mono_label_files)):
         continue
 
     # align two labels roughly based on the phoneme labels
-    d, path = fastdtw(ph2numeric(lab_sinsy.contexts,ph2num),
-        ph2numeric(lab_mono_label.contexts, ph2num), radius=len(lab_mono_label))
+    d, path = fastdtw(
+        ph2numeric(lab_sinsy.contexts, ph2num),
+        ph2numeric(lab_mono_label.contexts, ph2num),
+        radius=len(lab_mono_label),
+    )
 
     # Edit sinsy labels with hand-annontated aligments
     for x, y in path:
