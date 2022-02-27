@@ -1,0 +1,24 @@
+[build-system]
+requires = [
+    "wheel",
+    "setuptools",
+    "cython>=0.28.0",
+    "numpy<v1.20.0",
+    "scipy",
+]
+
+
+[tool.pysen]
+version = "0.10"
+
+[tool.pysen.lint]
+enable_black = true
+enable_flake8 = true
+enable_isort = true
+enable_mypy = false
+mypy_preset = "entry"
+line_length = 88
+py_version = "py38"
+
+[[tool.pysen.lint.mypy_targets]]
+paths = ["nnsvs", "tests"]
