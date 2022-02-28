@@ -157,9 +157,15 @@ class WORLDAcousticSource(FileDataSource):
         f0_score = _midi_to_hz(l_features, self.pitch_idx, False)
         notes = l_features[:, self.pitch_idx]
         notes = notes[notes > 0]
-        # allow semi-tone upper/lower
-        min_f0 = librosa.midi_to_hz(min(notes) - 1)
-        max_f0 = librosa.midi_to_hz(max(notes) + 1)
+
+        # allow 200 cent upper/lower to propery handle F0 estimation of
+        # preparation, vibrato and overshoot.
+        # NOET: set the minimum f0 to 63.5 Hz (125 - 3*20.5)
+        # https://acoustics.jp/qanda/answer/50.html
+        # NOTE: sinsy allows 30-150 cent frequency range for vibrato (as of 2010)
+        # https://staff.aist.go.jp/m.goto/PAPER/SIGMUS201007oura.pdf
+        min_f0 = max(63.5, librosa.midi_to_hz(min(notes) - 2))
+        max_f0 = librosa.midi_to_hz(max(notes) + 2)
         assert max_f0 > min_f0
 
         fs, x = wavfile.read(wav_path)
