@@ -51,7 +51,7 @@ for (path1, path2) in tqdm(zip(sinsy_files, mono_label_files)):
         radius=len(lab_mono_label),
     )
 
-    # Edit sinsy labels with hand-annontated aligments
+    # Edit sinsy labels with hand-annontated alignments
     for x, y in path:
         lab_sinsy.start_times[x] = lab_mono_label.start_times[y]
         lab_sinsy.end_times[x] = lab_mono_label.end_times[y]

@@ -97,7 +97,7 @@ for base in tqdm(base_files):
         lab_score = hts.load(lab_score_path)
         sanity_check_lab(lab_align)
 
-        # Pau/sil lenghts may differ in score and alignment, so remove it in case.
+        # Pau/sil lengths may differ in score and alignment, so remove it in case.
         lab_align = trim_sil_and_pau(lab_align)
         lab_score = trim_sil_and_pau(lab_score)
 

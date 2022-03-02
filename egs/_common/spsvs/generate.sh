@@ -1,5 +1,5 @@
 # NOTE: the script is supposed to be used called from nnsvs recipes.
-# Please don't try to run the shell script directry.
+# Please don't try to run the shell script directory.
 
 for s in ${testsets[@]}; do
     for typ in timelag duration acoustic; do

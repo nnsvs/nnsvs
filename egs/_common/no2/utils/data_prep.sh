@@ -10,7 +10,7 @@ fi
 config_path=$1
 
 # Step 1:
-# Generate full-context lables from music xml using pysinsy
+# Generate full-context labels from music xml using pysinsy
 # pysinsy: https://github.com/r9y9/pysinsy
 
 python $script_dir/gen_lab.py $config_path
