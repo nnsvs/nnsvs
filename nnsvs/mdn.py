@@ -26,7 +26,7 @@ class MDNLayer(nn.Module):
         in_dim (int): the number of dimensions in the input
         out_dim (int): the number of dimensions in the output
         num_gaussians (int): the number of mixture component
-        dim_wise (bool): whether to model data for each dimension seperately
+        dim_wise (bool): whether to model data for each dimension separately
     """
 
     def __init__(self, in_dim, out_dim, num_gaussians=30, dim_wise=False):

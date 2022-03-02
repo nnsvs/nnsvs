@@ -49,7 +49,7 @@ def split_streams(inputs, stream_sizes=None):
 
 
 def get_static_stream_sizes(stream_sizes, has_dynamic_features, num_windows):
-    """Get static dimention for each feature stream."""
+    """Get static dimension for each feature stream."""
     static_stream_sizes = np.array(stream_sizes)
     static_stream_sizes[has_dynamic_features] = (
         static_stream_sizes[has_dynamic_features] / num_windows
@@ -111,7 +111,7 @@ def multi_stream_mlpg(
         streams = [True, True, True, True]
     T, D = inputs.shape
     if D != sum(stream_sizes):
-        raise RuntimeError("You probably have specified wrong dimention params.")
+        raise RuntimeError("You probably have specified wrong dimension params.")
 
     # Straem indices for static+delta features
     # [0,   180, 183, 184]

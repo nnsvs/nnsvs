@@ -18,7 +18,7 @@ label_time_unit: "sec"
 # will be saved in the following directory
 out_dir: "./data"
 
-## Songs to be excluded from trainig.
+## Songs to be excluded from training.
 exclude_songs: []
 
 ### Pyinsy related settings.
@@ -37,7 +37,7 @@ question_path: "../../_common/hed/jp_qst001_nnsvs.hed"
 # Split song by silences (in sec)
 segmentation_threshold: 0.4
 # Min duration for a segment
-# note: there could be some execptions (e.g., the last segment of a song)
+# note: there could be some exceptions (e.g., the last segment of a song)
 segment_min_duration: 5.0
 # Force split segments if long silence is found regardless of min_duration
 force_split_threshold: 5.0

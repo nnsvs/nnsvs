@@ -269,7 +269,7 @@ def _fix_mono_lab_after_align_default(lab):
     f = hts.HTSLabelFile()
     f.append(lab[0])
     for i in range(1, len(lab)):
-        # fix contigous pau
+        # fix contiguous pau
         if (
             f.contexts[-1] == "pau"
             and lab.contexts[i] == "pau"

@@ -183,7 +183,7 @@ for lab_align_path in full_lab_align_files:
     wav_path = join(hts_demo_root, "data", "wav", name + ".wav")
     raw_path = join(hts_demo_root, "data", "raw", name + ".raw")
 
-    # We can load and manupulate audio (e.g., normalizing gain), but for now just copy it as is
+    # We can load and manipulate audio (e.g., normalizing gain), but for now just copy it as is
     if exists(wav_path):
         # sr, wave = wavfile.read(wav_path)
         wav, sr = librosa.load(wav_path, sr=48000)

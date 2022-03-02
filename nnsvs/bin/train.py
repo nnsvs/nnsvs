@@ -127,8 +127,8 @@ def save_checkpoint(config, model, optimizer, lr_scheduler, epoch):
         checkpoint_path,
     )
     logger.info("Checkpoint is saved at %s", checkpoint_path)
-    lastest_path = join(out_dir, "latest.pth")
-    shutil.copyfile(checkpoint_path, lastest_path)
+    latest_path = join(out_dir, "latest.pth")
+    shutil.copyfile(checkpoint_path, latest_path)
 
 
 def save_best_checkpoint(config, model, optimizer, best_loss):

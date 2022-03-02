@@ -89,7 +89,7 @@ for mono_path, xml_path in zip(mono_lab_files, muxicxml_files):
         bb, ee = round(b / 50000) * 50000, round(e / 50000) * 50000
         # TODO: better way
         if bb == ee:
-            # ensure mininum frame length 1
+            # ensure minimum frame length 1
             align_mono_lab.end_times[idx] = align_mono_lab.start_times[idx] + 50000
             align_mono_lab.start_times[idx + 1] = align_mono_lab.end_times[idx]
             print(align_mono_lab[idx - 1 : idx + 2])
