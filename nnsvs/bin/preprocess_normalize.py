@@ -11,12 +11,11 @@ import hydra
 import joblib
 import numpy as np
 from hydra.utils import to_absolute_path
-from nnmnkwii import preprocessing as P
+from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
+
 # from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
-
-from nnsvs.logger import getLogger
 
 logger = None
 
@@ -50,8 +49,18 @@ def apply_normalization_dir2dir(in_dir, out_dir, scaler, inverse, num_workers):
     executor = ProcessPoolExecutor(max_workers=num_workers)
     futures = []
     for audio_path, feature_path in zip_longest(audio_paths, feature_paths):
-        futures.append(executor.submit(
-            partial(_process_utterance, out_dir, audio_path, feature_path, scaler, inverse)))
+        futures.append(
+            executor.submit(
+                partial(
+                    _process_utterance,
+                    out_dir,
+                    audio_path,
+                    feature_path,
+                    scaler,
+                    inverse,
+                )
+            )
+        )
     for future in tqdm(futures):
         future.result()
 

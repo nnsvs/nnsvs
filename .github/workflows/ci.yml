@@ -28,14 +28,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pysinsy
-        pip install -e .
+        pip install -e ".[lint,test]"
 
-    - name: Lint with flake8
+    - name: Lint with pysen
       run: |
-        pip install flake8
-        # flake8
+        pysen run lint
 
     - name: Test with pytest
       run: |
         pip install pytest
-        # pytest
+        pytest

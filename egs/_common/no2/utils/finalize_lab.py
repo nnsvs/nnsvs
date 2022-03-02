@@ -1,24 +1,22 @@
-# coding: utf-8
-import pysinsy
 import os
 import sys
 from glob import glob
-from os.path import join, basename, exists, expanduser, splitext
-from nnmnkwii.io import hts
-from scipy.io import wavfile
+from os.path import basename, exists, expanduser, join, splitext
+
 import librosa
-import soundfile as sf
-from tqdm import tqdm
 import numpy as np
-from util import fix_offset, trim_sil_and_pau, get_note_indices, _is_silence
+import soundfile as sf
 import yaml
+from nnmnkwii.io import hts
+from tqdm import tqdm
+from util import _is_silence, fix_offset, get_note_indices, trim_sil_and_pau
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")
     sys.exit(-1)
 
 config = None
-with open(sys.argv[1], 'r') as yml:
+with open(sys.argv[1], "r") as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 if config is None:
     print(f"Cannot read config file: {sys.argv[1]}.")
@@ -27,31 +25,33 @@ if config is None:
 full_align_dir = join(config["out_dir"], "full_dtw_seg")
 full_score_dir = join(config["out_dir"], "sinsy_full_round_seg")
 
+
 def sanity_check_lab(lab):
-    for b,e,l in lab:
-        assert e-b > 0
+    for b, e, _ in lab:
+        assert e - b > 0
 
 
 def remove_sil_and_pau(lab):
     newlab = hts.HTSLabelFile()
-    for l in lab:
-        if "-sil" not in l[-1] and "-pau" not in l[-1]:
-            newlab.append(l, strict=False)
+    for l_inner in lab:
+        if "-sil" not in l_inner[-1] and "-pau" not in l_inner[-1]:
+            newlab.append(l_inner, strict=False)
 
     return newlab
 
-### Prepare data for time-lag models
+
+# Prepare data for time-lag models
 
 dst_dir = join(config["out_dir"], "timelag")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
 
 
 base_files = sorted(glob(join(config["out_dir"], "full_dtw", "*.lab")))
-    
+
 print("Prepare data for time-lag models")
 for base in tqdm(base_files):
     utt_id = splitext(basename(base))[0]
@@ -78,7 +78,9 @@ for base in tqdm(base_files):
     global_offset = int(round(global_offset / 50000) * 50000)
 
     # Apply offset correction only when there is a big gap
-    apply_offset_correction = np.abs(global_offset * 1e-7) > float(config["offset_correction_threshold"])
+    apply_offset_correction = np.abs(global_offset * 1e-7) > float(
+        config["offset_correction_threshold"]
+    )
     if apply_offset_correction:
         print(f"{utt_id}: Global offset (in sec): {global_offset * 1e-7}")
 
@@ -129,10 +131,14 @@ for base in tqdm(base_files):
             note_idx = note_indices[idx]
             lag = np.abs(a - b) / 50000
             if _is_silence(lab_score.contexts[note_idx]):
-                if lag >= float(config["timelag_allowed_range_rest"][0]) and lag <= float(config["timelag_allowed_range_rest"][1]):
+                if lag >= float(
+                    config["timelag_allowed_range_rest"][0]
+                ) and lag <= float(config["timelag_allowed_range_rest"][1]):
                     valid_note_indices.append(note_idx)
             else:
-                if lag >= float(config["timelag_allowed_range"][0]) and lag <= float(config["timelag_allowed_range"][1]):
+                if lag >= float(config["timelag_allowed_range"][0]) and lag <= float(
+                    config["timelag_allowed_range"][1]
+                ):
                     valid_note_indices.append(note_idx)
 
         if len(valid_note_indices) < len(note_indices):
@@ -155,10 +161,10 @@ for base in tqdm(base_files):
         seg_idx += 1
 
 
-### Prepare data for duration models
+# Prepare data for duration models
 
 dst_dir = join(config["out_dir"], "duration")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
 
 for d in [lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -186,12 +192,12 @@ for base in tqdm(base_files):
 
         seg_idx += 1
 
-### Prepare data for acoustic models
+# Prepare data for acoustic models
 
 dst_dir = join(config["out_dir"], "acoustic")
-wav_dst_dir  = join(dst_dir, "wav")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+wav_dst_dir = join(dst_dir, "wav")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [wav_dst_dir, lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -210,10 +216,10 @@ for base in tqdm(base_files):
     # sr, wave = wavfile.read(wav_path)
     wav, sr = librosa.load(wav_path, sr=config["sample_rate"])
     assert sr == config["sample_rate"]
-    
+
     # gain normalize
     wav = wav / wav.max() * 0.99
-    
+
     seg_idx = 0
     while True:
         lab_align_path = join(full_align_dir, f"{utt_id}_seg{seg_idx}.lab")

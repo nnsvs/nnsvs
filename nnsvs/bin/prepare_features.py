@@ -7,21 +7,27 @@ import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
+from nnsvs.data import (
+    DurationFeatureSource,
+    MusicalLinguisticSource,
+    TimeLagFeatureSource,
+    WORLDAcousticSource,
+)
+from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
-
-from nnsvs.data import (DurationFeatureSource, MusicalLinguisticSource,
-TimeLagFeatureSource, WORLDAcousticSource)
-from nnsvs.logger import getLogger
 
 logger = None
 
 
-def _prepare_timelag_feature(in_timelag_root, out_timelag_root,
-                             in_timelag: FileSourceDataset,
-                             out_timelag: FileSourceDataset, idx: int) -> None:
-    """prepare timelag feature for one item of in_duration
-    """
+def _prepare_timelag_feature(
+    in_timelag_root,
+    out_timelag_root,
+    in_timelag: FileSourceDataset,
+    out_timelag: FileSourceDataset,
+    idx: int,
+) -> None:
+    """prepare timelag feature for one item of in_duration"""
     x, y = in_timelag[idx], out_timelag[idx]
     name = splitext(basename(in_timelag.collected_files[idx][0]))[0]
     xpath = join(in_timelag_root, name + "-feats.npy")
@@ -30,11 +36,14 @@ def _prepare_timelag_feature(in_timelag_root, out_timelag_root,
     np.save(ypath, y, allow_pickle=False)
 
 
-def _prepare_duration_feature(in_duration_root, out_duration_root,
-                              in_duration: FileSourceDataset,
-                              out_duration: FileSourceDataset, idx: int) -> None:
-    """prepare duration feature for one item of in_duration
-    """
+def _prepare_duration_feature(
+    in_duration_root,
+    out_duration_root,
+    in_duration: FileSourceDataset,
+    out_duration: FileSourceDataset,
+    idx: int,
+) -> None:
+    """prepare duration feature for one item of in_duration"""
     x, y = in_duration[idx], out_duration[idx]
     name = splitext(basename(in_duration.collected_files[idx][0]))[0]
     xpath = join(in_duration_root, name + "-feats.npy")
@@ -43,11 +52,14 @@ def _prepare_duration_feature(in_duration_root, out_duration_root,
     np.save(ypath, y, allow_pickle=False)
 
 
-def _prepare_acoustic_feature(in_acoustic_root, out_acoustic_root,
-                              in_acoustic: FileSourceDataset,
-                              out_acoustic: FileSourceDataset, idx: int) -> None:
-    """prepare acoustic feature for one item of in_acoustic
-    """
+def _prepare_acoustic_feature(
+    in_acoustic_root,
+    out_acoustic_root,
+    in_acoustic: FileSourceDataset,
+    out_acoustic: FileSourceDataset,
+    idx: int,
+) -> None:
+    """prepare acoustic feature for one item of in_acoustic"""
     x, (y, wave) = in_acoustic[idx], out_acoustic[idx]
     name = splitext(basename(in_acoustic.collected_files[idx][0]))[0]
     xpath = join(in_acoustic_root, name + "-feats.npy")
@@ -82,11 +94,13 @@ def my_app(config: DictConfig) -> None:
         add_frame_features=False,
         subphone_features=None,
         question_path=question_path,
-        log_f0_conditioning=config.log_f0_conditioning)
+        log_f0_conditioning=config.log_f0_conditioning,
+    )
     out_timelag_source = TimeLagFeatureSource(
         utt_list,
         to_absolute_path(config.timelag.label_phone_score_dir),
-        to_absolute_path(config.timelag.label_phone_align_dir))
+        to_absolute_path(config.timelag.label_phone_align_dir),
+    )
 
     in_timelag = FileSourceDataset(in_timelag_source)
     out_timelag = FileSourceDataset(out_timelag_source)
@@ -105,10 +119,11 @@ def my_app(config: DictConfig) -> None:
         add_frame_features=False,
         subphone_features=None,
         question_path=question_path,
-        log_f0_conditioning=config.log_f0_conditioning)
+        log_f0_conditioning=config.log_f0_conditioning,
+    )
     out_duration_source = DurationFeatureSource(
-        utt_list,
-        to_absolute_path(config.duration.label_dir))
+        utt_list, to_absolute_path(config.duration.label_dir)
+    )
 
     in_duration = FileSourceDataset(in_duration_source)
     out_duration = FileSourceDataset(out_duration_source)
@@ -126,16 +141,21 @@ def my_app(config: DictConfig) -> None:
         question_path,
         add_frame_features=True,
         subphone_features=config.acoustic.subphone_features,
-        log_f0_conditioning=config.log_f0_conditioning)
+        log_f0_conditioning=config.log_f0_conditioning,
+    )
     out_acoustic_source = WORLDAcousticSource(
         utt_list,
         to_absolute_path(config.acoustic.wav_dir),
         to_absolute_path(config.acoustic.label_dir),
-        question_path, use_harvest=config.acoustic.use_harvest,
-        f0_ceil=config.acoustic.f0_ceil, f0_floor=config.acoustic.f0_floor,
-        frame_period=config.acoustic.frame_period, mgc_order=config.acoustic.mgc_order,
+        question_path,
+        use_harvest=config.acoustic.use_harvest,
+        f0_ceil=config.acoustic.f0_ceil,
+        f0_floor=config.acoustic.f0_floor,
+        frame_period=config.acoustic.frame_period,
+        mgc_order=config.acoustic.mgc_order,
         num_windows=config.acoustic.num_windows,
-        relative_f0=config.acoustic.relative_f0)
+        relative_f0=config.acoustic.relative_f0,
+    )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)
 
@@ -147,8 +167,14 @@ def my_app(config: DictConfig) -> None:
     in_acoustic_root = join(out_dir, "in_acoustic")
     out_acoustic_root = join(out_dir, "out_acoustic")
 
-    for d in [in_timelag_root, out_timelag_root, in_duration_root, out_duration_root,
-              in_acoustic_root, out_acoustic_root]:
+    for d in [
+        in_timelag_root,
+        out_timelag_root,
+        in_duration_root,
+        out_duration_root,
+        in_acoustic_root,
+        out_acoustic_root,
+    ]:
         if not os.path.exists(d):
             logger.info("mkdirs: %s", format(d))
             os.makedirs(d)
@@ -165,7 +191,7 @@ def my_app(config: DictConfig) -> None:
                     out_timelag_root,
                     in_timelag,
                     out_timelag,
-                    idx
+                    idx,
                 )
                 for idx in range(len(in_timelag))
             ]
@@ -184,7 +210,7 @@ def my_app(config: DictConfig) -> None:
                     out_duration_root,
                     in_duration,
                     out_duration,
-                    idx
+                    idx,
                 )
                 for idx in range(len(in_duration))
             ]
@@ -203,7 +229,7 @@ def my_app(config: DictConfig) -> None:
                     out_acoustic_root,
                     in_acoustic,
                     out_acoustic,
-                    idx
+                    idx,
                 )
                 for idx in range(len(in_acoustic))
             ]

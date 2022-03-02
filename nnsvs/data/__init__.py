@@ -1,6 +1,13 @@
-# coding: utf-8
-
 from .data_source import (
-    MusicalLinguisticSource, TimeLagFeatureSource,
-    DurationFeatureSource, WORLDAcousticSource
+    DurationFeatureSource,
+    MusicalLinguisticSource,
+    TimeLagFeatureSource,
+    WORLDAcousticSource,
 )
+
+__all__ = [
+    "DurationFeatureSource",
+    "MusicalLinguisticSource",
+    "TimeLagFeatureSource",
+    "WORLDAcousticSource",
+]

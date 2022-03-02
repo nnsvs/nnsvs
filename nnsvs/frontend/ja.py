@@ -1,8 +1,4 @@
-# coding: utf-8
-
-import os
 from nnmnkwii.io import hts
-
 
 try:
     import pysinsy

@@ -1,21 +1,20 @@
-# coding: utf-8
 import os
 import sys
-import numpy as np
 from glob import glob
-from os.path import join, basename, splitext
-from nnmnkwii.io import hts
-import sys
-from util import segment_labels, trim_sil_and_pau, compute_nosil_duration
-from tqdm import tqdm
+from os.path import basename, join, splitext
+
+import numpy as np
 import yaml
+from nnmnkwii.io import hts
+from tqdm import tqdm
+from util import segment_labels
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")
     sys.exit(-1)
 
 config = None
-with open(sys.argv[1], 'r') as yml:
+with open(sys.argv[1], "r") as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 if config is None:
     print(f"Cannot read config file: {sys.argv[1]}.")
@@ -48,22 +47,25 @@ for name in ["full_dtw", "sinsy_full_round", "sinsy_mono_round"]:
         utt_id = splitext(basename(base))[0]
         base_lab = hts.load(base)
         base_segments, start_indices, end_indices = segment_labels(
-            base_lab, True, config["segmentation_threshold"],
+            base_lab,
+            True,
+            config["segmentation_threshold"],
             min_duration=config["segment_min_duration"],
-            force_split_threshold=config["force_split_threshold"])
+            force_split_threshold=config["force_split_threshold"],
+        )
         if name == "full_dtw":
             d = []
             for seg in base_segments:
-              d.append((seg.end_times[-1] - seg.start_times[0]) * 1e-7)
+                d.append((seg.end_times[-1] - seg.start_times[0]) * 1e-7)
             lengths[utt_id] = d
 
         lab = hts.load(files[idx])
-#        print("{}: len:{}".format(files[idx], len(lab)))
-#        print("{}: len:{}".format(base, len(base_lab)))
+        #        print("{}: len:{}".format(files[idx], len(lab)))
+        #        print("{}: len:{}".format(base, len(base_lab)))
         assert len(lab) == len(base_lab)
         segments = []
-        for s,e in zip(start_indices, end_indices):
-            segments.append(lab[s:e+1])
+        for s, e in zip(start_indices, end_indices):
+            segments.append(lab[s : e + 1])
 
         dst_dir = join(config["out_dir"], f"{name}_seg")
         os.makedirs(dst_dir, exist_ok=True)
@@ -79,8 +81,11 @@ for name in ["full_dtw", "sinsy_full_round", "sinsy_mono_round"]:
 
 for ls in [lengths]:
     for k, v in ls.items():
-        print("{}.lab: segment duration min {:.02f}, max {:.02f}, mean {:.02f}".format(
-            k, np.min(v), np.max(v), np.mean(v)))
+        print(
+            "{}.lab: segment duration min {:.02f}, max {:.02f}, mean {:.02f}".format(
+                k, np.min(v), np.max(v), np.mean(v)
+            )
+        )
 
     flatten_lengths = []
     for k, v in ls.items():
@@ -90,8 +95,11 @@ for ls in [lengths]:
             flatten_lengths.append(d)
         sys.stdout.write("\n")
 
-    print("Segmentation stats: min {:.02f}, max {:.02f}, mean {:.02f}".format(
-        np.min(flatten_lengths), np.max(flatten_lengths), np.mean(flatten_lengths)))
+    print(
+        "Segmentation stats: min {:.02f}, max {:.02f}, mean {:.02f}".format(
+            np.min(flatten_lengths), np.max(flatten_lengths), np.mean(flatten_lengths)
+        )
+    )
 
     print("Total number of segments: {}".format(len(flatten_lengths)))
 

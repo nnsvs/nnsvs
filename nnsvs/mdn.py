@@ -1,12 +1,10 @@
-# coding: utf-8
-
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class MDNLayer(nn.Module):
-    """ Mixture Density Network layer
+    """Mixture Density Network layer
 
     The input maps to the parameters of a Mixture of Gaussians (MoG) probability
     distribution, where each Gaussian has out_dim dimensions and diagonal covariance.
@@ -15,10 +13,14 @@ class MDNLayer(nn.Module):
     especially for high dimensional data.
 
     Implementation references:
-    1. Mixture Density Networks by Mike Dusenberry https://mikedusenberry.com/mixture-density-networks
-    2. PRML book https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/
-    3. sagelywizard/pytorch-mdn https://github.com/sagelywizard/pytorch-mdn
-    4. sksq96/pytorch-mdn https://github.com/sksq96/pytorch-mdn
+    1. Mixture Density Networks by Mike Dusenberry
+        https://mikedusenberry.com/mixture-density-networks
+    2. PRML book
+        https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/
+    3. sagelywizard/pytorch-mdn
+        https://github.com/sagelywizard/pytorch-mdn
+    4. sksq96/pytorch-mdn
+        https://github.com/sksq96/pytorch-mdn
 
     Attributes:
         in_dim (int): the number of dimensions in the input
@@ -26,6 +28,7 @@ class MDNLayer(nn.Module):
         num_gaussians (int): the number of mixture component
         dim_wise (bool): whether to model data for each dimension seperately
     """
+
     def __init__(self, in_dim, out_dim, num_gaussians=30, dim_wise=False):
         super(MDNLayer, self).__init__()
         self.in_dim = in_dim
@@ -58,7 +61,9 @@ class MDNLayer(nn.Module):
         B = len(minibatch)
         if self.dim_wise:
             # (B, T, G, D_out)
-            log_pi = self.log_pi(minibatch).view(B, -1, self.num_gaussians, self.out_dim)
+            log_pi = self.log_pi(minibatch).view(
+                B, -1, self.num_gaussians, self.out_dim
+            )
             log_pi = F.log_softmax(log_pi, dim=2)
         else:
             # (B, T, G)
@@ -70,7 +75,9 @@ class MDNLayer(nn.Module):
         return log_pi, log_sigma, mu
 
 
-def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0, reduce=True):
+def mdn_loss(
+    log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0, reduce=True
+):
     """Calculates the error, given the MoG parameters and the target.
     The loss is the negative log likelihood of the data given the MoG
     parameters.
@@ -118,12 +125,15 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0,
         # (B, T, D_out. D_out)
         loss = log_prob + log_pi
     else:
-        # Here we assume that the covariance matrix of multivariate Gaussian distribution is diagonal
-        # to handle the mean and the variance in each dimension separately.
-        # (Reference: https://markusthill.github.io/gaussian-distribution-with-a-diagonal-covariance-matrix/)
+        # Here we assume that the covariance matrix of multivariate Gaussian
+        # distribution is diagonal to handle the mean and the variance in each
+        # dimension separately.
+        # Reference:
+        # https://markusthill.github.io/gaussian-distribution-with-a-diagonal-covariance-matrix/
         # log pi(x)N(y|mu(x),sigma(x)) = log pi(x) + log N(y|mu(x),sigma(x))
-        # log N(y_1,y_2,...,y_{D_out}|mu(x),sigma(x)) = log N(y_1|mu(x),sigma(x))...N(y_{D_out}|mu(x),sigma(x))
-        #                                             = \sum_{i=1}^{D_out} log N(y_i|mu(x),sigma(x))
+        # log N(y_1,y_2,...,y_{D_out}|mu(x),sigma(x))
+        #  = log N(y_1|mu(x),sigma(x))...N(y_{D_out}|mu(x),sigma(x))
+        #  = \sum_{i=1}^{D_out} log N(y_i|mu(x),sigma(x))
         # (B, T, G, D_out) -> (B, T, G)
         loss = torch.sum(log_prob, dim=3) + log_pi
 
@@ -145,7 +155,7 @@ def mdn_loss(log_pi, log_sigma, mu, target, log_pi_min=-7.0, log_sigma_min=-7.0,
 
 
 # from r9y9/wavenet_vocoder/wavenet_vocoder/mixture.py
-def to_one_hot(tensor, n, fill_with=1.):
+def to_one_hot(tensor, n, fill_with=1.0):
     # we perform one hot encore with respect to the last axis
     one_hot = torch.FloatTensor(tensor.size() + (n,)).zero_()
     if tensor.is_cuda:
@@ -174,9 +184,9 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
         - torch.Tensor: Tensor of shape (B, T, D_out). Means of the Gaussians.
     """
     dim_wise = len(log_pi.shape) == 4
-    _, _, num_gaussians , _ = mu.shape
+    _, _, num_gaussians, _ = mu.shape
     # Get the indexes of the largest log_pi
-    _, max_component = torch.max(log_pi, dim=2) # (B, T) or (B, T, C_out)
+    _, max_component = torch.max(log_pi, dim=2)  # (B, T) or (B, T, C_out)
 
     # Convert max_component to one_hot manner
     # if dim_wise: (B, T, D_out) -> (B, T, D_out, G)
@@ -201,7 +211,7 @@ def mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu):
 
 
 def mdn_get_sample(log_pi, log_sigma, mu):
-    """ Sample from mixture of the Gaussian component whose weight coefficient is
+    """Sample from mixture of the Gaussian component whose weight coefficient is
     the largest as the most probable predictions.
 
     Args:
@@ -221,7 +231,7 @@ def mdn_get_sample(log_pi, log_sigma, mu):
     max_sigma, max_mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
 
     # Create gaussians with mean=max_mu and variance=max_log_sigma^2
-    dist= torch.distributions.Normal(loc=max_mu, scale=max_sigma)
+    dist = torch.distributions.Normal(loc=max_mu, scale=max_sigma)
 
     # Sample from normal distribution
     sample = dist.sample()

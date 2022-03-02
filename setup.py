@@ -1,9 +1,10 @@
 # coding: utf-8
-from setuptools import setup, find_packages
 from importlib.machinery import SourceFileLoader
 from os.path import exists
 
-version = SourceFileLoader('nnsvs.version', 'nnsvs/version.py').load_module().version
+from setuptools import find_packages, setup
+
+version = SourceFileLoader("nnsvs.version", "nnsvs/version.py").load_module().version
 
 packages = find_packages()
 if exists("README.md"):
@@ -12,9 +13,10 @@ if exists("README.md"):
 else:
     LONG_DESC = ""
 
-setup(name='nnsvs',
+setup(
+    name="nnsvs",
     version=version,
-    description='DNN-based singing voice synthesis library',
+    description="DNN-based singing voice synthesis library",
     long_description=LONG_DESC,
     long_description_content_type="text/markdown",
     packages=packages,
@@ -33,8 +35,16 @@ setup(name='nnsvs',
         "nnmnkwii",
     ],
     extras_require={
-        "test": [
+        "lint": [
+            "pysen",
+            "types-setuptools",
+            "mypy<=0.910",
+            "black>=19.19b0,<=20.8",
+            "flake8>=3.7,<4",
+            "flake8-bugbear",
+            "isort>=4.3,<5.2.0",
         ],
+        "test": ["pytest"],
     },
     entry_points={
         "console_scripts": [
@@ -46,4 +56,4 @@ setup(name='nnsvs',
             "nnsvs-synthesis = nnsvs.bin.synthesis:entry",
         ],
     },
-    )
+)

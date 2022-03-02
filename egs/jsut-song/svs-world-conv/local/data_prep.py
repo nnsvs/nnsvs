@@ -1,33 +1,30 @@
-# coding: utf-8
-import os
-
 import argparse
-from glob import glob
-from os.path import join, basename, splitext, exists, expanduser
-from nnmnkwii.io import hts
-from scipy.io import wavfile
-import librosa
-import soundfile as sf
+import os
 import sys
-import numpy as np
+from glob import glob
+from os.path import basename, exists, join, splitext
 
+import librosa
+import numpy as np
+import soundfile as sf
+from nnmnkwii.io import hts
 from nnsvs.io.hts import get_note_indices
 
 
-def _is_silence(l):
-    is_full_context = "@" in l
+def _is_silence(label):
+    is_full_context = "@" in label
     if is_full_context:
-        is_silence = ("-sil" in l or "-pau" in l)
+        is_silence = "-sil" in label or "-pau" in label
     else:
-        is_silence = (l == "sil" or l == "pau")
+        is_silence = label == "sil" or label == "pau"
     return is_silence
 
 
 def remove_sil_and_pau(lab):
     newlab = hts.HTSLabelFile()
-    for l in lab:
-        if "-sil" not in l[-1] and "-pau" not in l[-1]:
-            newlab.append(l, strict=False)
+    for label in lab:
+        if "-sil" not in label[-1] and "-pau" not in label[-1]:
+            newlab.append(label, strict=False)
 
     return newlab
 
@@ -41,8 +38,9 @@ def get_parser():
     parser.add_argument("jsut_lab_root", type=str, help="JSUT lab dir")
     parser.add_argument("hts_demo_root", type=str, help="HTS demo root")
     parser.add_argument("out_dir", type=str, help="Output directory")
-    parser.add_argument("--gain-normalize", action='store_true')
+    parser.add_argument("--gain-normalize", action="store_true")
     return parser
+
 
 args = get_parser().parse_args(sys.argv[1:])
 
@@ -58,7 +56,7 @@ timelag_allowed_range_rest = (-40, 39)
 offset_correction_threshold = 0.005
 
 
-### Make aligned full context labels
+# Make aligned full context labels
 
 full_align_dir = join(args.jsut_lab_root)
 # Note: this will be saved under jsut_song_root directory
@@ -71,7 +69,9 @@ os.makedirs(full_align_new_dir, exist_ok=True)
 # while jsut-song's label uses numbers (e.g. 87) to represent pitch.
 full_lab_files = sorted(glob(join(full_align_dir, "*.lab")))
 names = list(map(lambda s: basename(s), full_lab_files))
-nit_lab_files = list(map(lambda s: join(nit_song080_label_root, f"nitech_jp_song070_f001_{s}"), names))
+nit_lab_files = list(
+    map(lambda s: join(nit_song080_label_root, f"nitech_jp_song070_f001_{s}"), names)
+)
 for jsut, nit in zip(full_lab_files, nit_lab_files):
     assert exists(jsut) and exists(nit)
     jsut_lab = hts.load(jsut)
@@ -89,11 +89,11 @@ for jsut, nit in zip(full_lab_files, nit_lab_files):
         of.write(str(jsut_lab))
 
 
-### Prepare data for time-lag models
+# Prepare data for time-lag models
 
 dst_dir = join(out_dir, "timelag")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -131,7 +131,10 @@ for lab_align_path in full_lab_align_files:
         note_idx = note_indices[idx]
         lag = np.abs(a - b) / 50000
         if _is_silence(lab_score.contexts[note_idx]):
-            if lag >= timelag_allowed_range_rest[0] and lag <= timelag_allowed_range_rest[1]:
+            if (
+                lag >= timelag_allowed_range_rest[0]
+                and lag <= timelag_allowed_range_rest[1]
+            ):
                 valid_note_indices.append(note_idx)
         else:
             if lag >= timelag_allowed_range[0] and lag <= timelag_allowed_range[1]:
@@ -154,10 +157,10 @@ for lab_align_path in full_lab_align_files:
     with open(lab_score_dst_path, "w") as of:
         of.write(str(lab_score))
 
-### Prepare data for duration models
+# Prepare data for duration models
 
 dst_dir = join(out_dir, "duration")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
 
 for d in [lab_align_dst_dir]:
     os.makedirs(d, exist_ok=True)
@@ -175,12 +178,12 @@ for lab_align_path in full_lab_align_files:
         of.write(str(lab_align))
 
 
-### Prepare data for acoustic models
+# Prepare data for acoustic models
 
 dst_dir = join(out_dir, "acoustic")
-wav_dst_dir  = join(dst_dir, "wav")
-lab_align_dst_dir  = join(dst_dir, "label_phone_align")
-lab_score_dst_dir  = join(dst_dir, "label_phone_score")
+wav_dst_dir = join(dst_dir, "wav")
+lab_align_dst_dir = join(dst_dir, "label_phone_align")
+lab_score_dst_dir = join(dst_dir, "label_phone_score")
 
 for d in [wav_dst_dir, lab_align_dst_dir, lab_score_dst_dir]:
     os.makedirs(d, exist_ok=True)

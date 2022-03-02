@@ -1,25 +1,25 @@
-# coding: utf-8
-import pysinsy
 import os
 import sys
 from glob import glob
-from os.path import join, basename, expanduser, splitext
-from nnmnkwii.io import hts
-from util import merge_sil, fix_mono_lab_before_align
-from tqdm import tqdm
+from os.path import basename, expanduser, join, splitext
+
+import pysinsy
 import yaml
+from nnmnkwii.io import hts
+from tqdm import tqdm
+from util import fix_mono_lab_before_align, merge_sil
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")
     sys.exit(-1)
 
 config = None
-with open(sys.argv[1], 'r') as yml:
+with open(sys.argv[1], "r") as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 if config is None:
     print(f"Cannot read config file: {sys.argv[1]}.")
     sys.exit(-1)
-    
+
 sinsy = pysinsy.sinsy.Sinsy()
 
 assert sinsy.setLanguages("j", config["sinsy_dic"])
@@ -37,8 +37,8 @@ for path in tqdm(files):
         n = "sinsy_mono" if is_mono else "sinsy_full"
         labels = sinsy.createLabelData(is_mono, 1, 1).getData()
         lab = hts.HTSLabelFile()
-        for l in labels:
-            lab.append(l.split(), strict=False)
+        for label in labels:
+            lab.append(label.split(), strict=False)
         lab = merge_sil(lab)
         dst_dir = join(config["out_dir"], f"{n}")
         os.makedirs(dst_dir, exist_ok=True)
@@ -51,18 +51,18 @@ files = sorted(glob(join(expanduser(config["db_root"]), "**/*.lab"), recursive=T
 dst_dir = join(config["out_dir"], "mono_label")
 os.makedirs(dst_dir, exist_ok=True)
 for m in tqdm(files):
-    if (config["spk"] == "natsumeyuuri"):
+    if config["spk"] == "natsumeyuuri":
         # natsume_singing
         name = splitext(basename(m))[0]
         if name in config["exclude_songs"]:
             continue
         h = hts.HTSLabelFile()
         with open(m) as f:
-            for l in f:
-                s,e,l = l.strip().split()
+            for label in f:
+                s, e, lab = label.strip().split()
                 if config["label_time_unit"] == "sec":
-                    s,e = int(float(s) * 1e7), int(float(e) * 1e7)
-                h.append((s,e,l))
+                    s, e = int(float(s) * 1e7), int(float(e) * 1e7)
+                h.append((s, e, lab))
             with open(join(dst_dir, basename(m)), "w") as of:
                 of.write(str(fix_mono_lab_before_align(h, config["spk"])))
     else:
@@ -91,12 +91,14 @@ for name in ["sinsy_mono", "sinsy_full", "mono_label"]:
 
         # Check if rounding is done property
         if name == "mono_label":
-            for i in range(len(lab)-1):
-                if lab.end_times[i] != lab.start_times[i+1]:
+            for i in range(len(lab) - 1):
+                if lab.end_times[i] != lab.start_times[i + 1]:
                     print(path)
                     print(i, lab[i])
-                    print(i+1, lab[i+1])
-                    import ipdb; ipdb.set_trace()
+                    print(i + 1, lab[i + 1])
+                    import ipdb
+
+                    ipdb.set_trace()
 
         with open(join(dst_dir, name), "w") as of:
             of.write(str(lab))
