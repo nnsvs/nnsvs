@@ -408,12 +408,10 @@ def gen_waveform(
     frame_period=5,
     relative_f0=True,
 ):
-    windows = get_windows(num_windows)
-
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
-            stream_sizes, has_dynamic_features, len(windows)
+            stream_sizes, has_dynamic_features, num_windows
         )
     else:
         static_stream_sizes = stream_sizes
