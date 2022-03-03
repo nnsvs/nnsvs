@@ -33,6 +33,7 @@ setup(
         "pyworld",
         "tensorboard",
         "nnmnkwii",
+        "pysinsy",
     ],
     extras_require={
         "lint": [
