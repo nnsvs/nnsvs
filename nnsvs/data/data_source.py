@@ -158,7 +158,7 @@ class WORLDAcousticSource(FileDataSource):
         notes = l_features[:, self.pitch_idx]
         notes = notes[notes > 0]
 
-        # allow 200 cent upper/lower to propery handle F0 estimation of
+        # allow 200 cent upper/lower to properly handle F0 estimation of
         # preparation, vibrato and overshoot.
         # NOET: set the minimum f0 to 63.5 Hz (125 - 3*20.5)
         # https://acoustics.jp/qanda/answer/50.html
