@@ -18,18 +18,9 @@ Neural network-based singing voice synthesis library for research.
 
 ## Installation
 
-- Python 3.6 or newer
-- [nnmnkwii](https://github.com/r9y9/nnmnkwii): **development** version (master branch) is required
-- [pysinsy](https://github.com/r9y9/pysinsy) **development** version is required. Please have a look at the repository for installation.
-- Pytorch >= 1.x
-
-Note that packages listed above should be manually installed. After installing them, you can run:
-
 ```
 python setup.py develop
 ```
-
-to install the rest of dependencies.
 
 ## Repository structure
 
