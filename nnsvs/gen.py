@@ -169,6 +169,18 @@ def predict_timelag(
 
 
 def postprocess_duration(labels, pred_durations, lag):
+    """Post-process durations based on predicted time-lag
+
+    Ref : https://arxiv.org/abs/2108.02776
+
+    Args:
+        labels (HTSLabelFile): HTS labels
+        pred_durations (array): predicted durations
+        lag (array): predicted time-lag
+
+    Returns:
+        HTSLabelFile: labels with adjusted durations
+    """
     note_indices = get_note_indices(labels)
     # append the end of note
     note_indices.append(len(labels))
@@ -176,8 +188,17 @@ def postprocess_duration(labels, pred_durations, lag):
     output_labels = hts.HTSLabelFile()
 
     for i in range(1, len(note_indices)):
-        # Apply time lag
         p = labels[note_indices[i - 1] : note_indices[i]]
+
+        # Compute note duration with time-lag
+        # eq (11)
+        L = int(fe.duration_features(p)[0])
+        if i < len(note_indices) - 1:
+            L_hat = L - (lag[i - 1] + lag[i]) / 50000
+        else:
+            L_hat = L - (lag[i - 1]) / 50000
+
+        # adjust the start time of the note
         p.start_times = np.minimum(
             np.asarray(p.start_times) + lag[i - 1].reshape(-1),
             np.asarray(p.end_times) - 50000 * len(p),
@@ -189,15 +210,15 @@ def postprocess_duration(labels, pred_durations, lag):
             )
 
         # Compute normalized phoneme durations
-        d = fe.duration_features(p)
+        # eq (12)
         d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
-        d_norm = d[0] * d_hat / d_hat.sum()
+        d_norm = L_hat * d_hat / d_hat.sum()
         d_norm = np.round(d_norm)
         d_norm[d_norm <= 0] = 1
 
         # TODO: better way to adjust?
-        if d_norm.sum() != d[0]:
-            d_norm[-1] += d[0] - d_norm.sum()
+        if d_norm.sum() != L_hat:
+            d_norm[-1] += L_hat - d_norm.sum()
         p.set_durations(d_norm)
 
         if len(output_labels) > 0:

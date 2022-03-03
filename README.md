@@ -64,6 +64,7 @@ See [HISTORY.md](HISTORY.md)
 
 ## References
 
+- Y. Hono et al, "Sinsy: A Deep Neural Network-Based Singing Voice Synthesis System", Journal of IEEE/ACM TASLP https://arxiv.org/abs/2108.02776
 - Y. Hono et al, "Recent Development of the DNN-based Singing Voice Synthesis System — Sinsy," Proc. of APSIPA, 2017. ([PDF](http://www.apsipa.org/proceedings/2018/pdfs/0001003.pdf))
 - A fork of sinsy: https://github.com/r9y9/sinsy
 - Python wrapper for sinsy: https://github.com/r9y9/pysinsy
