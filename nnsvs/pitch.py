@@ -181,7 +181,7 @@ def extract_vibrato_parameters(
     min_extent=30,
     max_extent=150,
     interp_params=True,
-    smooth_params=True,
+    smooth_params=False,
     smooth_width=15,
     clip_extent=True,
 ):
@@ -194,7 +194,6 @@ def extract_vibrato_parameters(
     peak_high_pos = argrelmax(pitch)[0]
     peak_low_pos = argrelmin(pitch)[0]
 
-    num_vibrato = 0
     # iterate over every peak position
     peak_high_idx = 0
     while peak_high_idx < len(peak_high_pos):
@@ -275,13 +274,8 @@ def extract_vibrato_parameters(
                 R, E, m_a_seg, m_f_seg = extract_vibrato_parameters_impl(
                     pitch[start_index - 1 : end_index + 2], sr
                 )
-                # TODO
-                if m_a_seg is None:
-                    found = False
-                    break
                 found = True
                 results[start_index:end_index] = 1
-                num_vibrato += 1
 
                 if interp_params:
                     m_a_seg = interp_vibrato(m_a_seg)
