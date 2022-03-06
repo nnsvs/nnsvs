@@ -193,15 +193,26 @@ class WORLDAcousticSource(FileDataSource):
         f0 = np.maximum(f0, 0)
 
         if self.extract_vibrato:
-            assert (
-                not self.use_harvest
-            ), "harvest is not supported for vibrato extraction"
             sr_f0 = int(1 / (self.frame_period * 0.001))
             win_length = 64
             n_fft = 256
             threshold = 0.12
 
-            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=8)
+            if self.use_harvest:
+                # NOTE: harvest is not supported for vibrato extraction so far.
+                # We use DIO for vibrato extraction
+                _f0, _timeaxis = pyworld.dio(
+                    x,
+                    fs,
+                    frame_period=self.frame_period,
+                    f0_floor=min_f0,
+                    f0_ceil=max_f0,
+                )
+                _f0 = pyworld.stonemask(x, _f0, _timeaxis, fs)
+                f0_smooth = extract_smoothed_f0(_f0, sr_f0, cutoff=8)
+            else:
+                f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=8)
+
             f0_smooth_cent = hz_to_cent_based_c4(f0_smooth)
             vibrato_likelihood = extract_vibrato_likelihood(
                 f0_smooth_cent, sr_f0, win_length=win_length, n_fft=n_fft
