@@ -312,7 +312,11 @@ def gen_sine_vibrato(f0, sr, m_a, m_f):
     f0_gen = f0.copy()
 
     for s, e in get_voiced_segments(m_a):
-        cent = m_a[s:e] * np.sin(2 * np.pi / sr * m_f[s:e] * np.arange(0, e - s))
+        # limit vibrato frequency to [3, 8] Hz
+        m_f_seg = np.clip(m_f[s:e], 3, 8)
+        m_a_seg = m_a[s:e]
+
+        cent = m_a_seg * np.sin(2 * np.pi / sr * m_f_seg * np.arange(0, e - s))
         new_f0 = f0[s:e] * np.exp(cent * np.log(2) / 1200)
         f0_gen[s:e] = new_f0
 
