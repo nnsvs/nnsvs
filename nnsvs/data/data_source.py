@@ -196,8 +196,7 @@ class WORLDAcousticSource(FileDataSource):
             assert (
                 not self.use_harvest
             ), "harvest is not supported for vibrato extraction"
-            frame_shift = int(self.frame_period * 0.001 * fs)
-            sr_f0 = int(fs / frame_shift)
+            sr_f0 = int(1 / (self.frame_period * 0.001))
             win_length = 64
             n_fft = 256
             threshold = 0.12
