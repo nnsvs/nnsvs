@@ -26,3 +26,5 @@ num_windows: 1
 relative_f0: true
 
 interp_unvoiced_aperiodicity: true
+
+extract_vibrato: false

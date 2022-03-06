@@ -13,7 +13,7 @@ subphone_features: coarse_coding
 f0_floor: 150
 f0_ceil: 700
 
-use_harvest: true
+use_harvest: false
 
 frame_period: 5 # ms
 mgc_order: 59
@@ -27,4 +27,4 @@ relative_f0: true
 
 interp_unvoiced_aperiodicity: true
 
-extract_vibrato: false
+extract_vibrato: true

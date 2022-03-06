@@ -155,6 +155,7 @@ def my_app(config: DictConfig) -> None:
         mgc_order=config.acoustic.mgc_order,
         num_windows=config.acoustic.num_windows,
         relative_f0=config.acoustic.relative_f0,
+        extract_vibrato=config.acoustic.extract_vibrato,
     )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)
