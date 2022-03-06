@@ -41,16 +41,16 @@ def lowpass_filter(x, fs, cutoff=5):
     return y
 
 
-def get_voiced_segments(f0):
+def nonzero_segments(f0):
     vuv = f0 > 0
     started = False
     s, e = 0, 0
     segments = []
     for idx in range(len(f0)):
-        if vuv[idx] and not started:
+        if vuv[idx] > 0 and not started:
             started = True
             s = idx
-        elif started and not vuv[idx]:
+        elif started and (vuv[idx] <= 0):
             e = idx
             started = False
             segments.append((s, e))
@@ -129,7 +129,7 @@ def compute_extent(pitch_seg):
 
 
 def extract_smoothed_f0(f0, sr, cutoff=8):
-    segments = get_voiced_segments(f0)
+    segments = nonzero_segments(f0)
 
     f0_smooth = f0.copy()
     for s, e in segments:
@@ -311,7 +311,9 @@ def extract_vibrato_parameters(
 def gen_sine_vibrato(f0, sr, m_a, m_f):
     f0_gen = f0.copy()
 
-    for s, e in get_voiced_segments(m_a):
+    voiced_end_indices = np.asarray([e for _, e in nonzero_segments(f0)])
+
+    for s, e in nonzero_segments(m_a):
         # limit vibrato frequency to [3, 8] Hz
         m_f_seg = np.clip(m_f[s:e], 3, 8)
         m_a_seg = m_a[s:e]
@@ -319,5 +321,11 @@ def gen_sine_vibrato(f0, sr, m_a, m_f):
         cent = m_a_seg * np.sin(2 * np.pi / sr * m_f_seg * np.arange(0, e - s))
         new_f0 = f0[s:e] * np.exp(cent * np.log(2) / 1200)
         f0_gen[s:e] = new_f0
+
+        # NOTE: this is a hack to avoid discontinuity at the end of vibrato
+        voiced_ends_next_to_vibrato = voiced_end_indices[voiced_end_indices > e]
+        if len(voiced_ends_next_to_vibrato) > 0:
+            voiced_end = voiced_ends_next_to_vibrato[0]
+            f0_gen[s:voiced_end] = lowpass_filter(f0_gen[s:voiced_end], sr, cutoff=12)
 
     return f0_gen
