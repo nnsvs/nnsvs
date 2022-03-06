@@ -308,7 +308,7 @@ def extract_vibrato_parameters(
     return results, m_a, m_f
 
 
-def gen_vibrato(f0, sr, m_a, m_f):
+def gen_sine_vibrato(f0, sr, m_a, m_f):
     f0_gen = f0.copy()
 
     for s, e in get_voiced_segments(m_a):
