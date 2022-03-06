@@ -10,6 +10,12 @@ from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
 from nnsvs.gen import get_windows
+from nnsvs.pitch import (
+    extract_smoothed_f0,
+    extract_vibrato_likelihood,
+    extract_vibrato_parameters,
+    hz_to_cent_based_c4,
+)
 from scipy.io import wavfile
 
 
@@ -122,6 +128,7 @@ class WORLDAcousticSource(FileDataSource):
         num_windows=3,
         relative_f0=True,
         interp_unvoiced_aperiodicity=True,
+        extract_vibrato=False,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -137,6 +144,7 @@ class WORLDAcousticSource(FileDataSource):
         self.mgc_order = mgc_order
         self.relative_f0 = relative_f0
         self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
+        self.extract_vibrato = extract_vibrato
         self.windows = get_windows(num_windows)
 
     def collect_files(self):
@@ -184,6 +192,28 @@ class WORLDAcousticSource(FileDataSource):
         # Workaround for https://github.com/r9y9/nnsvs/issues/7
         f0 = np.maximum(f0, 0)
 
+        if self.extract_vibrato:
+            assert (
+                not self.use_harvest
+            ), "harvest is not supported for vibrato extraction"
+            frame_shift = int(self.frame_period * 0.001 * fs)
+            sr_f0 = int(fs / frame_shift)
+            win_length = 64
+            n_fft = 256
+            threshold = 0.12
+
+            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=8)
+            f0_smooth_cent = hz_to_cent_based_c4(f0_smooth)
+            vibrato_likelihood = extract_vibrato_likelihood(
+                f0_smooth_cent, sr_f0, win_length=win_length, n_fft=n_fft
+            )
+            _, m_a, m_f = extract_vibrato_parameters(
+                f0_smooth_cent, vibrato_likelihood, sr_f0, threshold=threshold
+            )
+            vib = np.stack([m_a, m_f], axis=1)
+        else:
+            vib = None
+
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
 
@@ -222,6 +252,7 @@ class WORLDAcousticSource(FileDataSource):
         lf0 = lf0[: labels.num_frames()]
         vuv = vuv[: labels.num_frames()]
         bap = bap[: labels.num_frames()]
+        vib = vib[: labels.num_frames()] if vib is not None else None
 
         if self.relative_f0:
             # # F0 derived from the musical score
@@ -250,8 +281,12 @@ class WORLDAcousticSource(FileDataSource):
         mgc = apply_delta_windows(mgc, self.windows)
         f0_target = apply_delta_windows(f0_target, self.windows)
         bap = apply_delta_windows(bap, self.windows)
+        vib = apply_delta_windows(vib, self.windows) if vib is not None else None
 
-        features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
+        if vib is None:
+            features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
+        else:
+            features = np.hstack((mgc, f0_target, vuv, bap, vib)).astype(np.float32)
 
         # Align waveform and features
         wave = x.astype(np.float32) / 2 ** 15
