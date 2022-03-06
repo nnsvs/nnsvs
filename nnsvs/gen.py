@@ -492,9 +492,9 @@ def gen_waveform(
 
     # Generate sine-based vibrato
     if vib is not None:
-        m_a, m_f = vib[0, :], vib[1, :]
+        m_a, m_f = vib[:, 0], vib[:, 1]
         sr_f0 = int(1 / (frame_period * 0.001))
-        f0 = gen_sine_vibrato(f0, sr_f0, m_a, m_f)
+        f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f)
 
     generated_waveform = pyworld.synthesize(
         f0.flatten().astype(np.float64),
