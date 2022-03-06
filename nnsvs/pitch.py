@@ -67,7 +67,7 @@ def extract_vibrato_parameters_impl(pitch_seg, sr):
     m_f = np.zeros(len(pitch_seg))
 
     if len(peak_high_pos) != len(peak_low_pos) + 1:
-        print("warning!")
+        print("Warning! Probably a bug...T.T")
         print(peak_high_pos, peak_low_pos)
         return None, None, None, None
 
@@ -106,6 +106,9 @@ def compute_extent(pitch_seg):
     peak_high_pos = argrelmax(pitch_seg)[0]
     peak_low_pos = argrelmin(pitch_seg)[0]
 
+    if len(peak_high_pos) == 1 or len(peak_low_pos) == 1:
+        return np.array([-1])
+
     if len(peak_high_pos) < len(peak_low_pos):
         peak_low_pos = peak_low_pos[:-2]
     elif len(peak_high_pos) == len(peak_low_pos):
@@ -114,12 +117,12 @@ def compute_extent(pitch_seg):
     peak_high_pitch = pitch_seg[peak_high_pos]
     peak_low_pitch = pitch_seg[peak_low_pos]
 
-    # NOTE: don't have enough peaks to compute parameters
-    if len(peak_low_pitch) <= 2:
-        return np.array([-1])
-
     peak_high_pos_diff = np.diff(peak_high_pos)
     peak_low_pos_diff = np.diff(peak_low_pos)
+
+    # TODO: would probably be a bug...
+    if len(peak_high_pitch) != len(peak_low_pitch) + 1:
+        return np.array([-1])
 
     E = np.zeros(len(peak_high_pos_diff) + len(peak_low_pos_diff))
     E[0::2] = (peak_high_pitch[1:] + peak_high_pitch[:-1]) / 2 - peak_low_pitch
@@ -274,6 +277,9 @@ def extract_vibrato_parameters(
                 R, E, m_a_seg, m_f_seg = extract_vibrato_parameters_impl(
                     pitch[start_index - 1 : end_index + 2], sr
                 )
+                if m_a_seg is None:
+                    found = False
+                    break
                 found = True
                 results[start_index:end_index] = 1
 
