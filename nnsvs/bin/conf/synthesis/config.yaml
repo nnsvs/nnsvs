@@ -36,6 +36,10 @@ log_f0_conditioning: true
 # if true, time-lag and duration models will not be used.
 ground_truth_duration: false
 
+# Inference time vibrato scaling
+# Set 0.0 to disable vibrato
+vibrato_scale: 1.0
+
 gain_normalize: false
 
 # If not empty, try to search statisics in the directory

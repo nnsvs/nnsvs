@@ -308,7 +308,7 @@ def extract_vibrato_parameters(
     return results, m_a, m_f
 
 
-def gen_sine_vibrato(f0, sr, m_a, m_f):
+def gen_sine_vibrato(f0, sr, m_a, m_f, scale=1.0):
     f0_gen = f0.copy()
 
     voiced_end_indices = np.asarray([e for _, e in nonzero_segments(f0)])
@@ -318,7 +318,7 @@ def gen_sine_vibrato(f0, sr, m_a, m_f):
         m_f_seg = np.clip(m_f[s:e], 3, 8)
         m_a_seg = m_a[s:e]
 
-        cent = m_a_seg * np.sin(2 * np.pi / sr * m_f_seg * np.arange(0, e - s))
+        cent = scale * m_a_seg * np.sin(2 * np.pi / sr * m_f_seg * np.arange(0, e - s))
         new_f0 = f0[s:e] * np.exp(cent * np.log(2) / 1200)
         f0_gen[s:e] = new_f0
 
