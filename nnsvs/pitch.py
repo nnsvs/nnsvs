@@ -190,7 +190,7 @@ def extract_vibrato_parameters(
 ):
     T = len(vibrato_likelihood)
 
-    results = np.zeros(T, dtype=int)
+    vibrato_flags = np.zeros(T, dtype=int)
     m_a = np.zeros(T)
     m_f = np.zeros(T)
 
@@ -286,7 +286,7 @@ def extract_vibrato_parameters(
                     found = False
                     break
                 found = True
-                results[start_index:end_index] = 1
+                vibrato_flags[start_index:end_index] = 1
 
                 if interp_params:
                     m_a_seg = interp_vibrato(m_a_seg)
@@ -310,7 +310,7 @@ def extract_vibrato_parameters(
         if not found:
             peak_high_idx += 1
 
-    return results, m_a, m_f
+    return vibrato_flags, m_a, m_f
 
 
 def gen_sine_vibrato(f0, sr, m_a, m_f, scale=1.0):
@@ -319,9 +319,10 @@ def gen_sine_vibrato(f0, sr, m_a, m_f, scale=1.0):
     voiced_end_indices = np.asarray([e for _, e in nonzero_segments(f0)])
 
     for s, e in nonzero_segments(m_a):
-        # limit vibrato frequency to [3, 8] Hz
+        # limit vibrato rate to [3, 8] Hz
         m_f_seg = np.clip(m_f[s:e], 3, 8)
-        m_a_seg = m_a[s:e]
+        # limit vibrato extent to [30, 150] cent
+        m_a_seg = np.clip(m_a[s:e], 30, 150)
 
         cent = scale * m_a_seg * np.sin(2 * np.pi / sr * m_f_seg * np.arange(0, e - s))
         new_f0 = f0[s:e] * np.exp(cent * np.log(2) / 1200)

@@ -217,12 +217,15 @@ class WORLDAcousticSource(FileDataSource):
             vibrato_likelihood = extract_vibrato_likelihood(
                 f0_smooth_cent, sr_f0, win_length=win_length, n_fft=n_fft
             )
-            _, m_a, m_f = extract_vibrato_parameters(
+            vib_flags, m_a, m_f = extract_vibrato_parameters(
                 f0_smooth_cent, vibrato_likelihood, sr_f0, threshold=threshold
             )
+            m_a = interp1d(m_a, kind="linear")
+            m_f = interp1d(m_f, kind="linear")
             vib = np.stack([m_a, m_f], axis=1)
+            vib_flags = vib_flags[:, np.newaxis]
         else:
-            vib = None
+            vib, vib_flags = None, None
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
@@ -263,6 +266,7 @@ class WORLDAcousticSource(FileDataSource):
         vuv = vuv[: labels.num_frames()]
         bap = bap[: labels.num_frames()]
         vib = vib[: labels.num_frames()] if vib is not None else None
+        vib_flags = vib_flags[: labels.num_frames()] if vib_flags is not None else None
 
         if self.relative_f0:
             # # F0 derived from the musical score
@@ -296,7 +300,9 @@ class WORLDAcousticSource(FileDataSource):
         if vib is None:
             features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
         else:
-            features = np.hstack((mgc, f0_target, vuv, bap, vib)).astype(np.float32)
+            features = np.hstack((mgc, f0_target, vuv, bap, vib, vib_flags)).astype(
+                np.float32
+            )
 
         # Align waveform and features
         wave = x.astype(np.float32) / 2 ** 15

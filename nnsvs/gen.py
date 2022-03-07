@@ -444,8 +444,8 @@ def gen_waveform(
     if len(streams) == 4:
         mgc, target_f0, vuv, bap = streams
         vib = None
-    elif len(streams) == 5:
-        mgc, target_f0, vuv, bap, vib = streams
+    elif len(streams) == 6:
+        mgc, target_f0, vuv, bap, vib, vib_flags = streams
     else:
         raise RuntimeError("Not supported streams")
 
@@ -493,18 +493,12 @@ def gen_waveform(
 
     # Generate sine-based vibrato
     if vib is not None:
+        vib_flags = vib_flags.flatten()
         m_a, m_f = vib[:, 0], vib[:, 1]
-        # Predicted params may contain non zero values for non-vibrate frames
-        # Manually fill zeros for frames that are likely not to contain vibrato.
-        non_vibrato_indices = (m_a < 30) | (m_f < 3) | (vuv.ravel() < 0.5)
-        m_a[non_vibrato_indices] = 0
-        m_f[non_vibrato_indices] = 0
 
-        # Post-processing for extent: allow 30 ~ 150 cent
-        m_a = np.clip(m_a, 0, 150)
-
-        # Post-processing for rate: allow 3 ~ 8 Hz at maximum
-        m_f = np.clip(m_f, 0, 8)
+        # Fill zeros for non-vibrato frames
+        m_a[vib_flags < 0.5] = 0
+        m_f[vib_flags < 0.5] = 0
 
         # Gen vibrato
         sr_f0 = int(1 / (frame_period * 0.001))
