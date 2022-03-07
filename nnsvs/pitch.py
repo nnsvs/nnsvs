@@ -210,6 +210,7 @@ def extract_vibrato_parameters(
             if len(peaks) > 0:
                 end_index = peaks[0]
             else:
+                peak_high_idx += 1
                 continue
             next_start_peak_high_idx = -1
 
