@@ -336,7 +336,7 @@ class FFConvLSTM(BaseModel):
 
         self.conv = nn.Sequential(
             nn.ReflectionPad1d(3),
-            WNConv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            WNConv1d(ff_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
             nn.BatchNorm1d(conv_hidden_dim),
             nn.ReflectionPad1d(3),
             WNConv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
