@@ -508,7 +508,7 @@ def gen_waveform(
 
         # Gen vibrato
         sr_f0 = int(1 / (frame_period * 0.001))
-        f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f)
+        f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f, vibrato_scale)
 
     generated_waveform = pyworld.synthesize(
         f0.flatten().astype(np.float64),
