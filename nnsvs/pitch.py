@@ -206,7 +206,11 @@ def extract_vibrato_parameters(
         if vibrato_likelihood[peak_frame_idx] > threshold:
             # Initial positions for vibrato section
             start_index = peak_frame_idx
-            end_index = peak_low_pos[peak_low_pos > peak_frame_idx][0]
+            peaks = peak_low_pos[peak_low_pos > peak_frame_idx]
+            if len(peaks) > 0:
+                end_index = peaks[0]
+            else:
+                continue
             next_start_peak_high_idx = -1
 
             # Find a peak position that is close to the next non-speech segment
