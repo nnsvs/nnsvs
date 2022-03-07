@@ -303,7 +303,7 @@ def extract_vibrato_parameters(
                 m_a[start_index:end_index] = m_a_seg[1:-2]
                 m_f[start_index:end_index] = m_f_seg[1:-2]
 
-                assert next_start_peak_high_idx > 0
+                assert next_start_peak_high_idx > peak_high_idx
                 peak_high_idx = next_start_peak_high_idx
 
         if not found:
