@@ -227,7 +227,7 @@ class WORLDAcousticSource(FileDataSource):
             vib = np.stack([m_a, m_f], axis=1)
             vib_flags = vib_flags[:, np.newaxis]
         elif self.vibrato_mode == "diff":
-            # NOTE: vibratio is known to have 3 ~ 8 Hz range (in general)
+            # NOTE: vibrato is known to have 3 ~ 8 Hz range (in general)
             # remove higher frequency than 3 to separate vibrato from the original F0
             f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=3)
             vib = (f0 - f0_smooth)[:, np.newaxis]
