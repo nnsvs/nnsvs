@@ -443,10 +443,11 @@ def gen_waveform(
     streams = split_streams(acoustic_features, static_stream_sizes)
     if len(streams) == 4:
         mgc, target_f0, vuv, bap = streams
-        vib = None
+        vib, vib_flags = None, None
     elif len(streams) == 5:
         # Assuming diff-based vibrato parameters
         mgc, target_f0, vuv, bap, vib = streams
+        vib_flags = None
     elif len(streams) == 6:
         # Assuming sine-based vibrato parameters
         mgc, target_f0, vuv, bap, vib, vib_flags = streams
