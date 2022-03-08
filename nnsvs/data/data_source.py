@@ -128,7 +128,7 @@ class WORLDAcousticSource(FileDataSource):
         num_windows=3,
         relative_f0=True,
         interp_unvoiced_aperiodicity=True,
-        extract_vibrato=False,
+        vibrato_mode="none",  # diff, sine
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -144,7 +144,7 @@ class WORLDAcousticSource(FileDataSource):
         self.mgc_order = mgc_order
         self.relative_f0 = relative_f0
         self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
-        self.extract_vibrato = extract_vibrato
+        self.vibrato_mode = vibrato_mode
         self.windows = get_windows(num_windows)
 
     def collect_files(self):
@@ -192,15 +192,17 @@ class WORLDAcousticSource(FileDataSource):
         # Workaround for https://github.com/r9y9/nnsvs/issues/7
         f0 = np.maximum(f0, 0)
 
-        if self.extract_vibrato:
-            sr_f0 = int(1 / (self.frame_period * 0.001))
+        # Vibrato parameter extraction
+        sr_f0 = int(1 / (self.frame_period * 0.001))
+        if self.vibrato_mode == "sine":
             win_length = 64
             n_fft = 256
             threshold = 0.12
 
             if self.use_harvest:
-                # NOTE: harvest is not supported for vibrato extraction so far.
-                # We use DIO for vibrato extraction
+                # NOTE: harvest is not supported here since the current implemented algorithm
+                # relies on v/uv flags to find vibrato sections.
+                # We use DIO since it provides more accurate v/uv detection in my experience.
                 _f0, _timeaxis = pyworld.dio(
                     x,
                     fs,
@@ -224,8 +226,16 @@ class WORLDAcousticSource(FileDataSource):
             m_f = interp1d(m_f, kind="linear")
             vib = np.stack([m_a, m_f], axis=1)
             vib_flags = vib_flags[:, np.newaxis]
-        else:
+        elif self.vibrato_mode == "diff":
+            # NOTE: vibratio is known to have 3 ~ 8 Hz range (in general)
+            # remove higher frequency than 3 to separate vibrato from the original F0
+            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=3)
+            vib = (f0 - f0_smooth)[:, np.newaxis]
+            vib_flags = None
+        elif self.vibrato_mode == "none":
             vib, vib_flags = None, None
+        else:
+            raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
@@ -297,12 +307,16 @@ class WORLDAcousticSource(FileDataSource):
         bap = apply_delta_windows(bap, self.windows)
         vib = apply_delta_windows(vib, self.windows) if vib is not None else None
 
-        if vib is None:
+        if vib is None and vib_flags is None:
             features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
-        else:
+        elif vib is not None and vib_flags is None:
+            features = np.hstack((mgc, f0_target, vuv, bap, vib)).astype(np.float32)
+        elif vib is not None and vib_flags is not None:
             features = np.hstack((mgc, f0_target, vuv, bap, vib, vib_flags)).astype(
                 np.float32
             )
+        else:
+            raise RuntimeError("Unknown combination of features")
 
         # Align waveform and features
         wave = x.astype(np.float32) / 2 ** 15

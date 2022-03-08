@@ -27,4 +27,11 @@ relative_f0: true
 
 interp_unvoiced_aperiodicity: true
 
-extract_vibrato: false
+# Vibrato mode (https://arxiv.org/abs/2108.02776)
+# 1) none -> no vibrato modeling
+# 2) sine -> sine vibrato modeling. Two dim features are added (rate and extent)
+# 3) diff -> diff-based vibrato modeling. One-dim differential F0 is added.
+# NOTE: you must be careful about the dimension of the acoustic features.
+# For example, if you use sine-based vibrato modeling (w/ dynamic features),
+# you'd need to increase 2*num_windows for the `out_dim` of the acoustic model.
+vibrato_mode: none

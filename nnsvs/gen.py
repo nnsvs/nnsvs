@@ -444,7 +444,11 @@ def gen_waveform(
     if len(streams) == 4:
         mgc, target_f0, vuv, bap = streams
         vib = None
+    elif len(streams) == 5:
+        # Assuming diff-based vibrato parameters
+        mgc, target_f0, vuv, bap, vib = streams
     elif len(streams) == 6:
+        # Assuming sine-based vibrato parameters
         mgc, target_f0, vuv, bap, vib, vib_flags = streams
     else:
         raise RuntimeError("Not supported streams")
@@ -491,18 +495,22 @@ def gen_waveform(
         f0[vuv < 0.5] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
 
-    # Generate sine-based vibrato
     if vib is not None:
-        vib_flags = vib_flags.flatten()
-        m_a, m_f = vib[:, 0], vib[:, 1]
+        if vib_flags is not None:
+            # Generate sine-based vibrato
+            vib_flags = vib_flags.flatten()
+            m_a, m_f = vib[:, 0], vib[:, 1]
 
-        # Fill zeros for non-vibrato frames
-        m_a[vib_flags < 0.5] = 0
-        m_f[vib_flags < 0.5] = 0
+            # Fill zeros for non-vibrato frames
+            m_a[vib_flags < 0.5] = 0
+            m_f[vib_flags < 0.5] = 0
 
-        # Gen vibrato
-        sr_f0 = int(1 / (frame_period * 0.001))
-        f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f, vibrato_scale)
+            # Gen vibrato
+            sr_f0 = int(1 / (frame_period * 0.001))
+            f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f, vibrato_scale)
+        else:
+            # Generate diff-based vibrato
+            f0 = f0.flatten() + vib.flatten()
 
     generated_waveform = pyworld.synthesize(
         f0.flatten().astype(np.float64),
