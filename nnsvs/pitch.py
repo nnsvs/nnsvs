@@ -1,3 +1,24 @@
+"""This module provides functionality for pitch analysis.
+
+References:
+
+Nakano et al, "An Automatic Singing Skill Evaluation Method
+for Unknown Melodies Using Pitch Interval Accuracy and Vibrato Features"
+Proc. Interspeech 2006.
+
+山田 et al, "HMM に基づく歌声合成のためのビブラートモデル化"
+IPSJ SIG Tech. Report 2009.
+
+Note that vibrato extraction method in this module is exerimental.
+Because details of the vibrato extraction method are not described
+in the above papers and not trivial to implement (in my opinion),
+my implementation may not work well compared to the original author's one.
+Also note that there are a lot of tunable parameters (threshold,
+window size, min/max extent, cut-off frequency, etc.).
+If you want to get maximum performance, you might want to tune these
+parameters with your dataset.
+I tested this code with kiritan_singing and nit-song070 database.
+"""
 import librosa
 import numpy as np
 from scipy import signal
@@ -8,6 +29,14 @@ _c4_cent = 4800
 
 
 def hz_to_cent_based_c4(hz):
+    """Convert Hz to cent based on C4
+
+    Args:
+        hz (np.ndarray): array of Hz
+
+    Returns:
+        np.ndarray: array of cent
+    """
     out = hz.copy()
     nonzero_indices = np.where(hz > 0)[0]
     out[nonzero_indices] = (
@@ -17,6 +46,14 @@ def hz_to_cent_based_c4(hz):
 
 
 def cent_to_hz_based_c4(cent):
+    """Convert cent to Hz based on C4
+
+    Args:
+        cent (np.ndarray): array of cent
+
+    Returns:
+        np.ndarray: array of Hz
+    """
     out = cent.copy()
     nonzero_indices = np.where(cent > 0)[0]
     out[nonzero_indices] = (
@@ -26,6 +63,16 @@ def cent_to_hz_based_c4(cent):
 
 
 def lowpass_filter(x, fs, cutoff=5):
+    """Lowpass filter
+
+    Args:
+        x (np.ndarray): input signal
+        fs (int): sampling rate
+        cutoff (int): cutoff frequency
+
+    Returns:
+        np.ndarray: filtered signal
+    """
     nyquist = fs // 2
     norm_cutoff = cutoff / nyquist
     Wn = [norm_cutoff]
@@ -42,6 +89,14 @@ def lowpass_filter(x, fs, cutoff=5):
 
 
 def nonzero_segments(f0):
+    """Find nonzero segments
+
+    Args:
+        f0 (np.ndarray): array of f0
+
+    Returns:
+        list: list of (start, end)
+    """
     vuv = f0 > 0
     started = False
     s, e = 0, 0
@@ -60,6 +115,22 @@ def nonzero_segments(f0):
 
 
 def extract_vibrato_parameters_impl(pitch_seg, sr):
+    """Extract vibrato parameters for a single pitch segment
+
+    Nakano et al, "An Automatic Singing Skill Evaluation Method
+    for Unknown Melodies Using Pitch Interval Accuracy and Vibrato Features"
+    Proc. Interspeech 2006.
+
+    山田 et al, "HMM に基づく歌声合成のためのビブラートモデル化"
+    IPSJ SIG Tech. Report 2009.
+
+    Args:
+        pitch_seg (np.ndarray): array of pitch
+        sr (int): sampling rate
+
+    Returns:
+        tuple: (R, E, m_a, m_f)
+    """
     peak_high_pos = argrelmax(pitch_seg)[0]
     peak_low_pos = argrelmin(pitch_seg)[0]
 
@@ -103,6 +174,14 @@ def extract_vibrato_parameters_impl(pitch_seg, sr):
 
 
 def compute_extent(pitch_seg):
+    """Compute extent of a pitch segment
+
+    Args:
+        pitch_seg (np.ndarray): array of pitch
+
+    Returns:
+        np.ndarray: array of extent
+    """
     peak_high_pos = argrelmax(pitch_seg)[0]
     peak_low_pos = argrelmin(pitch_seg)[0]
 
@@ -132,6 +211,18 @@ def compute_extent(pitch_seg):
 
 
 def extract_smoothed_f0(f0, sr, cutoff=8):
+    """Extract smoothed f0 by low-pass filtering
+
+    Note that the low-pass filter is only applied to voiced segments.
+
+    Args:
+        f0 (np.ndarray): array of f0
+        sr (int): sampling rate
+        cutoff (float): cutoff frequency
+
+    Returns:
+        np.ndarray: array of smoothed f0
+    """
     segments = nonzero_segments(f0)
 
     f0_smooth = f0.copy()
@@ -144,6 +235,19 @@ def extract_smoothed_f0(f0, sr, cutoff=8):
 def extract_vibrato_likelihood(
     f0_smooth, sr, win_length=32, n_fft=128, min_freq=3, max_freq=8
 ):
+    """Extract vibrato likelihood
+
+    Args:
+        f0_smooth (np.ndarray): array of smoothed f0
+        sr (int): sampling rate
+        win_length (int): window length
+        n_fft (int): FFT size
+        min_freq (float): minimum frequency of the vibrato
+        max_freq (float): maximum frequency of the vibrato
+
+    Returns:
+        np.ndarray: array of vibrato likelihood
+    """
     # STFT on 1st order diffference of F0
     X = np.abs(
         librosa.stft(
@@ -169,6 +273,14 @@ def extract_vibrato_likelihood(
 
 
 def interp_vibrato(m_f):
+    """Interpolate a sequence of vibrato parameter by linear interpolation
+
+    Args:
+        m_f (np.ndarray): array of vibrato parameter
+
+    Returns:
+        np.ndarray: array of vibrato parameter
+    """
     nonzero_indices = np.where(m_f > 0)[0]
     nonzero_indices = [0] + list(nonzero_indices) + [len(m_f) - 1]
     out = np.interp(np.arange(len(m_f)), nonzero_indices, m_f[nonzero_indices])
@@ -188,6 +300,24 @@ def extract_vibrato_parameters(
     smooth_width=15,
     clip_extent=True,
 ):
+    """Extract vibrato parameters
+
+    Args:
+        pitch (np.ndarray): array of pitch (smoothed f0)
+        vibrato_likelihood (np.ndarray): array of vibrato likelihood
+        sr (int): sampling rate
+        threshold (float): threshold of vibrato likelihood
+        min_cross_count (int): minimum number of cross points
+        min_extent (int): minimum extent of vibrato (cent)
+        max_extent (int): maximum extent of vibrato (cent)
+        interp_params (bool): whether to interpolate vibrato parameters
+        smooth_params (bool): whether to smooth vibrato parameters
+        smooth_width (int): width of smoothing window
+        clip_extent (bool): whether to clip extent
+
+    Returns:
+        tuple: tuple of vibrato parameters
+    """
     T = len(vibrato_likelihood)
 
     vibrato_flags = np.zeros(T, dtype=int)
@@ -314,6 +444,18 @@ def extract_vibrato_parameters(
 
 
 def gen_sine_vibrato(f0, sr, m_a, m_f, scale=1.0):
+    """Generate F0 with sine-based vibrato
+
+    Args:
+        f0 (ndarray): fundamental frequency
+        sr (int): sampling rate
+        m_a (ndarray): amplitude of vibrato
+        m_f (ndarray): frequency of vibrato
+        scale (float): scale factor
+
+    Returns:
+        ndarray: F0 with sine-based vibrato
+    """
     f0_gen = f0.copy()
 
     voiced_end_indices = np.asarray([e for _, e in nonzero_segments(f0)])
