@@ -334,11 +334,12 @@ def predict_lf0_with_residual(
         out_lf0_idx (int): index of LF0 in output features
         out_lf0_mean (float): mean of LF0 in the training data of output features
         out_lf0_scale (float): scale of LF0 in the training data of output features
+        residual_f0_max_cent (int): maximum value of residual LF0 in cent
 
     Returns:
         tuple: (predicted log-F0, residual log-F0)
     """
-    # Denormalize lf0 from of input musical score
+    # Denormalize lf0 from input musical score
     lf0_score = in_feats[:, :, in_lf0_idx].unsqueeze(-1)
     lf0_score_denorm = lf0_score * (in_lf0_max - in_lf0_min) + in_lf0_min
 
@@ -364,6 +365,7 @@ class ResF0Conv1dResnet(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=4,
+        # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
         in_lf0_min=5.3936276,
         in_lf0_max=6.491111,
@@ -422,6 +424,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out_dim=199,
         dropout=0.0,
         bidirectional=True,
+        # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
         in_lf0_min=5.3936276,
         in_lf0_max=6.491111,
