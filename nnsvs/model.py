@@ -410,3 +410,92 @@ class ResF0Conv1dResnet(BaseModel):
         out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
         return out
+
+
+class ResSkipF0FFConvLSTM(BaseModel):
+    def __init__(
+        self,
+        in_dim,
+        ff_hidden_dim=2048,
+        conv_hidden_dim=1024,
+        lstm_hidden_dim=256,
+        out_dim=199,
+        dropout=0.0,
+        bidirectional=True,
+        in_lf0_idx=300,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=180,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+    ):
+        super().__init__()
+        self.in_lf0_idx = in_lf0_idx
+        self.in_lf0_min = in_lf0_min
+        self.in_lf0_max = in_lf0_max
+        self.out_lf0_idx = out_lf0_idx
+        self.out_lf0_mean = out_lf0_mean
+        self.out_lf0_scale = out_lf0_scale
+
+        self.ff = nn.Sequential(
+            nn.Linear(in_dim, ff_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(ff_hidden_dim, ff_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(ff_hidden_dim, ff_hidden_dim),
+            nn.ReLU(),
+        )
+
+        self.conv = nn.Sequential(
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(ff_hidden_dim + 1, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+        )
+
+        num_direction = 2 if bidirectional else 1
+        self.lstm = nn.LSTM(
+            conv_hidden_dim,
+            lstm_hidden_dim,
+            num_direction,
+            bidirectional=True,
+            batch_first=True,
+            dropout=dropout,
+        )
+        self.fc = nn.Linear(num_direction * lstm_hidden_dim, out_dim)
+
+    def forward(self, x, lengths=None):
+        lf0_score = x[:, :, self.in_lf0_idx].unsqueeze(-1)
+
+        out = self.ff(x)
+        out = torch.cat([out, lf0_score], dim=-1)
+
+        out = self.conv(out.transpose(1, 2)).transpose(1, 2)
+        sequence = pack_padded_sequence(out, lengths, batch_first=True)
+        out, _ = self.lstm(sequence)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+        out = self.fc(out)
+
+        lf0_pred, lf0_residual = predict_lf0_with_residual(
+            x,
+            out,
+            self.in_lf0_idx,
+            self.in_lf0_min,
+            self.in_lf0_max,
+            self.out_lf0_idx,
+            self.out_lf0_mean,
+            self.out_lf0_scale,
+        )
+
+        # Inject the predicted lf0 into the output features
+        out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+
+        return out
