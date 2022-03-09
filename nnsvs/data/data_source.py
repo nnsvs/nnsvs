@@ -10,6 +10,12 @@ from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
 from nnsvs.gen import get_windows
+from nnsvs.pitch import (
+    extract_smoothed_f0,
+    extract_vibrato_likelihood,
+    extract_vibrato_parameters,
+    hz_to_cent_based_c4,
+)
 from scipy.io import wavfile
 
 
@@ -122,6 +128,7 @@ class WORLDAcousticSource(FileDataSource):
         num_windows=3,
         relative_f0=True,
         interp_unvoiced_aperiodicity=True,
+        vibrato_mode="none",  # diff, sine
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -137,6 +144,7 @@ class WORLDAcousticSource(FileDataSource):
         self.mgc_order = mgc_order
         self.relative_f0 = relative_f0
         self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
+        self.vibrato_mode = vibrato_mode
         self.windows = get_windows(num_windows)
 
     def collect_files(self):
@@ -184,6 +192,51 @@ class WORLDAcousticSource(FileDataSource):
         # Workaround for https://github.com/r9y9/nnsvs/issues/7
         f0 = np.maximum(f0, 0)
 
+        # Vibrato parameter extraction
+        sr_f0 = int(1 / (self.frame_period * 0.001))
+        if self.vibrato_mode == "sine":
+            win_length = 64
+            n_fft = 256
+            threshold = 0.12
+
+            if self.use_harvest:
+                # NOTE: harvest is not supported here since the current implemented algorithm
+                # relies on v/uv flags to find vibrato sections.
+                # We use DIO since it provides more accurate v/uv detection in my experience.
+                _f0, _timeaxis = pyworld.dio(
+                    x,
+                    fs,
+                    frame_period=self.frame_period,
+                    f0_floor=min_f0,
+                    f0_ceil=max_f0,
+                )
+                _f0 = pyworld.stonemask(x, _f0, _timeaxis, fs)
+                f0_smooth = extract_smoothed_f0(_f0, sr_f0, cutoff=8)
+            else:
+                f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=8)
+
+            f0_smooth_cent = hz_to_cent_based_c4(f0_smooth)
+            vibrato_likelihood = extract_vibrato_likelihood(
+                f0_smooth_cent, sr_f0, win_length=win_length, n_fft=n_fft
+            )
+            vib_flags, m_a, m_f = extract_vibrato_parameters(
+                f0_smooth_cent, vibrato_likelihood, sr_f0, threshold=threshold
+            )
+            m_a = interp1d(m_a, kind="linear")
+            m_f = interp1d(m_f, kind="linear")
+            vib = np.stack([m_a, m_f], axis=1)
+            vib_flags = vib_flags[:, np.newaxis]
+        elif self.vibrato_mode == "diff":
+            # NOTE: vibrato is known to have 3 ~ 8 Hz range (in general)
+            # remove higher frequency than 3 to separate vibrato from the original F0
+            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=3)
+            vib = (f0 - f0_smooth)[:, np.newaxis]
+            vib_flags = None
+        elif self.vibrato_mode == "none":
+            vib, vib_flags = None, None
+        else:
+            raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
+
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
 
@@ -222,6 +275,8 @@ class WORLDAcousticSource(FileDataSource):
         lf0 = lf0[: labels.num_frames()]
         vuv = vuv[: labels.num_frames()]
         bap = bap[: labels.num_frames()]
+        vib = vib[: labels.num_frames()] if vib is not None else None
+        vib_flags = vib_flags[: labels.num_frames()] if vib_flags is not None else None
 
         if self.relative_f0:
             # # F0 derived from the musical score
@@ -250,8 +305,18 @@ class WORLDAcousticSource(FileDataSource):
         mgc = apply_delta_windows(mgc, self.windows)
         f0_target = apply_delta_windows(f0_target, self.windows)
         bap = apply_delta_windows(bap, self.windows)
+        vib = apply_delta_windows(vib, self.windows) if vib is not None else None
 
-        features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
+        if vib is None and vib_flags is None:
+            features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
+        elif vib is not None and vib_flags is None:
+            features = np.hstack((mgc, f0_target, vuv, bap, vib)).astype(np.float32)
+        elif vib is not None and vib_flags is not None:
+            features = np.hstack((mgc, f0_target, vuv, bap, vib, vib_flags)).astype(
+                np.float32
+            )
+        else:
+            raise RuntimeError("Unknown combination of features")
 
         # Align waveform and features
         wave = x.astype(np.float32) / 2 ** 15

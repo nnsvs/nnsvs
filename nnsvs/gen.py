@@ -12,6 +12,7 @@ from nnmnkwii.preprocessing.f0 import interp1d
 from nnsvs.base import PredictionType
 from nnsvs.io.hts import get_note_indices
 from nnsvs.multistream import get_static_stream_sizes, multi_stream_mlpg, split_streams
+from nnsvs.pitch import gen_sine_vibrato
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -428,6 +429,7 @@ def gen_waveform(
     sample_rate=48000,
     frame_period=5,
     relative_f0=True,
+    vibrato_scale=1.0,
 ):
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
@@ -438,7 +440,19 @@ def gen_waveform(
         static_stream_sizes = stream_sizes
 
     # Split multi-stream features
-    mgc, target_f0, vuv, bap = split_streams(acoustic_features, static_stream_sizes)
+    streams = split_streams(acoustic_features, static_stream_sizes)
+    if len(streams) == 4:
+        mgc, target_f0, vuv, bap = streams
+        vib, vib_flags = None, None
+    elif len(streams) == 5:
+        # Assuming diff-based vibrato parameters
+        mgc, target_f0, vuv, bap, vib = streams
+        vib_flags = None
+    elif len(streams) == 6:
+        # Assuming sine-based vibrato parameters
+        mgc, target_f0, vuv, bap, vib, vib_flags = streams
+    else:
+        raise RuntimeError("Not supported streams")
 
     # Gen waveform by the WORLD vocodoer
     fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
@@ -481,6 +495,23 @@ def gen_waveform(
         f0 = target_f0
         f0[vuv < 0.5] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
+
+    if vib is not None:
+        if vib_flags is not None:
+            # Generate sine-based vibrato
+            vib_flags = vib_flags.flatten()
+            m_a, m_f = vib[:, 0], vib[:, 1]
+
+            # Fill zeros for non-vibrato frames
+            m_a[vib_flags < 0.5] = 0
+            m_f[vib_flags < 0.5] = 0
+
+            # Gen vibrato
+            sr_f0 = int(1 / (frame_period * 0.001))
+            f0 = gen_sine_vibrato(f0.flatten(), sr_f0, m_a, m_f, vibrato_scale)
+        else:
+            # Generate diff-based vibrato
+            f0 = f0.flatten() + vibrato_scale * vib.flatten()
 
     generated_waveform = pyworld.synthesize(
         f0.flatten().astype(np.float64),

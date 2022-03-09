@@ -149,6 +149,7 @@ def synthesis(
         config.sample_rate,
         config.frame_period,
         config.acoustic.relative_f0,
+        config.vibrato_scale,
     )
 
     return generated_waveform

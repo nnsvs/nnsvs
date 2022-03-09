@@ -15,7 +15,7 @@ def select_streams(
     if stream_sizes is None:
         stream_sizes = [60, 1, 1, 1]
     if streams is None:
-        streams = [True, True, True, True]
+        streams = [True] * len(stream_sizes)
     ret = []
     start_indices = np.hstack(([0], np.cumsum(stream_sizes)[:-1]))
     for start_idx, size, enabled in zip(start_indices, stream_sizes, streams):
@@ -71,7 +71,7 @@ def get_static_features(
     if has_dynamic_features is None:
         has_dynamic_features = [True, True, False, True]
     if streams is None:
-        streams = [True, True, True, True]
+        streams = [True] * len(stream_sizes)
     _, _, D = inputs.shape
     if stream_sizes is None or (len(stream_sizes) == 1 and has_dynamic_features[0]):
         return inputs[:, :, : D // num_windows]
@@ -108,7 +108,7 @@ def multi_stream_mlpg(
     if has_dynamic_features is None:
         has_dynamic_features = [True, True, False, True]
     if streams is None:
-        streams = [True, True, True, True]
+        streams = [True] * len(stream_sizes)
     T, D = inputs.shape
     if D != sum(stream_sizes):
         raise RuntimeError("You probably have specified wrong dimension params.")
