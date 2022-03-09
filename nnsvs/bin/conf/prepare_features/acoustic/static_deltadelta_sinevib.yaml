@@ -23,7 +23,7 @@ mgc_order: 59
 num_windows: 3
 
 # Use relative f0 modeling.
-relative_f0: true
+relative_f0: false
 
 interp_unvoiced_aperiodicity: true
 
