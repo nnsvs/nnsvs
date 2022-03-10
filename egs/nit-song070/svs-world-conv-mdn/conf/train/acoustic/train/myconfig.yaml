@@ -1,4 +1,6 @@
 out_dir: exp
+log_dir: tensorboard/exp
+
 nepochs: 200
 checkpoint_epoch_interval: 20
 
