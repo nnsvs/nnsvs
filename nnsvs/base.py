@@ -1,5 +1,3 @@
-# coding: utf-8
-
 from abc import ABC, abstractmethod
 from enum import Enum
 

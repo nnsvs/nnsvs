@@ -8,3 +8,4 @@ defaults:
 
 verbose: 100
 seed: 773
+data_parallel: false

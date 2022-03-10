@@ -21,4 +21,5 @@ xrun nnsvs-train $ext \
     data.in_scaler_path=$dump_norm_dir/in_timelag_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_timelag_scaler.joblib \
     train.out_dir=$expdir/timelag \
+    train.log_dir=tensorboard/${expname}_timelag \
     train.resume.checkpoint=$resume_checkpoint

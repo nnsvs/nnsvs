@@ -14,6 +14,26 @@ def init_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
+def pad_2d(x, max_len, constant_values=0):
+    """Pad a 2d-tensor.
+
+    Args:
+        x (torch.Tensor): tensor to pad
+        max_len (int): maximum length of the tensor
+        constant_values (int, optional): value to pad with. Default: 0
+
+    Returns:
+        torch.Tensor: padded tensor
+    """
+    x = np.pad(
+        x,
+        [(0, max_len - len(x)), (0, 0)],
+        mode="constant",
+        constant_values=constant_values,
+    )
+    return x
+
+
 def make_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
     """Make mask tensor containing indices of padded part.
 

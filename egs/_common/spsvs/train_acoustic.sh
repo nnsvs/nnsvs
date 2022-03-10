@@ -21,4 +21,5 @@ xrun nnsvs-train $ext \
     data.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
     train.out_dir=$expdir/acoustic \
+    train.log_dir=tensorboard/${expname}_acoustic \
     train.resume.checkpoint=$resume_checkpoint
