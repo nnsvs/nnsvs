@@ -8,7 +8,7 @@ from nnsvs.mdn import mdn_loss
 from nnsvs.multistream import split_streams
 from nnsvs.train_util import get_stream_weight, save_checkpoint, setup
 from nnsvs.util import make_non_pad_mask
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch import nn
 from tqdm import tqdm
 
