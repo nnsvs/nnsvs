@@ -1,5 +1,3 @@
-# @package _group_
-
 enabled: true
 question_path:
 wav_dir: data/acoustic/wav

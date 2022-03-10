@@ -1,12 +1,10 @@
-# @package _global_
-
 defaults:
-  - hydra/job_logging: colorlog
-  - hydra/hydra_logging: colorlog
-
   - timelag: defaults
   - duration: defaults
   - acoustic: defaults
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
 
 verbose: 100
 

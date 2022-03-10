@@ -1,5 +1,3 @@
-# @package _group_
-
 enabled: true
 question_path:
 label_phone_score_dir: data/timelag/label_phone_score

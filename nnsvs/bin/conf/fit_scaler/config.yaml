@@ -1,6 +1,4 @@
-# @package _global_
 verbose: 100
-
 scaler:
   _target_: sklearn.preprocessing.StandardScaler
 

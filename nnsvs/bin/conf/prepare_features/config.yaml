@@ -1,9 +1,4 @@
-# @package _global_
-
 defaults:
-  - hydra/job_logging: colorlog
-  - hydra/hydra_logging: colorlog
-
   # Musical/linguistic context -> time-lag (onset fluctuations)
   - timelag: defaults
 
@@ -12,6 +7,10 @@ defaults:
 
   # Musical/linguistic context -> acoustic parameters (f0, mgc, bap, vuv)
   - acoustic: static_deltadelta
+
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
 
 
 # Common settings for timelag/duration/acoustic features
