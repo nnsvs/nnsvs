@@ -411,7 +411,7 @@ class ResF0Conv1dResnet(BaseModel):
         # Inject the predicted lf0 into the output features
         out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
-        return out
+        return out, lf0_residual
 
 
 class ResSkipF0FFConvLSTM(BaseModel):
@@ -501,4 +501,4 @@ class ResSkipF0FFConvLSTM(BaseModel):
         # Inject the predicted lf0 into the output features
         out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
-        return out
+        return out, lf0_residual

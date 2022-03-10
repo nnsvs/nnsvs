@@ -1,0 +1,15 @@
+defaults:
+  - model: default
+  - train: defaults
+  - data: defaults
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
+
+verbose: 100
+seed: 773
+data_parallel: false
+
+# NOTE: the following paramters must be carefully set
+in_lf0_idx: null
+in_rest_idx: 1
