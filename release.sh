@@ -16,7 +16,7 @@ VERSION=${TAG/v/}
 
 python setup.py develop sdist
 echo "*** Ready to release! nnsvs $TAG ***"
-echo "Please make sure that release verion is correct."
+echo "Please make sure that release version is correct."
 cat nnsvs/version.py
 echo "Please run the following command manually:"
 echo twine upload dist/nnsvs-${VERSION}.tar.gz --repository-url https://upload.pypi.org/legacy/
