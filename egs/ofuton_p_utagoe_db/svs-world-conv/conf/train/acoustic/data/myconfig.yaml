@@ -1,5 +1,3 @@
-# @package _group_
-
 # training set
 train_no_dev:
   in_dir:

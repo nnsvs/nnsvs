@@ -1,5 +1,3 @@
-# @package _group_
-
 out_dir: exp
 nepochs: 200
 checkpoint_epoch_interval: 20

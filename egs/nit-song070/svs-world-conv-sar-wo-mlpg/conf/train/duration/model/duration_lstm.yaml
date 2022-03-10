@@ -1,5 +1,3 @@
-# @package _group_
-
 stream_sizes: [1]
 has_dynamic_features: [false]
 stream_weights: [1]
