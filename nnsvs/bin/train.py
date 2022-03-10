@@ -102,7 +102,17 @@ def train_loop(
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
-                loss = train_step(model, optimizer, train, in_feats, out_feats, lengths)
+                loss = train_step(
+                    model,
+                    optimizer,
+                    train,
+                    in_feats,
+                    out_feats,
+                    lengths,
+                    config.train.stream_wise_loss,
+                    config.model.stream_weights,
+                    config.model.stream_sizes,
+                )
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
             writer.add_scalar(f"Loss/{phase}", ave_loss, epoch)
