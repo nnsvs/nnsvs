@@ -12,3 +12,6 @@ dev:
 num_workers: 2
 batch_size: 2
 pin_memory: true
+
+in_scaler_path: null
+out_scaler_path: null
