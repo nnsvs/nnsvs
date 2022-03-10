@@ -39,4 +39,4 @@ interp_unvoiced_aperiodicity: true
 # NOTE: you must be careful about the dimension of the acoustic features.
 # For example, if you use sine-based vibrato modeling (w/ dynamic features),
 # you'd need to increase 2*num_windows + 1 for the `out_dim` of the acoustic model.
-vibrato_mode: none
+vibrato_mode: diff
