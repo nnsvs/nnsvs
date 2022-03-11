@@ -1,0 +1,19 @@
+# (mgc, lf0, vuv, bap, vib, vib_flags)
+stream_sizes: [180, 3, 1, 15, 6, 1]
+has_dynamic_features: [true, true, false, true, true, false]
+num_windows: 3
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.model.ResF0Conv1dResnet
+  in_dim: 348
+  out_dim: 206
+  hidden_dim: 128
+  num_layers: 6
+  in_lf0_idx: 300
+  out_lf0_idx: 180
+  in_lf0_min: 5.393627643585205
+  in_lf0_max: 6.491110801696777
+  out_lf0_mean: 5.953093881972361
+  out_lf0_scale: 0.23435173188961028
