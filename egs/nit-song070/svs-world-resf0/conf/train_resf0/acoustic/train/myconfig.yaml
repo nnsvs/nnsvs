@@ -4,6 +4,14 @@ log_dir: tensorboard/exp
 nepochs: 50
 checkpoint_epoch_interval: 20
 
+# Weight for pitch regularization loss
+# If > 0.0, add a pitch regularization loss that biases the model to
+# predict closer F0 to the F0 derived from the musical score.
+# This is conceptually same as imposing a prior distribution of the residual F0
+# to be N(0, sigma) (if we use L2 loss)
+# https://arxiv.org/abs/2108.02776
+pitch_reg_weight: 1.0
+
 stream_wise_loss: false
 use_detect_anomaly: true
 

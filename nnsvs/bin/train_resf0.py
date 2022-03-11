@@ -37,7 +37,7 @@ def note_segments(lf0_score_denorm):
     return segments
 
 
-def pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
+def compute_pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
     """Compute pitch regularization weight given note segments
 
     Args:
@@ -61,7 +61,7 @@ def pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
     return w
 
 
-def batch_pitch_regularization_weight(lf0_score_denorm):
+def compute_batch_pitch_regularization_weight(lf0_score_denorm):
     """Batch version of computing pitch regularization weight
 
     Args:
@@ -74,7 +74,7 @@ def batch_pitch_regularization_weight(lf0_score_denorm):
     w = torch.zeros_like(lf0_score_denorm)
     for idx in range(len(lf0_score_denorm)):
         segments = note_segments(lf0_score_denorm[idx])
-        w[idx, :] = pitch_regularization_weight(segments, T).to(w.device)
+        w[idx, :] = compute_pitch_regularization_weight(segments, T).to(w.device)
 
     return w.unsqueeze(-1)
 
@@ -86,7 +86,8 @@ def train_step(
     in_feats,
     out_feats,
     lengths,
-    pitch_reg_w,
+    pitch_reg_dyn_ws,
+    pitch_reg_wegith=1.0,
 ):
     optimizer.zero_grad()
 
@@ -107,10 +108,13 @@ def train_step(
         pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
     ).mean()
 
-    # Pitch reguralization
+    # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
-    # we could use l2 loss as suggested sinsy's paper
-    loss += (pitch_reg_w * lf0_residual.abs()).masked_select(mask).mean()
+    # we could use l2 loss as suggested in the sinsy's paper
+    loss += (
+        pitch_reg_wegith
+        * (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+    )
 
     if train:
         loss.backward()
@@ -137,6 +141,7 @@ def train_loop(
     in_rest_idx = config.data.in_rest_idx
     if in_lf0_idx is None or in_rest_idx is None:
         raise ValueError("in_lf0_idx and in_rest_idx must be specified")
+    pitch_reg_weight = config.train.pitch_reg_weight
 
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
@@ -163,11 +168,20 @@ def train_loop(
                 lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
                 for idx, length in enumerate(lengths):
                     lf0_score_denorm[idx, length:] = 0
-                # Compute pitch regularization weight
-                pitch_reg_w = batch_pitch_regularization_weight(lf0_score_denorm)
+                # Compute time-variant pitch regularization weight vector
+                pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
+                    lf0_score_denorm
+                )
 
                 loss = train_step(
-                    model, optimizer, train, in_feats, out_feats, lengths, pitch_reg_w
+                    model,
+                    optimizer,
+                    train,
+                    in_feats,
+                    out_feats,
+                    lengths,
+                    pitch_reg_dyn_ws,
+                    pitch_reg_weight,
                 )
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
