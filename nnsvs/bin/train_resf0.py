@@ -87,7 +87,7 @@ def train_step(
     out_feats,
     lengths,
     pitch_reg_dyn_ws,
-    pitch_reg_wegith=1.0,
+    pitch_reg_weight=1.0,
 ):
     optimizer.zero_grad()
 
@@ -112,7 +112,7 @@ def train_step(
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
     loss += (
-        pitch_reg_wegith
+        pitch_reg_weight
         * (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
     )
 
