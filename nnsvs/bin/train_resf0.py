@@ -129,7 +129,6 @@ def train_loop(
     data_loaders,
     writer,
     in_scaler,
-    out_scaler,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
     best_loss = torch.finfo(torch.float32).max
@@ -298,7 +297,6 @@ def my_app(config: DictConfig) -> None:
         data_loaders,
         writer,
         in_scaler,
-        out_scaler,
     )
 
 
