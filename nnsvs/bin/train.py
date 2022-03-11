@@ -84,8 +84,6 @@ def train_loop(
     lr_scheduler,
     data_loaders,
     writer,
-    in_scaler,
-    out_scaler,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
     best_loss = torch.finfo(torch.float32).max
@@ -140,16 +138,9 @@ def train_loop(
 @hydra.main(config_path="conf/train", config_name="config")
 def my_app(config: DictConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    (
-        model,
-        optimizer,
-        lr_scheduler,
-        data_loaders,
-        writer,
-        logger,
-        in_scaler,
-        out_scaler,
-    ) = setup(config, device)
+    (model, optimizer, lr_scheduler, data_loaders, writer, logger, _, _) = setup(
+        config, device
+    )
     train_loop(
         config,
         logger,
@@ -159,8 +150,6 @@ def my_app(config: DictConfig) -> None:
         lr_scheduler,
         data_loaders,
         writer,
-        in_scaler,
-        out_scaler,
     )
 
 
