@@ -222,13 +222,13 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
         if not np.allclose(model.in_lf0_min, in_scaler.data_min_[model.in_lf0_idx]):
             logger.warn(
                 f"in_lf0_min is set to {model.in_lf0_min}, "
-                "but should be {in_scaler.data_min_[model.in_lf0_idx]}"
+                f"but should be {in_scaler.data_min_[model.in_lf0_idx]}"
             )
             ok = False
         if not np.allclose(model.in_lf0_max, in_scaler.data_max_[model.in_lf0_idx]):
             logger.warn(
                 f"in_lf0_max is set to {model.in_lf0_max}, "
-                "but should be {in_scaler.data_max_[model.in_lf0_idx]}"
+                f"but should be {in_scaler.data_max_[model.in_lf0_idx]}"
             )
             ok = False
 
@@ -239,13 +239,13 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
         if not np.allclose(model.out_lf0_mean, out_scaler.mean_[model.out_lf0_idx]):
             logger.warn(
                 f"out_lf0_mean is set to {model.out_lf0_mean}, "
-                "but should be {out_scaler.mean_[model.out_lf0_idx]}"
+                f"but should be {out_scaler.mean_[model.out_lf0_idx]}"
             )
             ok = False
         if not np.allclose(model.out_lf0_scale, out_scaler.scale_[model.out_lf0_idx]):
             logger.warn(
                 f"out_lf0_scale is set to {model.out_lf0_scale}, "
-                "but should be {out_scaler.scale_[model.out_lf0_idx]}"
+                f"but should be {out_scaler.scale_[model.out_lf0_idx]}"
             )
             ok = False
 
