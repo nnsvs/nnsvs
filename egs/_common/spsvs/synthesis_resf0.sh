@@ -26,10 +26,10 @@ for s in ${testsets[@]}; do
         fi
         xrun nnsvs-synthesis $ext \
             question_path=$question_path \
-            log_f0_conditioning=false \
             timelag=$timelag_synthesis \
             duration=$duration_synthesis \
             acoustic=$acoustic_synthesis \
+            acoustic.relative_f0=false \
             timelag.checkpoint=$expdir/timelag/$timelag_eval_checkpoint \
             timelag.in_scaler_path=$dump_norm_dir/in_timelag_scaler.joblib \
             timelag.out_scaler_path=$dump_norm_dir/out_timelag_scaler.joblib \
