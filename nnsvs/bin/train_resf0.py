@@ -13,6 +13,16 @@ from tqdm import tqdm
 
 
 def note_segments(lf0_score_denorm):
+    """Compute note segments (start and end indices) from log-F0
+
+    Note that unvoiced frames must be set to 0 in advance.
+
+    Args:
+        lf0_score_denorm (Tensor): (B, T)
+
+    Returns:
+        list: list of note (start, end) indices
+    """
     segments = []
     for s, e in nonzero_segments(lf0_score_denorm):
         out = torch.sign(torch.abs(torch.diff(lf0_score_denorm[s : e + 1])))
@@ -27,6 +37,17 @@ def note_segments(lf0_score_denorm):
 
 
 def pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
+    """Compute pitch regularization weight given note segments
+
+    Args:
+        segments (list): list of note (start, end) indices
+        N (int): number of frames
+        decay_size (int): size of the decay window
+        max_w (float): maximum weight
+
+    Returns:
+        Tensor: weights of shape (N,)
+    """
     w = torch.zeros(N)
 
     for s, e in segments:
@@ -40,6 +61,14 @@ def pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
 
 
 def batch_pitch_regularization_weight(lf0_score_denorm):
+    """Batch version of computing pitch regularization weight
+
+    Args:
+        lf0_score_denorm (Tensor): (B, T)
+
+    Returns:
+        Tensor: weights of shape (B, N, 1)
+    """
     B, T = lf0_score_denorm.shape
     w = torch.zeros_like(lf0_score_denorm)
     for idx in range(len(lf0_score_denorm)):
@@ -104,8 +133,10 @@ def train_loop(
     out_dir = Path(to_absolute_path(config.train.out_dir))
     best_loss = torch.finfo(torch.float32).max
 
-    in_lf0_idx = config.in_lf0_idx
-    in_rest_idx = config.in_rest_idx
+    in_lf0_idx = config.data.in_lf0_idx
+    in_rest_idx = config.data.in_rest_idx
+    if in_lf0_idx is None or in_rest_idx is None:
+        raise ValueError("in_lf0_idx and in_rest_idx must be specified")
 
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
@@ -119,6 +150,7 @@ def train_loop(
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
+                # Compute denormalized log-F0 in the musical scores
                 lf0_score_denorm = (
                     in_feats[:, :, in_lf0_idx]
                     * float(
@@ -131,6 +163,7 @@ def train_loop(
                 lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
                 for idx, length in enumerate(lengths):
                     lf0_score_denorm[idx, length:] = 0
+                # Compute pitch regularization weight
                 pitch_reg_w = batch_pitch_regularization_weight(lf0_score_denorm)
 
                 loss = train_step(

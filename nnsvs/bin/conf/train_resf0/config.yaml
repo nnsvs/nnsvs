@@ -9,7 +9,3 @@ defaults:
 verbose: 100
 seed: 773
 data_parallel: false
-
-# NOTE: the following paramters must be carefully set
-in_lf0_idx: null
-in_rest_idx: 1
