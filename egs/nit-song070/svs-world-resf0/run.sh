@@ -86,7 +86,7 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
-    . $NNSVS_COMMON_ROOT/train_acoustic_resf0.sh
+    . $NNSVS_COMMON_ROOT/train_resf0_acoustic.sh
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
