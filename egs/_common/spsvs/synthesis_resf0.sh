@@ -26,7 +26,7 @@ for s in ${testsets[@]}; do
         fi
         xrun nnsvs-synthesis $ext \
             question_path=$question_path \
-            log_f0_conditioning=true \ # must be set to true for residual f0 modeling
+            log_f0_conditioning=true \
             timelag=$timelag_synthesis \
             duration=$duration_synthesis \
             acoustic=$acoustic_synthesis \
