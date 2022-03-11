@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import hydra
+import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
@@ -193,6 +194,84 @@ def train_loop(
     logger.info("The best loss was %s", best_loss)
 
 
+def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
+    logger.info("Checking model configs for residual F0 prediction")
+    if in_scaler is None or out_scaler is None:
+        raise ValueError("in_scaler and out_scaler must be specified")
+
+    in_lf0_idx = config.data.in_lf0_idx
+    in_rest_idx = config.data.in_rest_idx
+    if in_lf0_idx is None or in_rest_idx is None:
+        raise ValueError("in_lf0_idx and in_rest_idx must be specified")
+
+    logger.info("in_lf0_idx: %s", in_lf0_idx)
+    logger.info("in_rest_idx: %s", in_rest_idx)
+
+    ok = True
+    if hasattr(model, "in_lf0_idx"):
+        if model.in_lf0_idx != in_lf0_idx:
+            logger.warn(
+                "in_lf0_idx in model and data config must be same",
+                model.in_lf0_idx,
+                in_lf0_idx,
+            )
+            ok = False
+
+    if hasattr(model, "in_lf0_min") and hasattr(model, "in_lf0_max"):
+        logger.info("in_lf0_min: %s", model.in_lf0_min)
+        logger.info("in_lf0_max: %s", model.in_lf0_max)
+        if not np.allclose(model.in_lf0_min, in_scaler.data_min_[model.in_lf0_idx]):
+            logger.warn(
+                f"in_lf0_min is set to {model.in_lf0_min}, "
+                "but should be {in_scaler.data_min_[model.in_lf0_idx]}"
+            )
+            ok = False
+        if not np.allclose(model.in_lf0_max, in_scaler.data_max_[model.in_lf0_idx]):
+            logger.warn(
+                f"in_lf0_max is set to {model.in_lf0_max}, "
+                "but should be {in_scaler.data_max_[model.in_lf0_idx]}"
+            )
+            ok = False
+
+    if hasattr(model, "out_lf0_mean") and hasattr(model, "out_lf0_scale"):
+        logger.info("model.out_lf0_idx: %s", model.out_lf0_idx)
+        logger.info("model.out_lf0_mean: %s", model.out_lf0_mean)
+        logger.info("model.out_lf0_scale: %s", model.out_lf0_scale)
+        if not np.allclose(model.out_lf0_mean, out_scaler.mean_[model.out_lf0_idx]):
+            logger.warn(
+                f"out_lf0_mean is set to {model.out_lf0_mean}, "
+                "but should be {out_scaler.mean_[model.out_lf0_idx]}"
+            )
+            ok = False
+        if not np.allclose(model.out_lf0_scale, out_scaler.scale_[model.out_lf0_idx]):
+            logger.warn(
+                f"out_lf0_scale is set to {model.out_lf0_scale}, "
+                "but should be {out_scaler.scale_[model.out_lf0_idx]}"
+            )
+            ok = False
+
+    if not ok:
+        if (
+            model.in_lf0_idx == in_lf0_idx
+            and hasattr(model, "in_lf0_min")
+            and hasattr(model, "out_lf0_mean")
+        ):
+            logger.info(
+                f"""
+If you are 100% sure that you set model.in_lf0_idx and model.out_lf0_idx correctly,
+Please consider the following parameters in your model config:
+
+    in_lf0_idx: {model.in_lf0_idx}
+    out_lf0_idx: {model.out_lf0_idx}
+    in_lf0_min: {in_scaler.data_min_[model.in_lf0_idx]}
+    in_lf0_max: {in_scaler.data_max_[model.in_lf0_idx]}
+    out_lf0_mean: {out_scaler.mean_[model.out_lf0_idx]}
+    out_lf0_scale: {out_scaler.scale_[model.out_lf0_idx]}
+"""
+            )
+        raise ValueError("The model config has wrong configurations.")
+
+
 @hydra.main(config_path="conf/train_resf0", config_name="config")
 def my_app(config: DictConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -206,6 +285,9 @@ def my_app(config: DictConfig) -> None:
         in_scaler,
         out_scaler,
     ) = setup(config, device)
+
+    _check_resf0_config(logger, model, config, in_scaler, out_scaler)
+
     train_loop(
         config,
         logger,
