@@ -153,8 +153,8 @@ def setup(config, device):
     if torch.cuda.is_available():
         from torch.backends import cudnn
 
-        cudnn.benchmark = config.cudnn.benchmark
-        cudnn.deterministic = config.cudnn.deterministic
+        cudnn.benchmark = config.train.cudnn.benchmark
+        cudnn.deterministic = config.train.cudnn.deterministic
         logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
         logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
         if torch.backends.cudnn.version() is not None:
