@@ -78,7 +78,9 @@ def train_step(
     ).mean()
 
     # Pitch reguralization
-    loss += (pitch_reg_w * lf0_residual).masked_select(mask).mean()
+    # NOTE: l1 loss seems to be better than mse loss in my experiments
+    # we could use l2 loss as suggested sinsy's paper
+    loss += (pitch_reg_w * lf0_residual.abs()).masked_select(mask).mean()
 
     if train:
         loss.backward()
