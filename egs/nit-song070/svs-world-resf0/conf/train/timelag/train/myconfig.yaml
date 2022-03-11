@@ -1,7 +1,7 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
-nepochs: 10
+nepochs: 50
 checkpoint_epoch_interval: 20
 
 stream_wise_loss: false
