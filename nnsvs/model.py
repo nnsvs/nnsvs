@@ -413,6 +413,9 @@ class ResF0Conv1dResnet(BaseModel):
 
         return out, lf0_residual
 
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0]
+
 
 class ResSkipF0FFConvLSTM(BaseModel):
     def __init__(
@@ -502,3 +505,6 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
         return out, lf0_residual
+
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0]
