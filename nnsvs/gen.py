@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import librosa
 import numpy as np
 import pysptk
@@ -176,7 +174,8 @@ def postprocess_duration(labels, pred_durations, lag):
 
     Args:
         labels (HTSLabelFile): HTS labels
-        pred_durations (array): predicted durations
+        pred_durations (array or tuple): predicted durations for non-MDN,
+            mean and variance for MDN
         lag (array): predicted time-lag
 
     Returns:
@@ -185,6 +184,8 @@ def postprocess_duration(labels, pred_durations, lag):
     note_indices = get_note_indices(labels)
     # append the end of note
     note_indices.append(len(labels))
+
+    is_mdn = isinstance(pred_durations, tuple) and len(pred_durations) == 2
 
     output_labels = hts.HTSLabelFile()
 
@@ -211,9 +212,18 @@ def postprocess_duration(labels, pred_durations, lag):
             )
 
         # Compute normalized phoneme durations
-        # eq (12)
-        d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
-        d_norm = L_hat * d_hat / d_hat.sum()
+        if is_mdn:
+            mu = pred_durations[0][note_indices[i - 1] : note_indices[i]]
+            sigma_sq = pred_durations[1][note_indices[i - 1] : note_indices[i]]
+            # eq (17)
+            rho = (L_hat - mu.sum()) / sigma_sq.sum()
+            # eq (16)
+            d_norm = mu + rho * sigma_sq
+        else:
+            # eq (12)
+            d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
+            d_norm = L_hat * d_hat / d_hat.sum()
+
         d_norm = np.round(d_norm)
         d_norm[d_norm <= 0] = 1
 
@@ -279,28 +289,18 @@ def predict_duration(
         # (B, T, D_out)
         max_mu, max_sigma = duration_model.inference(x, [x.shape[1]])
         if np.any(duration_config.has_dynamic_features):
-            # Apply denormalization
-            # (B, T, D_out) -> (T, D_out)
-            max_sigma_sq = (
-                max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
+            raise RuntimeError(
+                "Dynamic features are not supported for duration modeling"
             )
-            max_mu = duration_out_scaler.inverse_transform(
-                max_mu.squeeze(0).cpu().data.numpy()
-            )
+        # Apply denormalization
+        max_sigma_sq = (
+            max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
+        )
+        max_mu = duration_out_scaler.inverse_transform(
+            max_mu.squeeze(0).cpu().data.numpy()
+        )
 
-            # (T, D_out) -> (T, static_dim)
-            pred_durations = multi_stream_mlpg(
-                max_mu,
-                max_sigma_sq,
-                get_windows(duration_config.num_windows),
-                duration_config.stream_sizes,
-                duration_config.has_dynamic_features,
-            )
-        else:
-            # Apply denormalization
-            pred_durations = duration_out_scaler.inverse_transform(
-                max_mu.squeeze(0).cpu().data.numpy()
-            )
+        return max_mu, max_sigma_sq
     else:
         # (T, D_out)
         pred_durations = (
