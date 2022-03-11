@@ -37,11 +37,11 @@ acoustic_features: static_deltadelta_sinevib
 # NOTE: *_model: model definition, *_train: general train configs,
 # *_data: data configs (e.g., batch size)
 
-timelag_model: timelag_ffn
+timelag_model: timelag_mdn
 timelag_train: myconfig
 timelag_data: myconfig
 
-duration_model: duration_lstm
+duration_model: duration_mdn
 duration_train: myconfig
 duration_data: myconfig
 
