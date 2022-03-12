@@ -487,7 +487,7 @@ class ResF0Conv1dResnetMDN(BaseModel):
         return (log_pi, log_sigma, mu), lf0_residual
 
     def inference(self, x, lengths=None):
-        log_pi, log_sigma, mu, _ = self.forward(x, lengths)
+        (log_pi, log_sigma, mu), _ = self.forward(x, lengths)
         sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
         return mu, sigma
 
