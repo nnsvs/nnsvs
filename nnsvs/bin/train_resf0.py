@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
+from nnsvs.mdn import mdn_loss
 from nnsvs.pitch import nonzero_segments
 from nnsvs.train_util import save_checkpoint, setup
 from nnsvs.util import make_non_pad_mask
@@ -98,15 +99,24 @@ def train_step(
     out_feats = model.preprocess_target(out_feats)
 
     # Run forward
-    assert model.prediction_type != PredictionType.PROBABILISTIC
     pred_out_feats, lf0_residual = model(in_feats, lengths)
 
-    # Compute loss
+    # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
-    loss = criterion(
-        pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-    ).mean()
+    # Compute loss
+    if model.prediction_type() == PredictionType.PROBABILISTIC:
+        pi, sigma, mu = pred_out_feats
+
+        # (B, max(T)) or (B, max(T), D_out)
+        mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
+        # Compute loss and apply mask
+        loss = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
+        loss = loss.masked_select(mask_).mean()
+    else:
+        loss = criterion(
+            pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+        ).mean()
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
