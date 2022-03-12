@@ -196,7 +196,7 @@ def postprocess_duration(labels, pred_durations, lag):
         # eq (11)
         L = int(fe.duration_features(p)[0])
         if i < len(note_indices) - 1:
-            L_hat = L - (lag[i - 1] + lag[i]) / 50000
+            L_hat = L - (lag[i - 1] - lag[i]) / 50000
         else:
             L_hat = L - (lag[i - 1]) / 50000
 
