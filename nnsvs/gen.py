@@ -225,6 +225,25 @@ def postprocess_duration(labels, pred_durations, lag):
             rho = (L_hat - mu.sum()) / sigma_sq.sum()
             # eq (16)
             d_norm = mu + rho * sigma_sq
+
+            if np.any(d_norm <= 0):
+                # eq (12) (using mu as d_hat)
+                print(
+                    f"Negative phoneme durations are predicted at {i}-th note. "
+                    "The note duration: ",
+                    f"{round(float(L)*0.005,3)} sec -> {round(float(L_hat)*0.005,3)} sec",
+                )
+                print(
+                    "It's likely that the model couldn't predict correct durations "
+                    "for short notes."
+                )
+                print(
+                    f"Variance scaling based durations (in frame):\n{(mu + rho * sigma_sq)}"
+                )
+                print(
+                    f"Fallback to uniform scaling (in frame):\n{(L_hat * mu / mu.sum())}"
+                )
+                d_norm = L_hat * mu / mu.sum()
         else:
             # eq (12)
             d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
