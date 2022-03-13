@@ -98,6 +98,7 @@ def synthesis(
             pitch_indices,
             log_f0_conditioning,
             config.timelag.allowed_range,
+            config.timelag.allowed_range_rest,
         )
 
         # Timelag predictions
