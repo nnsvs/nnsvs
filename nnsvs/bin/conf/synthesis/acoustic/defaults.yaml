@@ -8,3 +8,12 @@ model_yaml:
 subphone_features: coarse_coding
 relative_f0: true
 post_filter: true
+
+# Clip input context features to the range in the training data.
+# NOTE: While this would prevent unstable behaviors for test data,
+# it will also cause the model not to generalize well.
+# For example, it will be difficult to generate correct notes that are
+# not included in the training data.
+# It is recommended to set to false, especially when you have enough data
+# and expect your model to generalize well.
+force_clip_input_features: true

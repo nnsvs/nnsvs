@@ -81,6 +81,24 @@ def synthesis(
 
     log_f0_conditioning = config.log_f0_conditioning
 
+    # Clipping settings
+    # setting True by default for backward compatibility
+    timelag_clip_input_features = (
+        config.timelag.force_clip_input_features
+        if "force_clip_input_features" in config.timelag
+        else True
+    )
+    duration_clip_input_features = (
+        config.duration.force_clip_input_features
+        if "force_clip_input_features" in config.duration
+        else True
+    )
+    acoustic_clip_input_features = (
+        config.acoustic.force_clip_input_features
+        if "force_clip_input_features" in config.acoustic
+        else True
+    )
+
     if config.ground_truth_duration:
         # Use provided alignment
         duration_modified_labels = labels
@@ -98,9 +116,11 @@ def synthesis(
             pitch_indices,
             log_f0_conditioning,
             config.timelag.allowed_range,
+            config.timelag.allowed_range_rest,
+            timelag_clip_input_features,
         )
 
-        # Timelag predictions
+        # Duration predictions
         durations = predict_duration(
             device,
             labels,
@@ -113,6 +133,7 @@ def synthesis(
             continuous_dict,
             pitch_indices,
             log_f0_conditioning,
+            duration_clip_input_features,
         )
 
         # Normalize phoneme durations
@@ -131,6 +152,7 @@ def synthesis(
         config.acoustic.subphone_features,
         pitch_indices,
         log_f0_conditioning,
+        acoustic_clip_input_features,
     )
 
     # Waveform generation
