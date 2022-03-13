@@ -58,6 +58,7 @@ def predict_timelag(
     log_f0_conditioning=True,
     allowed_range=None,
     allowed_range_rest=None,
+    force_clip_input_features=False,
 ):
     if allowed_range is None:
         allowed_range = [-20, 20]
@@ -93,10 +94,15 @@ def predict_timelag(
     timelag_linguistic_features = timelag_in_scaler.transform(
         timelag_linguistic_features
     )
-    if isinstance(timelag_in_scaler, MinMaxScaler):
-        # clip to feature range
-        timelag_linguistic_features = np.clip(
-            timelag_linguistic_features,
+    if force_clip_input_features and isinstance(timelag_in_scaler, MinMaxScaler):
+        # clip to feature range (except for pitch-related features)
+        non_pitch_indices = [
+            idx
+            for idx in range(timelag_linguistic_features.shape[1])
+            if idx not in pitch_indices
+        ]
+        timelag_linguistic_features[:, non_pitch_indices] = np.clip(
+            timelag_linguistic_features[:, non_pitch_indices],
             timelag_in_scaler.feature_range[0],
             timelag_in_scaler.feature_range[1],
         )
@@ -252,6 +258,7 @@ def predict_duration(
     continuous_dict,
     pitch_indices=None,
     log_f0_conditioning=True,
+    force_clip_input_features=False,
 ):
     # Extract musical/linguistic features
     duration_linguistic_features = fe.linguistic_features(
@@ -273,10 +280,15 @@ def predict_duration(
     duration_linguistic_features = duration_in_scaler.transform(
         duration_linguistic_features
     )
-    if isinstance(duration_in_scaler, MinMaxScaler):
-        # clip to feature range
-        duration_linguistic_features = np.clip(
-            duration_linguistic_features,
+    if force_clip_input_features and isinstance(duration_in_scaler, MinMaxScaler):
+        # clip to feature range (except for pitch-related features)
+        non_pitch_indices = [
+            idx
+            for idx in range(duration_linguistic_features.shape[1])
+            if idx not in pitch_indices
+        ]
+        duration_linguistic_features[:, non_pitch_indices] = np.clip(
+            duration_linguistic_features[:, non_pitch_indices],
             duration_in_scaler.feature_range[0],
             duration_in_scaler.feature_range[1],
         )
@@ -336,6 +348,7 @@ def predict_acoustic(
     subphone_features="coarse_coding",
     pitch_indices=None,
     log_f0_conditioning=True,
+    force_clip_input_features=False,
 ):
 
     # Musical/linguistic features
@@ -356,10 +369,15 @@ def predict_acoustic(
 
     # Apply normalization
     linguistic_features = acoustic_in_scaler.transform(linguistic_features)
-    if isinstance(acoustic_in_scaler, MinMaxScaler):
-        # clip to feature range
-        linguistic_features = np.clip(
-            linguistic_features,
+    if force_clip_input_features and isinstance(acoustic_in_scaler, MinMaxScaler):
+        # clip to feature range (except for pitch-related features)
+        non_pitch_indices = [
+            idx
+            for idx in range(linguistic_features.shape[1])
+            if idx not in pitch_indices
+        ]
+        linguistic_features[:, non_pitch_indices] = np.clip(
+            linguistic_features[:, non_pitch_indices],
             acoustic_in_scaler.feature_range[0],
             acoustic_in_scaler.feature_range[1],
         )
