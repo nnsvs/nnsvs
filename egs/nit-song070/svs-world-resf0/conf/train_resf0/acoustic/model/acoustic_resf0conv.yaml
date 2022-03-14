@@ -11,9 +11,13 @@ netG:
   out_dim: 206
   hidden_dim: 128
   num_layers: 6
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
   in_lf0_idx: 300
   out_lf0_idx: 180
-  in_lf0_min: 5.393627643585205
-  in_lf0_max: 6.491110801696777
-  out_lf0_mean: 5.9517614858306
-  out_lf0_scale: 0.23679542468337675
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null

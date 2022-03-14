@@ -18,6 +18,8 @@ pin_memory: true
 # it depends on the hed file
 in_lf0_idx: null
 in_rest_idx: null
+# The log-F0 index in the output features
+out_lf0_idx: null
 
 in_scaler_path: null
 out_scaler_path: null

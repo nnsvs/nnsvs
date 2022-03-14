@@ -9,7 +9,7 @@ from nnsvs.mdn import mdn_loss
 from nnsvs.pitch import nonzero_segments
 from nnsvs.train_util import save_checkpoint, setup
 from nnsvs.util import make_non_pad_mask
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from tqdm import tqdm
 
@@ -224,11 +224,13 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
 
     in_lf0_idx = config.data.in_lf0_idx
     in_rest_idx = config.data.in_rest_idx
-    if in_lf0_idx is None or in_rest_idx is None:
-        raise ValueError("in_lf0_idx and in_rest_idx must be specified")
+    out_lf0_idx = config.data.out_lf0_idx
+    if in_lf0_idx is None or in_rest_idx is None or out_lf0_idx is None:
+        raise ValueError("in_lf0_idx, in_rest_idx and out_lf0_idx must be specified")
 
     logger.info("in_lf0_idx: %s", in_lf0_idx)
     logger.info("in_rest_idx: %s", in_rest_idx)
+    logger.info("out_lf0_idx: %s", out_lf0_idx)
 
     ok = True
     if hasattr(model, "in_lf0_idx"):
@@ -239,8 +241,21 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
                 in_lf0_idx,
             )
             ok = False
+    if hasattr(model, "out_lf0_idx"):
+        if model.out_lf0_idx != out_lf0_idx:
+            logger.warn(
+                "out_lf0_idx in model and data config must be same",
+                model.out_lf0_idx,
+                out_lf0_idx,
+            )
+            ok = False
 
     if hasattr(model, "in_lf0_min") and hasattr(model, "in_lf0_max"):
+        # Inject values from the input scaler
+        if model.in_lf0_min is None or model.in_lf0_max is None:
+            model.in_lf0_min = in_scaler.data_min_[in_lf0_idx]
+            model.in_lf0_max = in_scaler.data_max_[in_lf0_idx]
+
         logger.info("in_lf0_min: %s", model.in_lf0_min)
         logger.info("in_lf0_max: %s", model.in_lf0_max)
         if not np.allclose(model.in_lf0_min, in_scaler.data_min_[model.in_lf0_idx]):
@@ -257,7 +272,11 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
             ok = False
 
     if hasattr(model, "out_lf0_mean") and hasattr(model, "out_lf0_scale"):
-        logger.info("model.out_lf0_idx: %s", model.out_lf0_idx)
+        # Inject values from the output scaler
+        if model.out_lf0_mean is None or model.out_lf0_scale is None:
+            model.out_lf0_mean = out_scaler.mean_[out_lf0_idx]
+            model.out_lf0_scale = out_scaler.scale_[out_lf0_idx]
+
         logger.info("model.out_lf0_mean: %s", model.out_lf0_mean)
         logger.info("model.out_lf0_scale: %s", model.out_lf0_scale)
         if not np.allclose(model.out_lf0_mean, out_scaler.mean_[model.out_lf0_idx]):
@@ -294,6 +313,10 @@ Please consider the following parameters in your model config:
             )
         raise ValueError("The model config has wrong configurations.")
 
+    # Overwrite the parameters to the config
+    for key in ["in_lf0_min", "in_lf0_max", "out_lf0_mean", "out_lf0_scale"]:
+        config.model.netG[key] = float(getattr(model, key))
+
 
 @hydra.main(config_path="conf/train_resf0", config_name="config")
 def my_app(config: DictConfig) -> None:
@@ -310,6 +333,13 @@ def my_app(config: DictConfig) -> None:
     ) = setup(config, device)
 
     _check_resf0_config(logger, model, config, in_scaler, out_scaler)
+
+    # Save configs again in case the model config has been changed
+    out_dir = Path(to_absolute_path(config.train.out_dir))
+    with open(out_dir / "config.yaml", "w") as f:
+        OmegaConf.save(config, f)
+    with open(out_dir / "model.yaml", "w") as f:
+        OmegaConf.save(config.model, f)
 
     train_loop(
         config,

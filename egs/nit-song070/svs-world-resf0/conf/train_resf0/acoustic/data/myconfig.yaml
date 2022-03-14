@@ -21,3 +21,5 @@ out_scaler_path: null
 # it depends on the hed file
 in_lf0_idx: 300
 in_rest_idx: 1
+# The log-F0 index in the output features
+out_lf0_idx: 180
