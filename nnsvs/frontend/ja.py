@@ -1,17 +1,14 @@
+import pysinsy
 from nnmnkwii.io import hts
-
-try:
-    import pysinsy
-except ImportError as e:
-    print("Pysinsy must be manually installed!")
-    raise e
 
 # TODO: consider replacing pysinsy to pure python implementation
 
 _global_sinsy = None
 
 
-def _lazy_init(dic_dir="/usr/local/lib/sinsy/dic"):
+def _lazy_init(dic_dir=None):
+    if dic_dir is None:
+        dic_dir = pysinsy.get_default_dic_dir()
     global _global_sinsy
     if _global_sinsy is None:
         _global_sinsy = pysinsy.sinsy.Sinsy()
