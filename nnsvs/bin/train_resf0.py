@@ -169,7 +169,7 @@ def train_loop(
                 lf0_score_denorm = (
                     in_feats[:, :, in_lf0_idx]
                     * float(
-                        in_scaler.data_min_[in_lf0_idx]
+                        in_scaler.data_max_[in_lf0_idx]
                         - in_scaler.data_min_[in_lf0_idx]
                     )
                     + in_scaler.data_min_[in_lf0_idx]
