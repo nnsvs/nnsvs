@@ -35,22 +35,20 @@ def train_step(
     # Run forward
     outs = model(in_feats, lengths)
 
+    # Mask (B, T, 1)
+    mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
+
     # Compute loss
     if model.prediction_type() == PredictionType.PROBABILISTIC:
         pi, sigma, mu = outs
 
         # (B, max(T)) or (B, max(T), D_out)
-        mask = make_non_pad_mask(lengths).to(in_feats.device)
-        mask = mask.unsqueeze(-1) if len(pi.shape) == 4 else mask
-
+        mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
         # Compute loss and apply mask
         loss = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
-        loss = loss.masked_select(mask).mean()
+        loss = loss.masked_select(mask_).mean()
     else:
         pred_out_feats = outs
-
-        mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
-
         if stream_wise_loss:
             w = get_stream_weight(stream_weights, stream_sizes).to(in_feats.device)
             streams = split_streams(out_feats, stream_sizes)
