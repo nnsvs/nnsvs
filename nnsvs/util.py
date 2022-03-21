@@ -14,6 +14,26 @@ def init_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
+def pad_2d(x, max_len, constant_values=0):
+    """Pad a 2d-tensor.
+
+    Args:
+        x (torch.Tensor): tensor to pad
+        max_len (int): maximum length of the tensor
+        constant_values (int, optional): value to pad with. Default: 0
+
+    Returns:
+        torch.Tensor: padded tensor
+    """
+    x = np.pad(
+        x,
+        [(0, max_len - len(x)), (0, 0)],
+        mode="constant",
+        constant_values=constant_values,
+    )
+    return x
+
+
 def make_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
     """Make mask tensor containing indices of padded part.
 
@@ -73,3 +93,47 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
                     dtype=torch.bool in PyTorch 1.2+ (including 1.2)
     """
     return ~make_pad_mask(lengths, xs, length_dim, maxlen)
+
+
+class StandardScaler:
+    """sklearn.preprocess.StandardScaler like class with only
+    transform functionality
+
+    Args:
+        mean (np.ndarray): mean
+        std (np.ndarray): standard deviation
+    """
+
+    def __init__(self, mean, var, scale):
+        self.mean_ = mean
+        self.var_ = var
+        # NOTE: scale may not exactly same as np.sqrt(var)
+        self.scale_ = scale
+
+    def transform(self, x):
+        return (x - self.mean_) / self.scale_
+
+    def inverse_transform(self, x):
+        return x * self.scale_ + self.mean_
+
+
+class MinMaxScaler:
+    """sklearn.preprocess.MinMaxScaler like class with only
+    transform functionality
+
+    Args:
+        min (np.ndarray): minimum
+        scale (np.ndarray): scale
+        feature_range (tuple): (min, max)
+    """
+
+    def __init__(self, min, scale, feature_range=(0, 1)):
+        self.min_ = min
+        self.scale_ = scale
+        self.feature_range = feature_range
+
+    def transform(self, x):
+        return self.scale_ * x + self.min_
+
+    def inverse_transform(self, x):
+        return (x - self.min_) / self.scale_

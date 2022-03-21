@@ -8,7 +8,7 @@ else
 fi
 
 if [ ! -z "${pretrained_expdir}" ]; then
-    resume_checkpoint=$pretrained_expdir/timelag/latest.pth
+    resume_checkpoint=$pretrained_expdir/${timelag_model}/latest.pth
 else
     resume_checkpoint=
 fi
@@ -18,5 +18,6 @@ xrun nnsvs-train $ext \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_timelag/ \
     data.dev.in_dir=$dump_norm_dir/$dev_set/in_timelag/ \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_timelag/ \
-    train.out_dir=$expdir/timelag \
+    train.out_dir=$expdir/${timelag_model} \
+    train.log_dir=tensorboard/${expname}_${timelag_model} \
     train.resume.checkpoint=$resume_checkpoint

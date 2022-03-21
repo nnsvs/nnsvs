@@ -1,11 +1,11 @@
-# @package _global_
-
 defaults:
-  - hydra/job_logging: colorlog
-  - hydra/hydra_logging: colorlog
   - model: acoustic_default
   - train: defaults
   - data: defaults
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
 
 verbose: 100
 seed: 773
+data_parallel: false

@@ -1,16 +1,15 @@
-# coding: utf-8
-
 import os
 from os.path import exists, join
 
 import hydra
 import joblib
 import numpy as np
+import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnsvs.gen import (
-    gen_waveform,
+    gen_world_params,
     postprocess_duration,
     predict_acoustic,
     predict_duration,
@@ -20,34 +19,6 @@ from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 from tqdm import tqdm
-
-logger = None
-
-
-def maybe_set_checkpoints_(config):
-    if config.model_dir is None:
-        return
-    model_dir = to_absolute_path(config.model_dir)
-
-    for typ in ["timelag", "duration", "acoustic"]:
-        model_config = join(model_dir, typ, "model.yaml")
-        model_checkpoint = join(model_dir, typ, config.model_checkpoint)
-
-        config[typ].model_yaml = model_config
-        config[typ].checkpoint = model_checkpoint
-
-
-def maybe_set_normalization_stats_(config):
-    if config.stats_dir is None:
-        return
-    stats_dir = to_absolute_path(config.stats_dir)
-
-    for typ in ["timelag", "duration", "acoustic"]:
-        in_scaler_path = join(stats_dir, f"in_{typ}_scaler.joblib")
-        out_scaler_path = join(stats_dir, f"out_{typ}_scaler.joblib")
-
-        config[typ].in_scaler_path = in_scaler_path
-        config[typ].out_scaler_path = out_scaler_path
 
 
 def synthesis(
@@ -70,7 +41,7 @@ def synthesis(
 ):
     # load labels and question
     labels = hts.load(label_path).round_()
-    binary_dict, continuous_dict = hts.load_question_set(
+    binary_dict, numeric_dict = hts.load_question_set(
         question_path, append_hat_for_LL=False
     )
 
@@ -112,7 +83,7 @@ def synthesis(
             timelag_in_scaler,
             timelag_out_scaler,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             pitch_indices,
             log_f0_conditioning,
             config.timelag.allowed_range,
@@ -128,9 +99,8 @@ def synthesis(
             duration_config,
             duration_in_scaler,
             duration_out_scaler,
-            lag,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             pitch_indices,
             log_f0_conditioning,
             duration_clip_input_features,
@@ -148,23 +118,22 @@ def synthesis(
         acoustic_in_scaler,
         acoustic_out_scaler,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         config.acoustic.subphone_features,
         pitch_indices,
         log_f0_conditioning,
         acoustic_clip_input_features,
     )
 
-    # Waveform generation
-    generated_waveform = gen_waveform(
+    # Generate WORLD parameters
+    f0, spectrogram, aperiodicity = gen_world_params(
         duration_modified_labels,
         acoustic_features,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         acoustic_config.stream_sizes,
         acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features,
-        log_f0_conditioning,
         pitch_idx,
         acoustic_config.num_windows,
         config.acoustic.post_filter,
@@ -174,7 +143,11 @@ def synthesis(
         config.vibrato_scale,
     )
 
-    return generated_waveform
+    wav = pyworld.synthesize(
+        f0, spectrogram, aperiodicity, config.sample_rate, config.frame_period
+    )
+
+    return wav
 
 
 @hydra.main(config_path="conf/synthesis", config_name="config")
@@ -187,9 +160,6 @@ def my_app(config: DictConfig) -> None:
         device = torch.device("cpu")
     else:
         device = torch.device(config.device)
-
-    maybe_set_checkpoints_(config)
-    maybe_set_normalization_stats_(config)
 
     # timelag
     timelag_config = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))

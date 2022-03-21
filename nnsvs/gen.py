@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import librosa
 import numpy as np
 import pysptk
@@ -55,7 +53,7 @@ def predict_timelag(
     timelag_in_scaler,
     timelag_out_scaler,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     pitch_indices=None,
     log_f0_conditioning=True,
     allowed_range=None,
@@ -77,7 +75,7 @@ def predict_timelag(
     timelag_linguistic_features = fe.linguistic_features(
         note_labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=False,
         subphone_features=None,
     ).astype(np.float32)
@@ -175,67 +173,6 @@ def predict_timelag(
     return pred_timelag
 
 
-def postprocess_duration(labels, pred_durations, lag):
-    """Post-process durations based on predicted time-lag
-
-    Ref : https://arxiv.org/abs/2108.02776
-
-    Args:
-        labels (HTSLabelFile): HTS labels
-        pred_durations (array): predicted durations
-        lag (array): predicted time-lag
-
-    Returns:
-        HTSLabelFile: labels with adjusted durations
-    """
-    note_indices = get_note_indices(labels)
-    # append the end of note
-    note_indices.append(len(labels))
-
-    output_labels = hts.HTSLabelFile()
-
-    for i in range(1, len(note_indices)):
-        p = labels[note_indices[i - 1] : note_indices[i]]
-
-        # Compute note duration with time-lag
-        # eq (11)
-        L = int(fe.duration_features(p)[0])
-        if i < len(note_indices) - 1:
-            L_hat = L - (lag[i - 1] + lag[i]) / 50000
-        else:
-            L_hat = L - (lag[i - 1]) / 50000
-
-        # adjust the start time of the note
-        p.start_times = np.minimum(
-            np.asarray(p.start_times) + lag[i - 1].reshape(-1),
-            np.asarray(p.end_times) - 50000 * len(p),
-        )
-        p.start_times = np.maximum(p.start_times, 0)
-        if len(output_labels) > 0:
-            p.start_times = np.maximum(
-                p.start_times, output_labels.start_times[-1] + 50000
-            )
-
-        # Compute normalized phoneme durations
-        # eq (12)
-        d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
-        d_norm = L_hat * d_hat / d_hat.sum()
-        d_norm = np.round(d_norm)
-        d_norm[d_norm <= 0] = 1
-
-        # TODO: better way to adjust?
-        if d_norm.sum() != L_hat:
-            d_norm[-1] += L_hat - d_norm.sum()
-        p.set_durations(d_norm)
-
-        if len(output_labels) > 0:
-            output_labels.end_times[-1] = p.start_times[0]
-        for n in p:
-            output_labels.append(n)
-
-    return output_labels
-
-
 def predict_duration(
     device,
     labels,
@@ -243,9 +180,8 @@ def predict_duration(
     duration_config,
     duration_in_scaler,
     duration_out_scaler,
-    lag,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     pitch_indices=None,
     log_f0_conditioning=True,
     force_clip_input_features=False,
@@ -254,7 +190,7 @@ def predict_duration(
     duration_linguistic_features = fe.linguistic_features(
         labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=False,
         subphone_features=None,
     ).astype(np.float32)
@@ -291,28 +227,18 @@ def predict_duration(
         # (B, T, D_out)
         max_mu, max_sigma = duration_model.inference(x, [x.shape[1]])
         if np.any(duration_config.has_dynamic_features):
-            # Apply denormalization
-            # (B, T, D_out) -> (T, D_out)
-            max_sigma_sq = (
-                max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
+            raise RuntimeError(
+                "Dynamic features are not supported for duration modeling"
             )
-            max_mu = duration_out_scaler.inverse_transform(
-                max_mu.squeeze(0).cpu().data.numpy()
-            )
+        # Apply denormalization
+        max_sigma_sq = (
+            max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
+        )
+        max_mu = duration_out_scaler.inverse_transform(
+            max_mu.squeeze(0).cpu().data.numpy()
+        )
 
-            # (T, D_out) -> (T, static_dim)
-            pred_durations = multi_stream_mlpg(
-                max_mu,
-                max_sigma_sq,
-                get_windows(duration_config.num_windows),
-                duration_config.stream_sizes,
-                duration_config.has_dynamic_features,
-            )
-        else:
-            # Apply denormalization
-            pred_durations = duration_out_scaler.inverse_transform(
-                max_mu.squeeze(0).cpu().data.numpy()
-            )
+        return max_mu, max_sigma_sq
     else:
         # (T, D_out)
         pred_durations = (
@@ -336,6 +262,95 @@ def predict_duration(
     return pred_durations
 
 
+def postprocess_duration(labels, pred_durations, lag):
+    """Post-process durations based on predicted time-lag
+
+    Ref : https://arxiv.org/abs/2108.02776
+
+    Args:
+        labels (HTSLabelFile): HTS labels
+        pred_durations (array or tuple): predicted durations for non-MDN,
+            mean and variance for MDN
+        lag (array): predicted time-lag
+
+    Returns:
+        HTSLabelFile: labels with adjusted durations
+    """
+    note_indices = get_note_indices(labels)
+    # append the end of note
+    note_indices.append(len(labels))
+
+    is_mdn = isinstance(pred_durations, tuple) and len(pred_durations) == 2
+
+    output_labels = hts.HTSLabelFile()
+
+    for i in range(1, len(note_indices)):
+        p = labels[note_indices[i - 1] : note_indices[i]]
+
+        # Compute note duration with time-lag
+        # eq (11)
+        L = int(fe.duration_features(p)[0])
+        if i < len(note_indices) - 1:
+            L_hat = L - (lag[i - 1] - lag[i]) / 50000
+        else:
+            L_hat = L - (lag[i - 1]) / 50000
+
+        # adjust the start time of the note
+        p.start_times = np.minimum(
+            np.asarray(p.start_times) + lag[i - 1].reshape(-1),
+            np.asarray(p.end_times) - 50000 * len(p),
+        )
+        p.start_times = np.maximum(p.start_times, 0)
+        if len(output_labels) > 0:
+            p.start_times = np.maximum(
+                p.start_times, output_labels.start_times[-1] + 50000
+            )
+
+        # Compute normalized phoneme durations
+        if is_mdn:
+            mu = pred_durations[0][note_indices[i - 1] : note_indices[i]]
+            sigma_sq = pred_durations[1][note_indices[i - 1] : note_indices[i]]
+            # eq (17)
+            rho = (L_hat - mu.sum()) / sigma_sq.sum()
+            # eq (16)
+            d_norm = mu + rho * sigma_sq
+
+            if np.any(d_norm <= 0):
+                # eq (12) (using mu as d_hat)
+                print(
+                    f"Negative phoneme durations are predicted at {i}-th note. "
+                    "The note duration: ",
+                    f"{round(float(L)*0.005,3)} sec -> {round(float(L_hat)*0.005,3)} sec",
+                )
+                print(
+                    "It's likely that the model couldn't predict correct durations "
+                    "for short notes."
+                )
+                print(
+                    f"Variance scaling based durations (in frame):\n{(mu + rho * sigma_sq)}"
+                )
+                print(
+                    f"Fallback to uniform scaling (in frame):\n{(L_hat * mu / mu.sum())}"
+                )
+                d_norm = L_hat * mu / mu.sum()
+        else:
+            # eq (12)
+            d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
+            d_norm = L_hat * d_hat / d_hat.sum()
+
+        d_norm = np.round(d_norm)
+        d_norm[d_norm <= 0] = 1
+
+        p.set_durations(d_norm)
+
+        if len(output_labels) > 0:
+            output_labels.end_times[-1] = p.start_times[0]
+        for n in p:
+            output_labels.append(n)
+
+    return output_labels
+
+
 def predict_acoustic(
     device,
     labels,
@@ -344,7 +359,7 @@ def predict_acoustic(
     acoustic_in_scaler,
     acoustic_out_scaler,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     subphone_features="coarse_coding",
     pitch_indices=None,
     log_f0_conditioning=True,
@@ -355,7 +370,7 @@ def predict_acoustic(
     linguistic_features = fe.linguistic_features(
         labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=True,
         subphone_features=subphone_features,
     )
@@ -432,15 +447,14 @@ def predict_acoustic(
     return pred_acoustic
 
 
-def gen_waveform(
+def gen_world_params(
     labels,
     acoustic_features,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     stream_sizes,
     has_dynamic_features,
     subphone_features="coarse_coding",
-    log_f0_conditioning=True,
     pitch_idx=None,
     num_windows=3,
     post_filter=True,
@@ -448,6 +462,7 @@ def gen_waveform(
     frame_period=5,
     relative_f0=True,
     vibrato_scale=1.0,
+    vuv_threshold=0.3,
 ):
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
@@ -485,7 +500,7 @@ def gen_waveform(
     )
 
     # fill aperiodicity with ones for unvoiced regions
-    aperiodicity[vuv.reshape(-1) < 0.5, :] = 1.0
+    aperiodicity[vuv.reshape(-1) < vuv_threshold, :] = 1.0
     # WORLD fails catastrophically for out of range aperiodicity
     aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
@@ -496,7 +511,7 @@ def gen_waveform(
         linguistic_features = fe.linguistic_features(
             labels,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             add_frame_features=True,
             subphone_features=subphone_features,
         )
@@ -507,11 +522,11 @@ def gen_waveform(
         lf0_score = interp1d(lf0_score, kind="slinear")
 
         f0 = diff_lf0 + lf0_score
-        f0[vuv < 0.5] = 0
+        f0[vuv < vuv_threshold] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
     else:
         f0 = target_f0
-        f0[vuv < 0.5] = 0
+        f0[vuv < vuv_threshold] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
 
     if vib is not None:
@@ -531,12 +546,8 @@ def gen_waveform(
             # Generate diff-based vibrato
             f0 = f0.flatten() + vibrato_scale * vib.flatten()
 
-    generated_waveform = pyworld.synthesize(
-        f0.flatten().astype(np.float64),
-        spectrogram.astype(np.float64),
-        aperiodicity.astype(np.float64),
-        sample_rate,
-        frame_period,
-    )
+    f0 = f0.flatten().astype(np.float64)
+    spectrogram = spectrogram.astype(np.float64)
+    aperiodicity = aperiodicity.astype(np.float64)
 
-    return generated_waveform
+    return f0, spectrogram, aperiodicity

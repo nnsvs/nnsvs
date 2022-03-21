@@ -10,10 +10,10 @@ import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
 from nnsvs.base import PredictionType
-from nnsvs.bin.train import NpyFileSource
 from nnsvs.gen import get_windows
 from nnsvs.logger import getLogger
 from nnsvs.multistream import multi_stream_mlpg
+from nnsvs.train_util import NpyFileSource
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 

@@ -1,4 +1,3 @@
-# @package _group_
 # (mgc, lf0, vuv, bap)
 stream_sizes: [60, 1, 1, 5]
 has_dynamic_features: [false, false, false, false]
