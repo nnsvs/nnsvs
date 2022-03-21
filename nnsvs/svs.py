@@ -207,7 +207,6 @@ Acoustic model: {acoustic_str}
             self.acoustic_config.stream_sizes,
             self.acoustic_config.has_dynamic_features,
             self.config.acoustic.subphone_features,
-            self.config.log_f0_conditioning,
             self.pitch_idx,
             self.acoustic_config.num_windows,
             self.config.acoustic.post_filter,

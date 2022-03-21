@@ -133,7 +133,6 @@ def synthesis(
         acoustic_config.stream_sizes,
         acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features,
-        log_f0_conditioning,
         pitch_idx,
         acoustic_config.num_windows,
         config.acoustic.post_filter,

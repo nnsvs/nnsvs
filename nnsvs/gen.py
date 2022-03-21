@@ -455,7 +455,6 @@ def gen_waveform(
     stream_sizes,
     has_dynamic_features,
     subphone_features="coarse_coding",
-    log_f0_conditioning=True,
     pitch_idx=None,
     num_windows=3,
     post_filter=True,
