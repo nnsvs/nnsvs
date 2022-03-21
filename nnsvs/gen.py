@@ -462,6 +462,7 @@ def gen_waveform(
     frame_period=5,
     relative_f0=True,
     vibrato_scale=1.0,
+    vuv_threshold=0.4,
 ):
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
@@ -499,7 +500,7 @@ def gen_waveform(
     )
 
     # fill aperiodicity with ones for unvoiced regions
-    aperiodicity[vuv.reshape(-1) < 0.5, :] = 1.0
+    aperiodicity[vuv.reshape(-1) < vuv_threshold, :] = 1.0
     # WORLD fails catastrophically for out of range aperiodicity
     aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
@@ -521,11 +522,11 @@ def gen_waveform(
         lf0_score = interp1d(lf0_score, kind="slinear")
 
         f0 = diff_lf0 + lf0_score
-        f0[vuv < 0.5] = 0
+        f0[vuv < vuv_threshold] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
     else:
         f0 = target_f0
-        f0[vuv < 0.5] = 0
+        f0[vuv < vuv_threshold] = 0
         f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
 
     if vib is not None:
