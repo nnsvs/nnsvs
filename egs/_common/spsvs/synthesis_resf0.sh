@@ -44,7 +44,7 @@ for s in ${testsets[@]}; do
             acoustic.model_yaml=$expdir/${acoustic_model}/model.yaml \
             utt_list=./data/list/$s.list \
             in_dir=data/acoustic/$input/ \
-            out_dir=$expdir/synthesis/$s/${acoustic_eval_checkpoint/.pth/}/$input \
+            out_dir=$expdir/synthesis_${timelag_model}_${duration_model}_${acoustic_model}/$s/${acoustic_eval_checkpoint/.pth/}/$input \
             ground_truth_duration=$ground_truth_duration
     done
 done
