@@ -8,6 +8,7 @@ egs*/*/*/tensorboard
 egs*/*/*/wav*
 egs*/*/*/outputs
 egs*/*/*/*.wav
+egs*/*/*/packed_models
 
 # misc
 notebooks
