@@ -98,3 +98,37 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     echo "stage 6: Synthesis waveforms"
     . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
 fi
+
+if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
+    echo "Pack models for SVS"
+    dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
+    mkdir -p $dst_dir
+    # global config file
+    # NOTE: New residual F0 prediction models require relative_f0 to be false.
+    cat > ${dst_dir}/config.yaml <<EOL
+# Global configs
+sample_rate: 48000
+frame_period: 5
+log_f0_conditioning: true
+
+# Model-specific synthesis configs
+timelag:
+    allowed_range: [-20, 20]
+    allowed_range_rest: [-40, 40]
+    force_clip_input_features: true
+duration:
+    force_clip_input_features: true
+acoustic:
+    subphone_features: "coarse_coding"
+    force_clip_input_features: true
+    relative_f0: false
+    post_filter: true
+
+# Model definitions
+timelag_model: ${timelag_model}
+duration_model: ${duration_model}
+acoustic_model: ${acoustic_model}
+EOL
+
+    . $NNSVS_COMMON_ROOT/pack_model.sh
+ fi
