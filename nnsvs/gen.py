@@ -462,7 +462,7 @@ def gen_waveform(
     frame_period=5,
     relative_f0=True,
     vibrato_scale=1.0,
-    vuv_threshold=0.4,
+    vuv_threshold=0.3,
 ):
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
