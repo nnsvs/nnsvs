@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import os
 from os.path import exists, join
 
@@ -20,34 +18,6 @@ from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 from tqdm import tqdm
-
-logger = None
-
-
-def maybe_set_checkpoints_(config):
-    if config.model_dir is None:
-        return
-    model_dir = to_absolute_path(config.model_dir)
-
-    for typ in ["timelag", "duration", "acoustic"]:
-        model_config = join(model_dir, typ, "model.yaml")
-        model_checkpoint = join(model_dir, typ, config.model_checkpoint)
-
-        config[typ].model_yaml = model_config
-        config[typ].checkpoint = model_checkpoint
-
-
-def maybe_set_normalization_stats_(config):
-    if config.stats_dir is None:
-        return
-    stats_dir = to_absolute_path(config.stats_dir)
-
-    for typ in ["timelag", "duration", "acoustic"]:
-        in_scaler_path = join(stats_dir, f"in_{typ}_scaler.joblib")
-        out_scaler_path = join(stats_dir, f"out_{typ}_scaler.joblib")
-
-        config[typ].in_scaler_path = in_scaler_path
-        config[typ].out_scaler_path = out_scaler_path
 
 
 def synthesis(
@@ -187,9 +157,6 @@ def my_app(config: DictConfig) -> None:
         device = torch.device("cpu")
     else:
         device = torch.device(config.device)
-
-    maybe_set_checkpoints_(config)
-    maybe_set_normalization_stats_(config)
 
     # timelag
     timelag_config = OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
