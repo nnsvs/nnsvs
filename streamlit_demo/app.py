@@ -42,7 +42,7 @@ if uploaded_file:
     
     # save wav
     out_path = file_path + '.wav'
-    sf.write(out_path, wav, 48000)
+    sf.write(out_path, wav, sr)
 
     # show audio player
     with open(out_path, 'rb') as audio_file:
