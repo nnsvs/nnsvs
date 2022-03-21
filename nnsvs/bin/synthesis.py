@@ -40,7 +40,7 @@ def synthesis(
 ):
     # load labels and question
     labels = hts.load(label_path).round_()
-    binary_dict, continuous_dict = hts.load_question_set(
+    binary_dict, numeric_dict = hts.load_question_set(
         question_path, append_hat_for_LL=False
     )
 
@@ -82,7 +82,7 @@ def synthesis(
             timelag_in_scaler,
             timelag_out_scaler,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             pitch_indices,
             log_f0_conditioning,
             config.timelag.allowed_range,
@@ -99,7 +99,7 @@ def synthesis(
             duration_in_scaler,
             duration_out_scaler,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             pitch_indices,
             log_f0_conditioning,
             duration_clip_input_features,
@@ -117,7 +117,7 @@ def synthesis(
         acoustic_in_scaler,
         acoustic_out_scaler,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         config.acoustic.subphone_features,
         pitch_indices,
         log_f0_conditioning,
@@ -129,7 +129,7 @@ def synthesis(
         duration_modified_labels,
         acoustic_features,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         acoustic_config.stream_sizes,
         acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features,

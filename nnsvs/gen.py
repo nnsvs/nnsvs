@@ -53,7 +53,7 @@ def predict_timelag(
     timelag_in_scaler,
     timelag_out_scaler,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     pitch_indices=None,
     log_f0_conditioning=True,
     allowed_range=None,
@@ -75,7 +75,7 @@ def predict_timelag(
     timelag_linguistic_features = fe.linguistic_features(
         note_labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=False,
         subphone_features=None,
     ).astype(np.float32)
@@ -181,7 +181,7 @@ def predict_duration(
     duration_in_scaler,
     duration_out_scaler,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     pitch_indices=None,
     log_f0_conditioning=True,
     force_clip_input_features=False,
@@ -190,7 +190,7 @@ def predict_duration(
     duration_linguistic_features = fe.linguistic_features(
         labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=False,
         subphone_features=None,
     ).astype(np.float32)
@@ -359,7 +359,7 @@ def predict_acoustic(
     acoustic_in_scaler,
     acoustic_out_scaler,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     subphone_features="coarse_coding",
     pitch_indices=None,
     log_f0_conditioning=True,
@@ -370,7 +370,7 @@ def predict_acoustic(
     linguistic_features = fe.linguistic_features(
         labels,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         add_frame_features=True,
         subphone_features=subphone_features,
     )
@@ -451,7 +451,7 @@ def gen_waveform(
     labels,
     acoustic_features,
     binary_dict,
-    continuous_dict,
+    numeric_dict,
     stream_sizes,
     has_dynamic_features,
     subphone_features="coarse_coding",
@@ -511,7 +511,7 @@ def gen_waveform(
         linguistic_features = fe.linguistic_features(
             labels,
             binary_dict,
-            continuous_dict,
+            numeric_dict,
             add_frame_features=True,
             subphone_features=subphone_features,
         )
