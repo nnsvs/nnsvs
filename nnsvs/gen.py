@@ -173,95 +173,6 @@ def predict_timelag(
     return pred_timelag
 
 
-def postprocess_duration(labels, pred_durations, lag):
-    """Post-process durations based on predicted time-lag
-
-    Ref : https://arxiv.org/abs/2108.02776
-
-    Args:
-        labels (HTSLabelFile): HTS labels
-        pred_durations (array or tuple): predicted durations for non-MDN,
-            mean and variance for MDN
-        lag (array): predicted time-lag
-
-    Returns:
-        HTSLabelFile: labels with adjusted durations
-    """
-    note_indices = get_note_indices(labels)
-    # append the end of note
-    note_indices.append(len(labels))
-
-    is_mdn = isinstance(pred_durations, tuple) and len(pred_durations) == 2
-
-    output_labels = hts.HTSLabelFile()
-
-    for i in range(1, len(note_indices)):
-        p = labels[note_indices[i - 1] : note_indices[i]]
-
-        # Compute note duration with time-lag
-        # eq (11)
-        L = int(fe.duration_features(p)[0])
-        if i < len(note_indices) - 1:
-            L_hat = L - (lag[i - 1] - lag[i]) / 50000
-        else:
-            L_hat = L - (lag[i - 1]) / 50000
-
-        # adjust the start time of the note
-        p.start_times = np.minimum(
-            np.asarray(p.start_times) + lag[i - 1].reshape(-1),
-            np.asarray(p.end_times) - 50000 * len(p),
-        )
-        p.start_times = np.maximum(p.start_times, 0)
-        if len(output_labels) > 0:
-            p.start_times = np.maximum(
-                p.start_times, output_labels.start_times[-1] + 50000
-            )
-
-        # Compute normalized phoneme durations
-        if is_mdn:
-            mu = pred_durations[0][note_indices[i - 1] : note_indices[i]]
-            sigma_sq = pred_durations[1][note_indices[i - 1] : note_indices[i]]
-            # eq (17)
-            rho = (L_hat - mu.sum()) / sigma_sq.sum()
-            # eq (16)
-            d_norm = mu + rho * sigma_sq
-
-            if np.any(d_norm <= 0):
-                # eq (12) (using mu as d_hat)
-                print(
-                    f"Negative phoneme durations are predicted at {i}-th note. "
-                    "The note duration: ",
-                    f"{round(float(L)*0.005,3)} sec -> {round(float(L_hat)*0.005,3)} sec",
-                )
-                print(
-                    "It's likely that the model couldn't predict correct durations "
-                    "for short notes."
-                )
-                print(
-                    f"Variance scaling based durations (in frame):\n{(mu + rho * sigma_sq)}"
-                )
-                print(
-                    f"Fallback to uniform scaling (in frame):\n{(L_hat * mu / mu.sum())}"
-                )
-                d_norm = L_hat * mu / mu.sum()
-        else:
-            # eq (12)
-            d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
-            d_norm = L_hat * d_hat / d_hat.sum()
-
-        d_norm = np.round(d_norm)
-        d_norm[d_norm <= 0] = 1
-
-        p.set_durations(d_norm)
-
-        if len(output_labels) > 0:
-            output_labels.end_times[-1] = p.start_times[0]
-        for n in p:
-            output_labels.append(n)
-
-    return output_labels
-
-
 def predict_duration(
     device,
     labels,
@@ -350,6 +261,95 @@ def predict_duration(
     pred_durations = np.round(pred_durations)
 
     return pred_durations
+
+
+def postprocess_duration(labels, pred_durations, lag):
+    """Post-process durations based on predicted time-lag
+
+    Ref : https://arxiv.org/abs/2108.02776
+
+    Args:
+        labels (HTSLabelFile): HTS labels
+        pred_durations (array or tuple): predicted durations for non-MDN,
+            mean and variance for MDN
+        lag (array): predicted time-lag
+
+    Returns:
+        HTSLabelFile: labels with adjusted durations
+    """
+    note_indices = get_note_indices(labels)
+    # append the end of note
+    note_indices.append(len(labels))
+
+    is_mdn = isinstance(pred_durations, tuple) and len(pred_durations) == 2
+
+    output_labels = hts.HTSLabelFile()
+
+    for i in range(1, len(note_indices)):
+        p = labels[note_indices[i - 1] : note_indices[i]]
+
+        # Compute note duration with time-lag
+        # eq (11)
+        L = int(fe.duration_features(p)[0])
+        if i < len(note_indices) - 1:
+            L_hat = L - (lag[i - 1] - lag[i]) / 50000
+        else:
+            L_hat = L - (lag[i - 1]) / 50000
+
+        # adjust the start time of the note
+        p.start_times = np.minimum(
+            np.asarray(p.start_times) + lag[i - 1].reshape(-1),
+            np.asarray(p.end_times) - 50000 * len(p),
+        )
+        p.start_times = np.maximum(p.start_times, 0)
+        if len(output_labels) > 0:
+            p.start_times = np.maximum(
+                p.start_times, output_labels.start_times[-1] + 50000
+            )
+
+        # Compute normalized phoneme durations
+        if is_mdn:
+            mu = pred_durations[0][note_indices[i - 1] : note_indices[i]]
+            sigma_sq = pred_durations[1][note_indices[i - 1] : note_indices[i]]
+            # eq (17)
+            rho = (L_hat - mu.sum()) / sigma_sq.sum()
+            # eq (16)
+            d_norm = mu + rho * sigma_sq
+
+            if np.any(d_norm <= 0):
+                # eq (12) (using mu as d_hat)
+                print(
+                    f"Negative phoneme durations are predicted at {i}-th note. "
+                    "The note duration: ",
+                    f"{round(float(L)*0.005,3)} sec -> {round(float(L_hat)*0.005,3)} sec",
+                )
+                print(
+                    "It's likely that the model couldn't predict correct durations "
+                    "for short notes."
+                )
+                print(
+                    f"Variance scaling based durations (in frame):\n{(mu + rho * sigma_sq)}"
+                )
+                print(
+                    f"Fallback to uniform scaling (in frame):\n{(L_hat * mu / mu.sum())}"
+                )
+                d_norm = L_hat * mu / mu.sum()
+        else:
+            # eq (12)
+            d_hat = pred_durations[note_indices[i - 1] : note_indices[i]]
+            d_norm = L_hat * d_hat / d_hat.sum()
+
+        d_norm = np.round(d_norm)
+        d_norm[d_norm <= 0] = 1
+
+        p.set_durations(d_norm)
+
+        if len(output_labels) > 0:
+            output_labels.end_times[-1] = p.start_times[0]
+        for n in p:
+            output_labels.append(n)
+
+    return output_labels
 
 
 def predict_acoustic(
