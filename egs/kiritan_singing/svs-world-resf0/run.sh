@@ -89,7 +89,7 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
-    . $NNSVS_COMMON_ROOT/train_acoustic.sh
+    . $NNSVS_COMMON_ROOT/train_resf0_acoustic.sh
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
@@ -99,7 +99,7 @@ fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     echo "stage 6: Synthesis waveforms"
-    . $NNSVS_COMMON_ROOT/synthesis.sh
+    . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
 fi
 
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
