@@ -180,7 +180,6 @@ def predict_duration(
     duration_config,
     duration_in_scaler,
     duration_out_scaler,
-    lag,
     binary_dict,
     continuous_dict,
     pitch_indices=None,
