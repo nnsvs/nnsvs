@@ -4,11 +4,12 @@ from os.path import exists, join
 import hydra
 import joblib
 import numpy as np
+import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnsvs.gen import (
-    gen_waveform,
+    gen_world_params,
     postprocess_duration,
     predict_acoustic,
     predict_duration,
@@ -124,8 +125,8 @@ def synthesis(
         acoustic_clip_input_features,
     )
 
-    # Waveform generation
-    generated_waveform = gen_waveform(
+    # Generate WORLD parameters
+    f0, spectrogram, aperiodicity = gen_world_params(
         duration_modified_labels,
         acoustic_features,
         binary_dict,
@@ -142,7 +143,11 @@ def synthesis(
         config.vibrato_scale,
     )
 
-    return generated_waveform
+    wav = pyworld.synthesize(
+        f0, spectrogram, aperiodicity, config.sample_rate, config.frame_period
+    )
+
+    return wav
 
 
 @hydra.main(config_path="conf/synthesis", config_name="config")

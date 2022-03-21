@@ -447,7 +447,7 @@ def predict_acoustic(
     return pred_acoustic
 
 
-def gen_waveform(
+def gen_world_params(
     labels,
     acoustic_features,
     binary_dict,
@@ -546,12 +546,8 @@ def gen_waveform(
             # Generate diff-based vibrato
             f0 = f0.flatten() + vibrato_scale * vib.flatten()
 
-    generated_waveform = pyworld.synthesize(
-        f0.flatten().astype(np.float64),
-        spectrogram.astype(np.float64),
-        aperiodicity.astype(np.float64),
-        sample_rate,
-        frame_period,
-    )
+    f0 = f0.flatten().astype(np.float64)
+    spectrogram = spectrogram.astype(np.float64)
+    aperiodicity = aperiodicity.astype(np.float64)
 
-    return generated_waveform
+    return f0, spectrogram, aperiodicity
