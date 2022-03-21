@@ -2,11 +2,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pyworld
 import torch
 from hydra.utils import instantiate
 from nnmnkwii.io import hts
 from nnsvs.gen import (
-    gen_waveform,
+    gen_world_params,
     postprocess_duration,
     predict_acoustic,
     predict_duration,
@@ -139,7 +140,7 @@ Acoustic model: {acoustic_str}
         self.acoustic_model.to(device)
 
     @torch.no_grad()
-    def svs(self, labels):
+    def svs(self, labels, return_states=False):
         """Synthesize waveform given HTS-style labels
 
         Args:
@@ -198,8 +199,8 @@ Acoustic model: {acoustic_str}
             self.config.acoustic.force_clip_input_features,
         )
 
-        # Waveform generation
-        wav = gen_waveform(
+        # Generate WORLD parameters
+        f0, spectrogram, aperiodicity = gen_world_params(
             duration_modified_labels,
             acoustic_features,
             self.binary_dict,
@@ -215,7 +216,25 @@ Acoustic model: {acoustic_str}
             self.config.acoustic.relative_f0,
         )
 
-        return self.post_process(wav), self.config.sample_rate
+        wav = pyworld.synthesize(
+            f0,
+            spectrogram,
+            aperiodicity,
+            self.config.sample_rate,
+            self.config.frame_period,
+        )
+
+        wav = self.post_process(wav)
+
+        if return_states:
+            states = {
+                "f0": f0,
+                "spectrogram": spectrogram,
+                "aperiodicity": aperiodicity,
+            }
+            return wav, self.config.sample_rate, states
+
+        return wav, self.config.sample_rate
 
     def post_process(self, wav):
         if np.max(wav) > 10:
