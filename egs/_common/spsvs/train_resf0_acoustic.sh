@@ -8,7 +8,7 @@ else
 fi
 
 if [ ! -z "${pretrained_expdir}" ]; then
-    resume_checkpoint=$pretrained_expdir/acoustic/latest.pth
+    resume_checkpoint=$pretrained_expdir/${acoustic_model}/latest.pth
 else
     resume_checkpoint=
 fi
@@ -20,6 +20,6 @@ xrun nnsvs-train-resf0 $ext \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
     data.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
-    train.out_dir=$expdir/acoustic \
-    train.log_dir=tensorboard/${expname}_acoustic \
+    train.out_dir=$expdir/${acoustic_model} \
+    train.log_dir=tensorboard/${expname}_${acoustic_model} \
     train.resume.checkpoint=$resume_checkpoint
