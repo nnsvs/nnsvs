@@ -67,9 +67,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
-    grep 01_ data/list/utt_list.txt > data/list/$eval_set.list
-    grep 02_ data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v 01_ data/list/utt_list.txt | grep -v 02_ > data/list/$train_set.list
+    grep 05_ data/list/utt_list.txt > data/list/$eval_set.list
+    grep 01_ data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v 01_ data/list/utt_list.txt | grep -v 05_ > data/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
