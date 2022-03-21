@@ -93,3 +93,47 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
                     dtype=torch.bool in PyTorch 1.2+ (including 1.2)
     """
     return ~make_pad_mask(lengths, xs, length_dim, maxlen)
+
+
+class StandardScaler:
+    """sklearn.preprocess.StandardScaler like class with only
+    transform functionality
+
+    Args:
+        mean (np.ndarray): mean
+        std (np.ndarray): standard deviation
+    """
+
+    def __init__(self, mean, var, scale):
+        self.mean_ = mean
+        self.var_ = var
+        # NOTE: scale may not exactly same as np.sqrt(var)
+        self.scale_ = scale
+
+    def transform(self, x):
+        return (x - self.mean_) / self.scale_
+
+    def inverse_transform(self, x):
+        return x * self.scale_ + self.mean_
+
+
+class MinMaxScaler:
+    """sklearn.preprocess.MinMaxScaler like class with only
+    transform functionality
+
+    Args:
+        min (np.ndarray): minimum
+        scale (np.ndarray): scale
+        feature_range (tuple): (min, max)
+    """
+
+    def __init__(self, min, scale, feature_range=(0, 1)):
+        self.min_ = min
+        self.scale_ = scale
+        self.feature_range = feature_range
+
+    def transform(self, x):
+        return self.scale_ * x + self.min_
+
+    def inverse_transform(self, x):
+        return (x - self.min_) / self.scale_
