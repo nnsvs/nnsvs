@@ -1,7 +1,7 @@
 # NNSVS Streamlit demo
 This folder explain how to work with this demo
 
-![](streamlit_demo/imgs/demo.png)
+![demo image](imgs/demo.png)
 
 * install the requirements
 ```
