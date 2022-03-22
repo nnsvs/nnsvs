@@ -1,4 +1,6 @@
+import importlib
 import random
+from typing import Any
 
 import numpy as np
 import torch
@@ -12,6 +14,20 @@ def init_seed(seed):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def dynamic_import(name: str) -> Any:
+    """Dynamic import
+
+    Args:
+        name (str): module_name + ":" + class_name
+
+    Returns:
+        Any: class object
+    """
+    mod_name, class_name = name.split(":")
+    mod = importlib.import_module(mod_name)
+    return getattr(mod, class_name)
 
 
 def pad_2d(x, max_len, constant_values=0):
