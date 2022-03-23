@@ -19,7 +19,7 @@ voice_option = st.selectbox("Select the voice", models.keys())
 uploaded_file = st.file_uploader("Choose a .xml music file", type="xml")
 
 if st.button("synthesis") and uploaded_file:
-    with st.spinner(f"Synthesizing to wav"):
+    with st.spinner("Synthesizing to wav"):
         # synthesize
         with tempfile.NamedTemporaryFile(suffix=".xml") as f:
             f.write(uploaded_file.getbuffer())
