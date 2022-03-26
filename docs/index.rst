@@ -9,7 +9,7 @@ NN-SVS
 Neural network based singing voice synthesis library
 
 Audio samples
--------
+-------------
 
 - Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
 - Samples by NNSVS/ENUNU community: https://www.youtube.com/results?search_query=nnsvs+enunu
