@@ -36,6 +36,17 @@ setup(
         "pysinsy",
     ],
     extras_require={
+        "docs": [
+            "sphinx",
+            "sphinx-autobuild",
+            "sphinx_rtd_theme",
+            "nbsphinx>=0.8.6",
+            "sphinxcontrib-bibtex",
+            "Jinja2>=3.0.1",
+            "pandoc",
+            "ipython",
+            "jupyter",
+        ],
         "lint": [
             "pysen",
             "types-setuptools",
