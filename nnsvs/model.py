@@ -154,6 +154,8 @@ class LSTMRNN(BaseModel):
         self.hidden2out = nn.Linear(self.num_direction * self.hidden_dim, out_dim)
 
     def forward(self, sequence, lengths):
+        if isinstance(lengths, torch.Tensor):
+            lengths = lengths.to("cpu")
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
@@ -237,6 +239,8 @@ class RMDN(BaseModel):
         return PredictionType.PROBABILISTIC
 
     def forward(self, x, lengths):
+        if isinstance(lengths, torch.Tensor):
+            lengths = lengths.to("cpu")
         out = self.linear(x)
         sequence = pack_padded_sequence(self.relu(out), lengths, batch_first=True)
         out, _ = self.lstm(sequence)
@@ -554,6 +558,9 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.fc = nn.Linear(num_direction * lstm_hidden_dim, out_dim)
 
     def forward(self, x, lengths=None):
+        if isinstance(lengths, torch.Tensor):
+            lengths = lengths.to("cpu")
+
         lf0_score = x[:, :, self.in_lf0_idx].unsqueeze(-1)
 
         out = self.ff(x)
