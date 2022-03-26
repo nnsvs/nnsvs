@@ -30,7 +30,7 @@ def train_step(
     prediction_type = (
         model.module.prediction_type()
         if isinstance(model, nn.DataParallel)
-        else prediction_type
+        else model.prediction_type()
     )
 
     # Apply preprocess if required (e.g., FIR filter for shallow AR)
