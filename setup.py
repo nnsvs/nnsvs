@@ -1,4 +1,3 @@
-# coding: utf-8
 from importlib.machinery import SourceFileLoader
 from os.path import exists
 
