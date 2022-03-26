@@ -41,7 +41,7 @@ setup(
             "sphinx_rtd_theme",
             "nbsphinx>=0.8.6",
             "sphinxcontrib-bibtex",
-            "Jinja2>=3.0.1",
+            "Jinja2>=3.0.1,<=3.0.3",
             "pandoc",
             "ipython",
             "jupyter",
