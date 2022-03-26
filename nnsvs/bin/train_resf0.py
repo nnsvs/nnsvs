@@ -93,10 +93,18 @@ def train_step(
     optimizer.zero_grad()
 
     criterion = nn.MSELoss(reduction="none")
+    prediction_type = (
+        model.module.prediction_type()
+        if isinstance(model, nn.DataParallel)
+        else prediction_type
+    )
 
     # Apply preprocess if required (e.g., FIR filter for shallow AR)
     # defaults to no-op
-    out_feats = model.preprocess_target(out_feats)
+    if isinstance(model, nn.DataParallel):
+        out_feats = model.module.preprocess_target(out_feats)
+    else:
+        out_feats = model.preprocess_target(out_feats)
 
     # Run forward
     pred_out_feats, lf0_residual = model(in_feats, lengths)
@@ -105,7 +113,7 @@ def train_step(
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
     # Compute loss
-    if model.prediction_type() == PredictionType.PROBABILISTIC:
+    if prediction_type == PredictionType.PROBABILISTIC:
         pi, sigma, mu = pred_out_feats
 
         # (B, max(T)) or (B, max(T), D_out)
