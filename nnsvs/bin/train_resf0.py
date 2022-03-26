@@ -230,6 +230,9 @@ def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
     if in_scaler is None or out_scaler is None:
         raise ValueError("in_scaler and out_scaler must be specified")
 
+    if isinstance(model, nn.DataParallel):
+        model = model.module
+
     in_lf0_idx = config.data.in_lf0_idx
     in_rest_idx = config.data.in_rest_idx
     out_lf0_idx = config.data.out_lf0_idx
