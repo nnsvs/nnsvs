@@ -14,8 +14,8 @@ function xrun () {
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/../../../
-NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
-NO2_ROOT=$NNSVS_ROOT/egs/_common/no2
+NNSVS_COMMON_ROOT=$NNSVS_ROOT/recipes/_common/spsvs
+NO2_ROOT=$NNSVS_ROOT/recipes/_common/no2
 . $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
 
 eval $(parse_yaml "./config.yaml" "")
@@ -49,11 +49,11 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 	cat<<EOF
 stage -1: Downloading
 
-This recipe does not download Natsume_Singing_DB.zip to 
+This recipe does not download Natsume_Singing_DB.zip to
 provide you the opportunity to read the original license.
 
 Please visit https://amanokei.hatenablog.com/entry/2020/04/30/230003
-and read the term of services, and then download the singing voice database 
+and read the term of services, and then download the singing voice database
 manually.
 EOF
     fi

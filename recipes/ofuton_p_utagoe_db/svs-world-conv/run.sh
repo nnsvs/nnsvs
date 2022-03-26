@@ -14,8 +14,8 @@ function xrun () {
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/../../../
-NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
-NO2_ROOT=$NNSVS_ROOT/egs/_common/no2
+NNSVS_COMMON_ROOT=$NNSVS_ROOT/recipes/_common/spsvs
+NO2_ROOT=$NNSVS_ROOT/recipes/_common/no2
 . $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
 
 eval $(parse_yaml "./config.yaml" "")
@@ -53,10 +53,10 @@ This recipe does not download OFTON_P_UTAGOE_DB.zip to
 provide you the opportunity to read the original license.
 
 Please visit https://sites.google.com/view/oftn-utagoedb/%E3%83%9B%E3%83%BC%E3%83%A0
-and read the term of services, and then download the singing voice database 
+and read the term of services, and then download the singing voice database
 manually.
 EOF
-	
+
     fi
 fi
 

@@ -14,8 +14,8 @@ function xrun () {
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/../../../
-NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
-NO2_ROOT=$NNSVS_ROOT/egs/_common/no2
+NNSVS_COMMON_ROOT=$NNSVS_ROOT/recipes/_common/spsvs
+NO2_ROOT=$NNSVS_ROOT/recipes/_common/no2
 . $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
 
 eval $(parse_yaml "./config.yaml" "")
@@ -48,7 +48,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 	cat<<EOF
 stage -1: Downloading
 
-This recipe does not download ONIKU_KURUMI_UTAGOE_DB.zip automatically to 
+This recipe does not download ONIKU_KURUMI_UTAGOE_DB.zip automatically to
 provide you the opportunity to read the original license.
 
 Please visit http://onikuru.info/db-download/ and read the term of services,
