@@ -14,13 +14,13 @@ class MDNLayer(nn.Module):
 
     Implementation references:
     1. Mixture Density Networks by Mike Dusenberry
-        https://mikedusenberry.com/mixture-density-networks
+    https://mikedusenberry.com/mixture-density-networks
     2. PRML book
-        https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/
+    https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/
     3. sagelywizard/pytorch-mdn
-        https://github.com/sagelywizard/pytorch-mdn
+    https://github.com/sagelywizard/pytorch-mdn
     4. sksq96/pytorch-mdn
-        https://github.com/sksq96/pytorch-mdn
+    https://github.com/sksq96/pytorch-mdn
 
     Attributes:
         in_dim (int): the number of dimensions in the input
