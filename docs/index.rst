@@ -17,23 +17,32 @@ Audio samples
 Installation
 -------------
 
+
+For development
+^^^^^^^^^^^^^^^^
+
 .. code::
 
+   git clone https://github.com/r9y9/nnsvs.git && cd nnsvs
    pip install -e ".[lint.test]"
 
-Note: adding ``[lint,test]`` to the end of the command above will installk test/lint requirements as well.
-If you don't want the extra requirements to be installed, you can run:
+Note: adding ``[lint,test]`` to the end of the command above will install test/lint requirements as well.
+
+For inference only
+^^^^^^^^^^^^^^^^^^
 
 .. code::
 
-      pip install -e .
+   pip install nnsvs
 
+If you don't need to train your models by yourself (I guess it's unlikely though), this should be enough.
 
 .. toctree::
    :maxdepth: 1
    :caption: Demos
 
    notebooks/Demos.ipynb
+   demo_server
 
 .. toctree::
    :maxdepth: 1
@@ -47,6 +56,7 @@ If you don't want the extra requirements to be installed, you can run:
    :caption: Package reference
 
    svs
+   pretrained
    mdn
    pitch
 
