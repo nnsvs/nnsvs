@@ -10,6 +10,17 @@ egs*/*/*/outputs
 egs*/*/*/*.wav
 egs*/*/*/packed_models
 
+recipes*/*/*/data*
+recipes*/*/*/db
+recipes*/*/*/downloads
+recipes*/*/*/dump
+recipes*/*/*/exp
+recipes*/*/*/tensorboard
+recipes*/*/*/wav*
+recipes*/*/*/outputs
+recipes*/*/*/*.wav
+recipes*/*/*/packed_models
+
 # misc
 notebooks
 demo
