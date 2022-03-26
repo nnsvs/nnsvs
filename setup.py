@@ -45,6 +45,7 @@ setup(
             "pandoc",
             "ipython",
             "jupyter",
+            "matplotlib>=1.5",
         ],
         "lint": [
             "pysen",
