@@ -373,7 +373,7 @@ CQS "e16_position_by_percent_in_measure"   {=(\d+)^}
 CQS "e17_position_by_percent_in_measure"   {^(\d+)~}
 
 # taken from enunu
-CQS "e18_position_by_note"      {∼(\d+)#}
+CQS "e18_position_by_note"      {~(\d+)#}
 CQS "e19_position_by_note"      {#(\d+)_}
 CQS "e20_position_by_10ms"      {_(\d+);}
 CQS "e21_position_by_10ms"      {;(\d+)$}
