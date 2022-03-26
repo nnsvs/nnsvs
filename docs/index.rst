@@ -44,6 +44,14 @@ If you don't want the extra requirements to be installed, you can run:
 
 .. toctree::
    :maxdepth: 1
+   :caption: Package reference
+
+   svs
+   mdn
+   pitch
+
+.. toctree::
+   :maxdepth: 1
    :caption: Resources
 
    related

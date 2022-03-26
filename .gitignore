@@ -13,6 +13,7 @@ egs*/*/*/packed_models
 # misc
 notebooks
 demo
+docs/generated
 
 # Created by https://www.gitignore.io/api/osx,vim,linux,emacs,python,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=osx,vim,linux,emacs,python,visualstudiocode
