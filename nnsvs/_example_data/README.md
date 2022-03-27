@@ -3,7 +3,7 @@ for research and development purpose.
 
 ## Notes
 
-05_short.xml was made by modifing 05.xml from:
+05_short.xml was made by modifying 05.xml from:
 https://github.com/mmorise/kiritan_singing
 
 song070_f00001_063.xml was taken from:
