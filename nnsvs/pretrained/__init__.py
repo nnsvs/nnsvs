@@ -25,8 +25,7 @@ model_registry = {
     },
     # yoko
     "r9y9/yoko_latest": {
-        "url": "https://www.dropbox.com/s/k8mya65yt52m0ps/"
-        "yoko_latest.tar.gz?dl=1",
+        "url": "https://www.dropbox.com/s/k8mya65yt52m0ps/yoko_latest.tar.gz?dl=1",
         "_target_": "nnsvs.svs:SPSVS",
     },
     "r9y9/20220322_yoko_timelag_mdn_duration_mdn_acoustic_resf0conv": {
