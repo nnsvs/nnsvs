@@ -12,7 +12,7 @@ Audio samples
 -------------
 
 - Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
-- Samples by NNSVS/ENUNU community: https://www.youtube.com/results?search_query=nnsvs+enunu
+- Samples by NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs?ref=nicotop_search>`_
 
 Installation
 -------------
@@ -41,7 +41,8 @@ If you don't need to train your models by yourself (I guess it's unlikely though
    :maxdepth: 1
    :caption: Demos
 
-   notebooks/Demos.ipynb
+   notebooks/Demos
+   notebooks/NNSVS_vs_Sinsy
    demo_server
 
 .. toctree::
