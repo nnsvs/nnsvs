@@ -1,10 +1,19 @@
-# Minimal version of jp_experiemntal
+# Minimal version of jp_experiemntal (by r9y9)
 # Note that this hed file is meant to be used for experimental purposes and is subject to change.
-# features dim: 171 for acoustic model, 167 duration/timelag
+# feature dim:: 206 for acoustic model, 202 for duration/timelag
+# in_rest_idx: 1
+# in_lf0_idx: 157
 
 QS "L-Phone_Muon"     {*^sil-*,*^pau-*}
 QS "C-Phone_Muon"     {*-sil+*,*-pau+*}
 QS "R-Phone_Muon"     {*+sil=*,*+pau=*}
+
+QS "L-Phone_Yuuseion" {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^v-*,*^b-*,*^by-*,*^m-*,*^my-*,*^w-*,*^z-*,*^j-*,*^d-*,*^dy-*,*^n-*,*^ny-*,*^N-*,*^r-*,*^ry-*,*^g-*,*^gy-*,*^y-*}
+QS "L-Phone_Museion"  {*^A-*,*^I-*,*^U-*,*^E-*,*^O-*,*^f-*,*^p-*,*^py-*,*^s-*,*^sh-*,*^ts-*,*^ch-*,*^t-*,*^ty-*,*^k-*,*^ky-*,*^h-*,*^hy-*}
+QS "L-Phone_Boin"                  {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^A-*,*^I-*,*^U-*,*^E-*,*^O-*}
+QS "L-Phone_Yuusei_Shiin" {*^v-*,*^b-*,*^by-*,*^m-*,*^my-*,*^w-*,*^z-*,*^j-*,*^d-*,*^dy-*,*^n-*,*^ny-*,*^N-*,*^r-*,*^ry-*,*^g-*,*^gy-*,*^y-*}
+QS "L-Phone_Musei_Shiin"  {*^f-*,*^p-*,*^py-*,*^s-*,*^sh-*,*^ts-*,*^ch-*,*^t-*,*^ty-*,*^k-*,*^ky-*,*^h-*,*^hy-*}
+QS "L-Phone_Youon" {*^by-*,*^my-*,*^j-*,*^dy-*,*^ny-*,*^ry-*,*^gy-*,*^py-*,*^sh-*,*^ch-*,*^ty-*,*^ky-*,*^hy-*}
 
 QS "L-Phone_A"   {*^A-*}
 QS "L-Phone_E"   {*^E-*}
@@ -52,6 +61,13 @@ QS "L-Phone_w"   {*^w-*}
 QS "L-Phone_y"   {*^y-*}
 QS "L-Phone_z"   {*^z-*}
 
+QS "C-Phone_Yuuseion" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
+QS "C-Phone_Museion"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
+QS "C-Phone_Boin"                  {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-A+*,*-I+*,*-U+*,*-E+*,*-O+*}
+QS "C-Phone_Yuusei_Shiin" {*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
+QS "C-Phone_Musei_Shiin"  {*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
+QS "C-Phone_Youon" {*-by+*,*-my+*,*-j+*,*-dy+*,*-ny+*,*-ry+*,*-gy+*,*-py+*,*-sh+*,*-ch+*,*-ty+*,*-ky+*,*-hy+*}
+
 QS "C-Phone_A"   {*-A+*}
 QS "C-Phone_E"   {*-E+*}
 QS "C-Phone_I"   {*-I+*}
@@ -97,6 +113,13 @@ QS "C-Phone_v"   {*-v+*}
 QS "C-Phone_w"   {*-w+*}
 QS "C-Phone_y"   {*-y+*}
 QS "C-Phone_z"   {*-z+*}
+
+QS "R-Phone_Yuusei_Shiin" {*+v=*,*+b=*,*+by=*,*+m=*,*+my=*,*+w=*,*+z=*,*+j=*,*+d=*,*+dy=*,*+n=*,*+ny=*,*+N=*,*+r=*,*+ry=*,*+g=*,*+gy=*,*+y=*}
+QS "R-Phone_Musei_Shiin"  {*+f=*,*+p=*,*+py=*,*+s=*,*+sh=*,*+ts=*,*+ch=*,*+t=*,*+ty=*,*+k=*,*+ky=*,*+h=*,*+hy=*}
+QS "R-Phone_Boin"                  {*+a=*,*+i=*,*+u=*,*+e=*,*+o=*,*+A=*,*+I=*,*+U=*,*+E=*,*+O=*}
+QS "R-Phone_Yuusei_Shiin" {*+v=*,*+b=*,*+by=*,*+m=*,*+my=*,*+w=*,*+z=*,*+j=*,*+d=*,*+dy=*,*+n=*,*+ny=*,*+N=*,*+r=*,*+ry=*,*+g=*,*+gy=*,*+y=*}
+QS "R-Phone_Musei_Shiin"  {*+f=*,*+p=*,*+py=*,*+s=*,*+sh=*,*+ts=*,*+ch=*,*+t=*,*+ty=*,*+k=*,*+ky=*,*+h=*,*+hy=*}
+QS "R-Phone_Youon" {*+by=*,*+my=*,*+j=*,*+dy=*,*+ny=*,*+ry=*,*+gy=*,*+py=*,*+sh=*,*+ch=*,*+ty=*,*+ky=*,*+hy=*}
 
 QS "R-Phone_A"   {*+A=*}
 QS "R-Phone_E"   {*+E=*}
@@ -158,14 +181,37 @@ CQS "f2" {#(\d+)#}
 CQS "p12" {-(\d+)!}
 CQS "p13" {!(\d+)[}
 
-# note potional features (C)
+# distance between consonant and vowel
+CQS "p14" {[(\d+)$}
+CQS "p15" {$(\d+)]}
+
+# number of phonemes in a syllable (L/C/R)
+CQS "a1" {/A:(\d+)-}
+CQS "b1" {/B:(\d+)_}
+CQS "c1" {/C:(\d+)+}
+
+# syllable potional features (L/C/R)
+CQS "a2" {-(\d+)-}
+CQS "a3" {-(\d+)@}
 CQS "b2" {_(\d+)_}
 CQS "b3" {_(\d+)@}
+CQS "c2" {+(\d+)+}
+CQS "c3" {+(\d+)@}
 
 # length of current note (C)
 CQS "e6" {!(\d+)@}
 CQS "e7" {@(\d+)#}
 CQS "e8" {#(\d+)+}
+
+# length of previous note (L)
+CQS "d6" {|(\d+)&}
+CQS "d7" {&(\d+);}
+CQS "d8" {;(\d+)-}
+
+# length of next note (R)
+CQS "f6" {$(\d+)+}
+CQS "f7" {+(\d+)%}
+CQS "f8" {%(\d+);}
 
 # note-level positional features in measures (C)
 CQS "e10_position_by_note_in_measure"      {](\d+)$}
@@ -186,3 +232,7 @@ CQS "e22_position_by_96th_note" {$(\d+)&}
 CQS "e23_position_by_96th_note" {&(\d+)%}
 CQS "e24_position_by_percent"   {%(\d+)[}
 CQS "e25_position_by_percent"   {[(\d+)|}
+
+# pitch diff
+CQS "e57" {~([pm]\d+)+}
+CQS "e58" {+([pm]\d+)!}

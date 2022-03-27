@@ -2,17 +2,13 @@
 # Note that this hed file is meant to be used for experimental purposes and is subject to change.
 # I use this config for nit-song070 and kiritan_singing databases for testing.
 # made based on jp_qst004_nnsvs.hed
-# features dim: 348 for acoustic model, 344 duration/timelag
+# feature dim:: 335 for acoustic model, 331 for duration/timelag
+# in_rest_idx: 1
+# in_lf0_idx: 286
 
 QS "L-Phone_Muon"     {*^sil-*,*^pau-*}
 QS "C-Phone_Muon"     {*-sil+*,*-pau+*}
 QS "R-Phone_Muon"     {*+sil=*,*+pau=*}
-
-QS "C-Phone_Language_Independent_Silence"   {s@*}
-QS "C-Phone_Language_Independent_Pause"     {p@*}
-QS "C-Phone_Language_Independent_Break"     {b@*}
-QS "C-Phone_Language_Independent_Consonant" {c@*}
-QS "C-Phone_Language_Independent_Vowel"     {v@*}
 
 QS "L-Phone_Yuuseion" {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^v-*,*^b-*,*^by-*,*^m-*,*^my-*,*^w-*,*^z-*,*^j-*,*^d-*,*^dy-*,*^n-*,*^ny-*,*^N-*,*^r-*,*^ry-*,*^g-*,*^gy-*,*^y-*}
 QS "L-Phone_Museion"  {*^A-*,*^I-*,*^U-*,*^E-*,*^O-*,*^f-*,*^p-*,*^py-*,*^s-*,*^sh-*,*^ts-*,*^ch-*,*^t-*,*^ty-*,*^k-*,*^ky-*,*^h-*,*^hy-*}
@@ -317,52 +313,53 @@ QS "R-Phone_w"   {*+w=*}
 QS "R-Phone_y"   {*+y=*}
 QS "R-Phone_z"   {*+z=*}
 
+# absolute pitch (L/C/R)
 CQS "d1" {/D:(\NOTE)!}
 CQS "e1" {/E:(\NOTE)]}
 CQS "f1" {/F:(\NOTE)#}
 
+# relative pitch (L/C/R)
+CQS "d2" {!(\d+)#}
+CQS "e2" {](\d+)^}
+CQS "f2" {#(\d+)#}
+
+# phoneme-level positional features (C)
 CQS "p12" {-(\d+)!}
 CQS "p13" {!(\d+)[}
 
+# distance between consonant and vowel
+CQS "p14" {[(\d+)$}
 CQS "p15" {$(\d+)]}
+
+# number of phonemes in a syllable (L/C/R)
 CQS "a1" {/A:(\d+)-}
+CQS "b1" {/B:(\d+)_}
+CQS "c1" {/C:(\d+)+}
+
+# syllable potional features (L/C/R)
 CQS "a2" {-(\d+)-}
 CQS "a3" {-(\d+)@}
-
-QS "L-Syllable_Language=JPN" {*@JPN~*}
-
-QS "L-Syllable_Language=JPN_0" {*@JPN~0/B:*}
-QS "L-Syllable_Language=JPN_1" {*@JPN~1/B:*}
-
-CQS "b1" {/B:(\d+)_}
 CQS "b2" {_(\d+)_}
 CQS "b3" {_(\d+)@}
-QS "C-Syllable_Language=JPN" {*@JPN|*}
-
-QS "C-Syllable_Language=JPN_0" {*@JPN|0/C:*}
-QS "C-Syllable_Language=JPN_1" {*@JPN|1/C:*}
-
-CQS "c1" {/C:(\d+)+}
 CQS "c2" {+(\d+)+}
 CQS "c3" {+(\d+)@}
 
-QS "R-Syllable_Language=JPN" {*@JPN&*}
-
-QS "R-Syllable_Language=JPN_0" {*@JPN&0/D:*}
-QS "R-Syllable_Language=JPN_1" {*@JPN&1/D:*}
-
-CQS "d2" {!(\d+)#}
-
-CQS "d6" {|(\d+)&}
-CQS "d7" {&(\d+);}
-CQS "d8" {;(\d+)-}
-
-CQS "e2" {](\d+)^}
-
+# length of current note (C)
 CQS "e6" {!(\d+)@}
 CQS "e7" {@(\d+)#}
 CQS "e8" {#(\d+)+}
 
+# length of previous note (L)
+CQS "d6" {|(\d+)&}
+CQS "d7" {&(\d+);}
+CQS "d8" {;(\d+)-}
+
+# length of next note (R)
+CQS "f6" {$(\d+)+}
+CQS "f7" {+(\d+)%}
+CQS "f8" {%(\d+);}
+
+# note-level positional features in measures (C)
 CQS "e10_position_by_note_in_measure"      {](\d+)$}
 CQS "e11_position_by_note_in_measure"      {$(\d+)|}
 CQS "e12_position_by_10ms_in_measure"      {|(\d+)[}
@@ -372,7 +369,7 @@ CQS "e15_position_by_96th_note_in_measure" {](\d+)=}
 CQS "e16_position_by_percent_in_measure"   {=(\d+)^}
 CQS "e17_position_by_percent_in_measure"   {^(\d+)~}
 
-# taken from enunu
+# note-level positional features in phrase (C)
 CQS "e18_position_by_note"      {~(\d+)#}
 CQS "e19_position_by_note"      {#(\d+)_}
 CQS "e20_position_by_10ms"      {_(\d+);}
@@ -382,11 +379,6 @@ CQS "e23_position_by_96th_note" {&(\d+)%}
 CQS "e24_position_by_percent"   {%(\d+)[}
 CQS "e25_position_by_percent"   {[(\d+)|}
 
+# pitch diff
 CQS "e57" {~([pm]\d+)+}
 CQS "e58" {+([pm]\d+)!}
-
-CQS "f2" {#(\d+)#}
-
-CQS "f6" {$(\d+)+}
-CQS "f7" {+(\d+)%}
-CQS "f8" {%(\d+);}
