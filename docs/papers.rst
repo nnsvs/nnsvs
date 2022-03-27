@@ -4,9 +4,10 @@ Papers
 Statistical parametric SVS
 --------------------------
 
-- :cite:t:`oura2010recent`
-- :cite:t:`hono2018recent`
 - :cite:t:`hono2021sinsy`
+- :cite:t:`hono2018recent`
+- :cite:t:`blaauw2017neural`
+- :cite:t:`oura2010recent`
 
 F0 modeling
 -----------
