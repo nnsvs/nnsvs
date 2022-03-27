@@ -60,6 +60,12 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # 1) data/timelag 2) data/duration 3) data/acoustic
     python local/data_prep.py $db_root $out_dir
 
+    # Normalize audio if sv56 is available
+    if command -v sv56demo &> /dev/null; then
+        echo "Normalize audio gain with sv56"
+        python $NNSVS_COMMON_ROOT/sv56.py $out_dir/acoustic/wav $out_dir/acoustic/wav
+    fi
+
     echo "train/dev/eval split"
     mkdir -p data/list
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
