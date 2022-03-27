@@ -7,4 +7,4 @@ inout = "inout"
 [default.extend-identifiers]
 
 [files]
-extend-exclude = ["*.hed", ".xml"]
+extend-exclude = ["*.hed", "*.xml"]
