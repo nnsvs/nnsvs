@@ -513,6 +513,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out_lf0_idx=180,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
+        skip_inputs=False,
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -521,6 +522,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.out_lf0_idx = out_lf0_idx
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
+        self.skip_inputs = skip_inputs
 
         self.ff = nn.Sequential(
             nn.Linear(in_dim, ff_hidden_dim),
@@ -555,7 +557,13 @@ class ResSkipF0FFConvLSTM(BaseModel):
             batch_first=True,
             dropout=dropout,
         )
-        self.fc = nn.Linear(num_direction * lstm_hidden_dim, out_dim)
+
+        if self.skip_inputs:
+            last_in_dim = num_direction * lstm_hidden_dim + in_dim
+        else:
+            last_in_dim = num_direction * lstm_hidden_dim
+
+        self.fc = nn.Linear(last_in_dim, out_dim)
 
     def forward(self, x, lengths=None):
         if isinstance(lengths, torch.Tensor):
@@ -570,6 +578,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         sequence = pack_padded_sequence(out, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
+        out = torch.cat([out, x], dim=-1) if self.skip_inputs else out
         out = self.fc(out)
 
         lf0_pred, lf0_residual = predict_lf0_with_residual(
