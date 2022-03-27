@@ -18,6 +18,7 @@ setup(
     description="DNN-based singing voice synthesis library",
     long_description=LONG_DESC,
     long_description_content_type="text/markdown",
+    package_data={"": ["_example_data/*"]},
     packages=packages,
     include_package_data=True,
     install_requires=[
