@@ -1,11 +1,30 @@
 import importlib
 import random
+from os.path import join
 from typing import Any
 
 import numpy as np
+import pkg_resources
 import torch
 
 # mask-related functions were adapted from https://github.com/espnet/espnet
+
+EXAMPLE_DIR = "_example_data"
+
+
+def example_xml_file(key="haruga_kita"):
+    """Get the path to an included xml file.
+
+    Args:
+        key (str): key of the file
+
+    Returns:
+        str: path to an example xml file
+
+    Raises:
+        FileNotFoundError: if the file is not found
+    """
+    return pkg_resources.resource_filename(__name__, join(EXAMPLE_DIR, f"{key}.xml"))
 
 
 def init_seed(seed):
