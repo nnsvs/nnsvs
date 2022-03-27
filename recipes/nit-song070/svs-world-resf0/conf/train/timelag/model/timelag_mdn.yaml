@@ -4,7 +4,7 @@ stream_weights: [1]
 
 netG:
   _target_: nnsvs.model.MDN
-  in_dim: 344
+  in_dim: 331
   out_dim: 1
   hidden_dim: 32
   num_layers: 3

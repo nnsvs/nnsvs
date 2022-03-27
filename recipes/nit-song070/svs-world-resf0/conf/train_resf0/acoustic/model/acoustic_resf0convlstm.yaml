@@ -7,7 +7,7 @@ stream_weights:
 
 netG:
   _target_: nnsvs.model.ResSkipF0FFConvLSTM
-  in_dim: 348
+  in_dim: 335
   out_dim: 206
   ff_hidden_dim: 1024
   conv_hidden_dim: 512
@@ -16,7 +16,7 @@ netG:
   bidirectional: true
   # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
   # otherwise the model does't work at all
-  in_lf0_idx: 300
+  in_lf0_idx: 286
   out_lf0_idx: 180
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.
