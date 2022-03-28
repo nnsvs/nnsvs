@@ -176,9 +176,6 @@ def setup(config, device):
         )
     )
 
-    if config.data_parallel:
-        model = nn.DataParallel(model)
-
     # Optimizer
     optimizer_class = getattr(optim, config.train.optim.optimizer.name)
     optimizer = optimizer_class(
@@ -208,6 +205,9 @@ def setup(config, device):
             logger.info("Load optimizer state")
             optimizer.load_state_dict(checkpoint["optimizer_state"])
             lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
+
+    if config.data_parallel:
+        model = nn.DataParallel(model)
 
     # Tensorboard
     writer = SummaryWriter(to_absolute_path(config.train.log_dir))
