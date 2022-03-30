@@ -110,7 +110,7 @@ def train_loop(
     writer,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
-    best_val_loss = torch.finfo(torch.float32).max
+    best_dev_loss = torch.finfo(torch.float32).max
 
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
@@ -142,8 +142,8 @@ def train_loop(
 
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
-            if not train and ave_loss < best_val_loss:
-                best_val_loss = ave_loss
+            if not train and ave_loss < best_dev_loss:
+                best_dev_loss = ave_loss
                 save_checkpoint(
                     logger, out_dir, model, optimizer, lr_scheduler, epoch, is_best=True
                 )
@@ -157,9 +157,9 @@ def train_loop(
     save_checkpoint(
         logger, out_dir, model, optimizer, lr_scheduler, config.train.nepochs
     )
-    logger.info("The best loss was %s", best_val_loss)
-    mlflow.log_metric(f"best_val_loss", best_val_loss, step=epoch)
-    return best_val_loss
+    logger.info("The best loss was %s", best_dev_loss)
+    mlflow.log_metric(f"best_dev_loss", best_dev_loss, step=epoch)
+    return best_dev_loss
 
 
 @hydra.main(config_path="conf/train", config_name="config")
@@ -173,7 +173,7 @@ def my_app(config: DictConfig) -> None:
 
     with mlflow.start_run():
         log_params_from_omegaconf_dict(config)
-        best_val_loss = train_loop(
+        best_dev_loss = train_loop(
             config,
             logger,
             device,
@@ -183,7 +183,7 @@ def my_app(config: DictConfig) -> None:
             data_loaders,
             writer,
         )
-    return best_val_loss
+    return best_dev_loss
 
 
 def entry():
