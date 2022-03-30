@@ -158,6 +158,7 @@ def train_loop(
         logger, out_dir, model, optimizer, lr_scheduler, config.train.nepochs
     )
     logger.info("The best loss was %s", best_val_loss)
+    mlflow.log_metric(f"best_val_loss", best_val_loss, step=epoch)
     return best_val_loss
 
 
