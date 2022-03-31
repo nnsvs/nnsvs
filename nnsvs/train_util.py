@@ -147,6 +147,7 @@ def setup(config, device):
             data loaders, tensorboard writer, and logger.
     """
     logger = getLogger(config.verbose)
+    logger.info(OmegaConf.to_yaml(config))
 
     logger.info(f"PyTorch version: {torch.__version__}")
 
