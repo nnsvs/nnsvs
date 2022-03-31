@@ -26,6 +26,9 @@ timelag_features: defaults
 duration_features: defaults
 acoustic_features: static_deltadelta_sinevib
 
+# Base dump norm directory that contains scaler files
+base_dump_norm_dir:
+
 ###########################################################
 #                TRAINING SETTING                         #
 ###########################################################
