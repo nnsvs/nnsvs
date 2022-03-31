@@ -24,10 +24,15 @@ for inout in "in" "out"; do
     fi
     for typ in timelag duration acoustic;
     do
+        if [[ ${base_dump_norm_dir+x} && ! -z $base_dump_norm_dir ]]; then
+            ext="external_scaler=${base_dump_norm_dir}/${inout}_${typ}_scaler.joblib"
+        else
+            ext=""
+        fi
         find $dump_org_dir/$train_set/${inout}_${typ} -name "*feats.npy" > train_list.txt
         scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib
         xrun nnsvs-fit-scaler list_path=train_list.txt scaler._target_=$scaler_class \
-            out_path=$scaler_path
+            out_path=$scaler_path ${ext}
         rm -f train_list.txt
         cp -v $scaler_path $dump_norm_dir/${inout}_${typ}_scaler.joblib
     done
