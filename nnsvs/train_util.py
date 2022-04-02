@@ -11,7 +11,7 @@ import torch
 from hydra.utils import get_original_cwd, to_absolute_path
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
 from nnsvs.logger import getLogger
-from nnsvs.util import init_seed, pad_2d
+from nnsvs.util import MinMaxScaler, StandardScaler, init_seed, pad_2d
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from torch import nn, optim
 from torch.utils import data as data_utils
@@ -242,10 +242,16 @@ def setup(config, device):
     # Scalers
     if "in_scaler_path" in config.data and config.data.in_scaler_path is not None:
         in_scaler = joblib.load(to_absolute_path(config.data.in_scaler_path))
+        in_scaler = MinMaxScaler(
+            in_scaler.min_, in_scaler.scale_, in_scaler.data_min_, in_scaler.data_max_
+        )
     else:
         in_scaler = None
     if "out_scaler_path" in config.data and config.data.out_scaler_path is not None:
         out_scaler = joblib.load(to_absolute_path(config.data.out_scaler_path))
+        out_scaler = StandardScaler(
+            out_scaler.mean_, out_scaler.var_, out_scaler.scale_
+        )
     else:
         out_scaler = None
 

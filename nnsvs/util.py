@@ -159,12 +159,16 @@ class MinMaxScaler:
     Args:
         min (np.ndarray): minimum
         scale (np.ndarray): scale
+        data_min (np.ndarray): minimum of input data
+        data_max (np.ndarray): maximum of input data
         feature_range (tuple): (min, max)
     """
 
-    def __init__(self, min, scale, feature_range=(0, 1)):
+    def __init__(self, min, scale, data_min=None, data_max=None, feature_range=(0, 1)):
         self.min_ = min
         self.scale_ = scale
+        self.data_min_ = data_min
+        self.data_max_ = data_max
         self.feature_range = feature_range
 
     def transform(self, x):

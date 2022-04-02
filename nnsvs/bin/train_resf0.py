@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import hydra
+import mlflow
 import numpy as np
 import torch
 from hydra.utils import to_absolute_path
@@ -151,9 +152,11 @@ def train_loop(
     data_loaders,
     writer,
     in_scaler,
+    use_mlflow,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
-    best_loss = torch.finfo(torch.float32).max
+    best_dev_loss = torch.finfo(torch.float32).max
+    last_dev_loss = torch.finfo(torch.float32).max
 
     in_lf0_idx = config.data.in_lf0_idx
     in_rest_idx = config.data.in_rest_idx
@@ -174,14 +177,10 @@ def train_loop(
                     out_feats[indices].to(device),
                 )
                 # Compute denormalized log-F0 in the musical scores
+                # test - s.min_[in_lf0_idx]) / s.scale_[in_lf0_idx]
                 lf0_score_denorm = (
-                    in_feats[:, :, in_lf0_idx]
-                    * float(
-                        in_scaler.data_max_[in_lf0_idx]
-                        - in_scaler.data_min_[in_lf0_idx]
-                    )
-                    + in_scaler.data_min_[in_lf0_idx]
-                )
+                    in_feats[:, :, in_lf0_idx] - in_scaler.min_[in_lf0_idx]
+                ) / in_scaler.scale_[in_lf0_idx]
                 # Fill zeros for rest and padded frames
                 lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
                 for idx, length in enumerate(lengths):
@@ -203,12 +202,17 @@ def train_loop(
                 )
                 running_loss += loss.item()
             ave_loss = running_loss / len(data_loaders[phase])
-            writer.add_scalar(f"Loss/{phase}", ave_loss, epoch)
+            if writer is not None:
+                writer.add_scalar(f"Loss/{phase}", ave_loss, epoch)
+            if use_mlflow:
+                mlflow.log_metric(f"{phase}_loss", ave_loss, step=epoch)
 
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
-            if not train and ave_loss < best_loss:
-                best_loss = ave_loss
+            if not train:
+                last_dev_loss = ave_loss
+            if not train and ave_loss < best_dev_loss:
+                best_dev_loss = ave_loss
                 save_checkpoint(
                     logger, out_dir, model, optimizer, lr_scheduler, epoch, is_best=True
                 )
@@ -222,7 +226,11 @@ def train_loop(
     save_checkpoint(
         logger, out_dir, model, optimizer, lr_scheduler, config.train.nepochs
     )
-    logger.info("The best loss was %s", best_loss)
+    logger.info("The best loss was %s", best_dev_loss)
+    if use_mlflow:
+        mlflow.log_metric("best_dev_loss", best_dev_loss, step=epoch)
+
+    return last_dev_loss
 
 
 def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
@@ -352,17 +360,37 @@ def my_app(config: DictConfig) -> None:
     with open(out_dir / "model.yaml", "w") as f:
         OmegaConf.save(config.model, f)
 
-    train_loop(
-        config,
-        logger,
-        device,
-        model,
-        optimizer,
-        lr_scheduler,
-        data_loaders,
-        writer,
-        in_scaler,
-    )
+    use_mlflow = config.mlflow.enabled
+
+    if use_mlflow:
+        with mlflow.start_run():
+            last_dev_loss = train_loop(
+                config,
+                logger,
+                device,
+                model,
+                optimizer,
+                lr_scheduler,
+                data_loaders,
+                writer,
+                in_scaler,
+                use_mlflow,
+            )
+    else:
+        last_dev_loss = train_loop(
+            config,
+            logger,
+            device,
+            model,
+            optimizer,
+            lr_scheduler,
+            data_loaders,
+            writer,
+            in_scaler,
+            use_mlflow,
+        )
+
+    return last_dev_loss
 
 
 def entry():
