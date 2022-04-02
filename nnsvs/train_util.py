@@ -5,16 +5,34 @@ from pathlib import Path
 
 import hydra
 import joblib
+import mlflow
 import numpy as np
 import torch
-from hydra.utils import to_absolute_path
+from hydra.utils import get_original_cwd, to_absolute_path
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
 from nnsvs.logger import getLogger
 from nnsvs.util import init_seed, pad_2d
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from torch import nn, optim
 from torch.utils import data as data_utils
 from torch.utils.tensorboard import SummaryWriter
+
+
+def log_params_from_omegaconf_dict(params):
+    for param_name, element in params.items():
+        _explore_recursive(param_name, element)
+
+
+def _explore_recursive(parent_name, element):
+    if isinstance(element, DictConfig):
+        for k, v in element.items():
+            if isinstance(v, DictConfig) or isinstance(v, ListConfig):
+                _explore_recursive(f"{parent_name}.{k}", v)
+            else:
+                mlflow.log_param(f"{parent_name}.{k}", v)
+    elif isinstance(element, ListConfig):
+        for i, v in enumerate(element):
+            mlflow.log_param(f"{parent_name}.{i}", v)
 
 
 def num_trainable_params(model):
@@ -210,8 +228,16 @@ def setup(config, device):
     if config.data_parallel:
         model = nn.DataParallel(model)
 
-    # Tensorboard
-    writer = SummaryWriter(to_absolute_path(config.train.log_dir))
+    # Mlflow
+    if config.mlflow.enabled:
+        mlflow.set_tracking_uri("file://" + get_original_cwd() + "/mlruns")
+        mlflow.set_experiment(config.mlflow.experiment)
+        # NOTE: disable tensorboard if mlflow is enabled
+        writer = None
+        logger.info("Using mlflow instead of tensorboard")
+    else:
+        # Tensorboard
+        writer = SummaryWriter(to_absolute_path(config.train.log_dir))
 
     # Scalers
     if "in_scaler_path" in config.data and config.data.in_scaler_path is not None:
