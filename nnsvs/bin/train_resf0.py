@@ -5,11 +5,13 @@ import mlflow
 import numpy as np
 import torch
 from hydra.utils import to_absolute_path
+from nnmnkwii import metrics
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_loss
+from nnsvs.multistream import get_static_features
 from nnsvs.pitch import nonzero_segments
 from nnsvs.train_util import save_checkpoint, setup
-from nnsvs.util import make_non_pad_mask
+from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from tqdm import tqdm
@@ -81,13 +83,61 @@ def compute_batch_pitch_regularization_weight(lf0_score_denorm):
     return w.unsqueeze(-1)
 
 
+@torch.no_grad()
+def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_config):
+    out_feats = out_scaler.inverse_transform(out_feats)
+    pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
+    out_streams = get_static_features(
+        out_feats,
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    pred_out_streams = get_static_features(
+        pred_out_feats,
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+
+    assert len(out_streams) >= 4
+    mgc, lf0, vuv, bap = out_streams[0], out_streams[1], out_streams[2], out_streams[3]
+    pred_mgc, pred_lf0, pred_vuv, pred_bap = (
+        pred_out_streams[0],
+        pred_out_streams[1],
+        pred_out_streams[2],
+        pred_out_streams[3],
+    )
+
+    # binarize vuv
+    vuv, pred_vuv = (vuv > 0.5).float(), (pred_vuv > 0.5).float()
+
+    dist = {
+        "mcd": metrics.melcd(mgc[:, :, 1:], pred_mgc[:, :, 1:], lengths=lengths),
+        "bap_mcd": metrics.melcd(bap, pred_bap, lengths=lengths) / 10.0,
+        "vuv_err": metrics.vuv_error(vuv, pred_vuv, lengths=lengths),
+    }
+
+    try:
+        f0_mse = metrics.lf0_mean_squared_error(
+            lf0, vuv, pred_lf0, pred_vuv, lengths=lengths, linear_domain=True
+        )
+        dist["f0_rmse"] = np.sqrt(f0_mse)
+    except ZeroDivisionError:
+        pass
+
+    return dist
+
+
 def train_step(
     model,
+    model_config,
     optimizer,
     train,
     in_feats,
     out_feats,
     lengths,
+    out_scaler,
     pitch_reg_dyn_ws,
     pitch_reg_weight=1.0,
 ):
@@ -135,11 +185,15 @@ def train_step(
         * (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
     )
 
+    distortions = compute_distortions(
+        pred_out_feats, out_feats, lengths, out_scaler, model_config
+    )
+
     if train:
         loss.backward()
         optimizer.step()
 
-    return loss
+    return loss, distortions
 
 
 def train_loop(
@@ -152,6 +206,7 @@ def train_loop(
     data_loaders,
     writer,
     in_scaler,
+    out_scaler,
     use_mlflow,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
@@ -169,6 +224,7 @@ def train_loop(
             train = phase.startswith("train")
             model.train() if train else model.eval()
             running_loss = 0
+            running_metrics = {}
             for in_feats, out_feats, lengths in data_loaders[phase]:
                 # NOTE: This is needed for pytorch's PackedSequence
                 lengths, indices = torch.sort(lengths, dim=0, descending=True)
@@ -190,25 +246,39 @@ def train_loop(
                     lf0_score_denorm
                 )
 
-                loss = train_step(
+                loss, distortions = train_step(
                     model,
+                    config.model,
                     optimizer,
                     train,
                     in_feats,
                     out_feats,
                     lengths,
+                    out_scaler,
                     pitch_reg_dyn_ws,
                     pitch_reg_weight,
                 )
                 running_loss += loss.item()
+                for k, v in distortions.items():
+                    try:
+                        running_metrics[k] += float(v)
+                    except KeyError:
+                        running_metrics[k] = float(v)
+
             ave_loss = running_loss / len(data_loaders[phase])
+            logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
             if writer is not None:
                 writer.add_scalar(f"Loss/{phase}", ave_loss, epoch)
             if use_mlflow:
                 mlflow.log_metric(f"{phase}_loss", ave_loss, step=epoch)
 
-            ave_loss = running_loss / len(data_loaders[phase])
-            logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
+            for k, v in running_metrics.items():
+                ave_v = v / len(data_loaders[phase])
+                if writer is not None:
+                    writer.add_scalar(f"{k}/{phase}", ave_v, epoch)
+                if use_mlflow:
+                    mlflow.log_metric(f"{phase}_{k}", ave_v, step=epoch)
+
             if not train:
                 last_dev_loss = ave_loss
             if not train and ave_loss < best_dev_loss:
@@ -360,6 +430,9 @@ def my_app(config: DictConfig) -> None:
     with open(out_dir / "model.yaml", "w") as f:
         OmegaConf.save(config.model, f)
 
+    out_scaler = PyTorchStandardScaler(
+        torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)
+    ).to(device)
     use_mlflow = config.mlflow.enabled
 
     if use_mlflow:
@@ -374,6 +447,7 @@ def my_app(config: DictConfig) -> None:
                 data_loaders,
                 writer,
                 in_scaler,
+                out_scaler,
                 use_mlflow,
             )
     else:
@@ -387,6 +461,7 @@ def my_app(config: DictConfig) -> None:
             data_loaders,
             writer,
             in_scaler,
+            out_scaler,
             use_mlflow,
         )
 
