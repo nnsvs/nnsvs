@@ -10,7 +10,7 @@ from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_loss
 from nnsvs.multistream import get_static_features
 from nnsvs.pitch import nonzero_segments
-from nnsvs.train_util import save_checkpoint, setup
+from nnsvs.train_util import log_params_from_omegaconf_dict, save_checkpoint, setup
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
@@ -437,6 +437,7 @@ def my_app(config: DictConfig) -> None:
 
     if use_mlflow:
         with mlflow.start_run():
+            log_params_from_omegaconf_dict(config)
             last_dev_loss = train_loop(
                 config,
                 logger,
