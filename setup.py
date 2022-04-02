@@ -36,6 +36,11 @@ setup(
         "pysinsy",
     ],
     extras_require={
+        "dev": [
+            "mlflow",
+            "optuna",
+            "hydra-optuna-sweeper",
+        ],
         "docs": [
             "sphinx",
             "sphinx-autobuild",
