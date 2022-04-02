@@ -12,7 +12,18 @@ if [ ! -z "${pretrained_expdir}" ]; then
 else
     resume_checkpoint=
 fi
-xrun nnsvs-train $ext \
+
+# Hyperparameter search with Hydra + optuna
+# mlflow is used to log the results of the hyperparameter search
+if [[ ${duration_hydra_optuna_sweeper_args+x} && ! -z $duration_hydra_optuna_sweeper_args ]]; then
+    hydra_opt="-m ${duration_hydra_optuna_sweeper_args}"
+    post_args="mlflow.enabled=true mlflow.experiment=${expname}_${duration_model} hydra.sweeper.n_trials=${duration_hydra_optuna_sweeper_n_trials}"
+else
+    hydra_opt=""
+    post_args=""
+fi
+
+xrun nnsvs-train $ext $hydra_opt \
     model=$duration_model train=$duration_train data=$duration_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_duration/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_duration/ \
@@ -20,4 +31,4 @@ xrun nnsvs-train $ext \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_duration/ \
     train.out_dir=$expdir/${duration_model} \
     train.log_dir=tensorboard/${expname}_${duration_model} \
-    train.resume.checkpoint=$resume_checkpoint
+    train.resume.checkpoint=$resume_checkpoint $post_args
