@@ -91,7 +91,7 @@ def get_static_features(
         else:
             static_features = inputs[:, :, start_idx : start_idx + size]
         ret.append(static_features)
-    return torch.cat(ret, dim=-1)
+    return ret
 
 
 def multi_stream_mlpg(
