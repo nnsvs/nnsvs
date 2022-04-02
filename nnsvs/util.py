@@ -134,8 +134,8 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
 class PyTorchStandardScaler(nn.Module):
     def __init__(self, mean, scale):
         super().__init__()
-        self.mean_ = mean
-        self.scale_ = scale
+        self.mean_ = nn.Parameter(mean, requires_grad=False)
+        self.scale_ = nn.Parameter(scale, requires_grad=False)
 
     def transform(self, x):
         return (x - self.mean_) / self.scale_
