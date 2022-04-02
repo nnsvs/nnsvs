@@ -33,6 +33,16 @@ model_registry = {
         "20220322_yoko_timelag_mdn_duration_mdn_acoustic_resf0conv.tar.gz?dl=1",
         "_target_": "nnsvs.svs:SPSVS",
     },
+    # oniku_kurumi
+    "r9y9/oniku_kurumi_latest": {
+        "url": "https://www.dropbox.com/s/qkctk86tec8gpbf/oniku_kurumi_latest.tar.gz?dl=1",
+        "_target_": "nnsvs.svs:SPSVS",
+    },
+    # JSUT
+    "r9y9/jsut_latest": {
+        "url": "https://www.dropbox.com/s/xj5vdnfmw8k2yxq/jsut_latest.tar.gz?dl=1",
+        "_target_": "nnsvs.svs:SPSVS",
+    },
 }
 
 
