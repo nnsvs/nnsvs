@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 import pkg_resources
 import torch
+from torch import nn
 
 # mask-related functions were adapted from https://github.com/espnet/espnet
 
@@ -128,6 +129,19 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
                     dtype=torch.bool in PyTorch 1.2+ (including 1.2)
     """
     return ~make_pad_mask(lengths, xs, length_dim, maxlen)
+
+
+class PyTorchStandardScaler(nn.Module):
+    def __init__(self, mean, scale):
+        super().__init__()
+        self.mean_ = mean
+        self.scale_ = scale
+
+    def transform(self, x):
+        return (x - self.mean_) / self.scale_
+
+    def inverse_transform(self, x):
+        return x * self.scale_ + self.mean_
 
 
 class StandardScaler:
