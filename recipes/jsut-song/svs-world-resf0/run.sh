@@ -55,14 +55,14 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -d downloads/jsut-song_ver1 ]; then
         echo "stage -1: Downloading JSUT-song"
         cd downloads
-        curl -LO https://ss-takashi.jp/corpus/jsut-song_ver1.zip
+        curl -LO https://ss-takashi.sakura.ne.jp/corpus/jsut-song_ver1.zip
         unzip jsut-song_ver1.zip
         cd -
     fi
     if [ ! -d downloads/todai_child ]; then
         echo "stage -1: Downloading JSUT-song labels"
         cd downloads
-        curl -LO https://ss-takashi.jp/corpus/jsut-song_label.zip
+        curl -LO https://ss-takashi.sakura.ne.jp/corpus/jsut-song_label.zip
         unzip jsut-song_label.zip
         cd -
     fi
@@ -79,7 +79,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         echo "Normalize audio gain with sv56"
         python $NNSVS_COMMON_ROOT/sv56.py data/acoustic/wav data/acoustic/wav
     fi
-    
+
     echo "train/dev/eval split"
     mkdir -p data/list
     # exclude 045 since the label file is not available
