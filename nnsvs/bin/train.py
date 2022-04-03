@@ -192,6 +192,7 @@ def train_loop(
     logger.info("The best loss was %s", best_dev_loss)
     if use_mlflow:
         mlflow.log_metric("best_dev_loss", best_dev_loss, step=epoch)
+        mlflow.log_artifacts(out_dir)
 
     return last_dev_loss
 
