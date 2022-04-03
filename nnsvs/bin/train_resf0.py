@@ -10,9 +10,14 @@ from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
 from nnsvs.multistream import get_static_features
 from nnsvs.pitch import nonzero_segments
-from nnsvs.train_util import log_params_from_omegaconf_dict, save_checkpoint, setup
+from nnsvs.train_util import (
+    log_params_from_omegaconf_dict,
+    save_checkpoint,
+    save_configs,
+    setup,
+)
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch import nn
 from tqdm import tqdm
 
@@ -428,20 +433,16 @@ def my_app(config: DictConfig) -> None:
 
     _check_resf0_config(logger, model, config, in_scaler, out_scaler)
 
-    # Save configs again in case the model config has been changed
-    out_dir = Path(to_absolute_path(config.train.out_dir))
-    with open(out_dir / "config.yaml", "w") as f:
-        OmegaConf.save(config, f)
-    with open(out_dir / "model.yaml", "w") as f:
-        OmegaConf.save(config.model, f)
-
     out_scaler = PyTorchStandardScaler(
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)
     ).to(device)
     use_mlflow = config.mlflow.enabled
 
     if use_mlflow:
-        with mlflow.start_run():
+        with mlflow.start_run() as run:
+            # NOTE: modify out_dir when running with mlflow
+            config.train.out_dir = f"{config.train.out_dir}/{run.info.run_id}"
+            save_configs(config)
             log_params_from_omegaconf_dict(config)
             last_dev_loss = train_loop(
                 config,
@@ -457,6 +458,7 @@ def my_app(config: DictConfig) -> None:
                 use_mlflow,
             )
     else:
+        save_configs(config)
         last_dev_loss = train_loop(
             config,
             logger,

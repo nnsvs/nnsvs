@@ -255,14 +255,6 @@ def setup(config, device):
     else:
         out_scaler = None
 
-    # Save configs
-    out_dir = Path(to_absolute_path(config.train.out_dir))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    with open(out_dir / "model.yaml", "w") as f:
-        OmegaConf.save(config.model, f)
-    with open(out_dir / "config.yaml", "w") as f:
-        OmegaConf.save(config, f)
-
     return (
         model,
         optimizer,
@@ -273,3 +265,12 @@ def setup(config, device):
         in_scaler,
         out_scaler,
     )
+
+
+def save_configs(config):
+    out_dir = Path(to_absolute_path(config.train.out_dir))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_dir / "model.yaml", "w") as f:
+        OmegaConf.save(config.model, f)
+    with open(out_dir / "config.yaml", "w") as f:
+        OmegaConf.save(config, f)

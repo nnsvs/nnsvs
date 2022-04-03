@@ -12,6 +12,7 @@ from nnsvs.train_util import (
     get_stream_weight,
     log_params_from_omegaconf_dict,
     save_checkpoint,
+    save_configs,
     setup,
 )
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
@@ -213,8 +214,12 @@ def my_app(config: DictConfig) -> None:
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)
     ).to(device)
     use_mlflow = config.mlflow.enabled
+
     if use_mlflow:
-        with mlflow.start_run():
+        with mlflow.start_run() as run:
+            # NOTE: modify out_dir when running with mlflow
+            config.train.out_dir = f"{config.train.out_dir}/{run.info.run_id}"
+            save_configs(config)
             log_params_from_omegaconf_dict(config)
             last_dev_loss = train_loop(
                 config,
@@ -229,6 +234,7 @@ def my_app(config: DictConfig) -> None:
                 use_mlflow,
             )
     else:
+        save_configs(config)
         last_dev_loss = train_loop(
             config,
             logger,
