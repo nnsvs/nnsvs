@@ -1,7 +1,7 @@
 # acoustic parameters
 sample_rate: 48000
 stream_sizes: [180, 3, 1, 15, 6, 1]
-has_dynamic_features: [true, true, false, true]
+has_dynamic_features: [true, true, false, true, true, false]
 # windows to compute delta and delta-delta features. Set 1 to disable
 num_windows: 3
 # Use relative f0 modeling.
