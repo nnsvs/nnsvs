@@ -464,7 +464,6 @@ def gen_world_params(
     vibrato_scale=1.0,
     vuv_threshold=0.3,
 ):
-    # Apply MLPG if necessary
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
             stream_sizes, has_dynamic_features, num_windows
