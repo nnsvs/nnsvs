@@ -7,7 +7,7 @@ import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii import metrics
 from nnsvs.base import PredictionType
-from nnsvs.mdn import mdn_loss
+from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
 from nnsvs.multistream import get_static_features
 from nnsvs.pitch import nonzero_segments
 from nnsvs.train_util import log_params_from_omegaconf_dict, save_checkpoint, setup
@@ -185,8 +185,13 @@ def train_step(
         * (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
     )
 
+    if prediction_type == PredictionType.PROBABILISTIC:
+        with torch.no_grad():
+            pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
+    else:
+        pred_out_feats_ = pred_out_feats
     distortions = compute_distortions(
-        pred_out_feats, out_feats, lengths, out_scaler, model_config
+        pred_out_feats_, out_feats, lengths, out_scaler, model_config
     )
 
     if train:
