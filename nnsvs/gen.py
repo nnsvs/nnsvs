@@ -447,7 +447,7 @@ def predict_acoustic(
     return pred_acoustic
 
 
-def gen_world_params(
+def gen_spsvs_static_features(
     labels,
     acoustic_features,
     binary_dict,
@@ -486,22 +486,9 @@ def gen_world_params(
     else:
         raise RuntimeError("Not supported streams")
 
-    # Gen waveform by the WORLD vocodoer
-    fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
-    alpha = pysptk.util.mcepalpha(sample_rate)
-
     if post_filter:
+        alpha = pysptk.util.mcepalpha(sample_rate)
         mgc = merlin_post_filter(mgc, alpha)
-
-    spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha)
-    aperiodicity = pyworld.decode_aperiodicity(
-        bap.astype(np.float64), sample_rate, fftlen
-    )
-
-    # fill aperiodicity with ones for unvoiced regions
-    aperiodicity[vuv.reshape(-1) < vuv_threshold, :] = 1.0
-    # WORLD fails catastrophically for out of range aperiodicity
-    aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
     # F0
     if relative_f0:
@@ -544,6 +531,35 @@ def gen_world_params(
         else:
             # Generate diff-based vibrato
             f0 = f0.flatten() + vibrato_scale * vib.flatten()
+
+    # NOTE: Back to log-domain for convenience
+    lf0 = f0.copy()
+    lf0[np.nonzero(lf0)] = np.log(f0[np.nonzero(lf0)])
+    # NOTE: interpolation is necessary
+    lf0 = interp1d(lf0, kind="slinear")
+
+    lf0 = lf0[:, None] if len(lf0.shape) == 1 else lf0
+    vuv = vuv[:, None] if len(vuv.shape) == 1 else vuv
+
+    return mgc, lf0, vuv, bap
+
+
+def gen_world_params(mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3):
+    fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
+    alpha = pysptk.util.mcepalpha(sample_rate)
+    spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha)
+    aperiodicity = pyworld.decode_aperiodicity(
+        bap.astype(np.float64), sample_rate, fftlen
+    )
+
+    # fill aperiodicity with ones for unvoiced regions
+    aperiodicity[vuv.reshape(-1) < vuv_threshold, :] = 1.0
+    # WORLD fails catastrophically for out of range aperiodicity
+    aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
+
+    f0 = lf0.copy()
+    f0[np.nonzero(f0)] = np.exp(f0[np.nonzero(f0)])
+    f0[vuv < vuv_threshold] = 0
 
     f0 = f0.flatten().astype(np.float64)
     spectrogram = spectrogram.astype(np.float64)

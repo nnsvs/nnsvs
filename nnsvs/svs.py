@@ -7,6 +7,7 @@ import torch
 from hydra.utils import instantiate
 from nnmnkwii.io import hts
 from nnsvs.gen import (
+    gen_spsvs_static_features,
     gen_world_params,
     postprocess_duration,
     predict_acoustic,
@@ -200,7 +201,7 @@ Acoustic model: {acoustic_str}
         )
 
         # Generate WORLD parameters
-        f0, spectrogram, aperiodicity = gen_world_params(
+        mgc, lf0, vuv, bap = gen_spsvs_static_features(
             duration_modified_labels,
             acoustic_features,
             self.binary_dict,
@@ -216,6 +217,10 @@ Acoustic model: {acoustic_str}
             self.config.acoustic.relative_f0,
         )
 
+        f0, spectrogram, aperiodicity = gen_world_params(
+            mgc, lf0, vuv, bap, self.config.sample_rate
+        )
+
         wav = pyworld.synthesize(
             f0,
             spectrogram,
@@ -228,6 +233,12 @@ Acoustic model: {acoustic_str}
 
         if return_states:
             states = {
+                # static features
+                "mgc": mgc,
+                "lf0": lf0,
+                "vuv": vuv,
+                "bap": bap,
+                # world params
                 "f0": f0,
                 "spectrogram": spectrogram,
                 "aperiodicity": aperiodicity,
