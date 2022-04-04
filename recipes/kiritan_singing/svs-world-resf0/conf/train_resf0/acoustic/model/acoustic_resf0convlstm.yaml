@@ -9,11 +9,11 @@ netG:
   _target_: nnsvs.model.ResSkipF0FFConvLSTM
   in_dim: 335
   out_dim: 206
-  ff_hidden_dim: 512
-  conv_hidden_dim: 256
-  lstm_hidden_dim: 128
-  dropout: 0.1
-  bidirectional: truse
+  ff_hidden_dim: 1024
+  conv_hidden_dim: 512
+  lstm_hidden_dim: 256
+  dropout: 0.0
+  bidirectional: true
   # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
   # otherwise the model does't work at all
   in_lf0_idx: 286
