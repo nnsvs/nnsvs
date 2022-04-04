@@ -6,7 +6,7 @@ netG:
   _target_: nnsvs.model.MDN
   in_dim: 331
   out_dim: 1
-  hidden_dim: 256
-  num_layers: 3
+  hidden_dim: 64
+  num_layers: 2
   dropout: 0.5
-  num_gaussians: 1
+  num_gaussians: 7
