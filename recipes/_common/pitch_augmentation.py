@@ -71,7 +71,7 @@ def pitch_shift_on_lpc_residual(
 
     # Pitch-shift on LPC residual
     residual_shifted = librosa.effects.pitch_shift(
-        residual, sr, shift_in_cent, bins_per_octave=1200
+        residual, sr=sr, n_steps=shift_in_cent, bins_per_octave=1200
     )
 
     # Filtering by LPC
