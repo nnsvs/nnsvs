@@ -9,6 +9,7 @@ import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnsvs.gen import (
+    gen_spsvs_static_features,
     gen_world_params,
     postprocess_duration,
     predict_acoustic,
@@ -126,7 +127,7 @@ def synthesis(
     )
 
     # Generate WORLD parameters
-    f0, spectrogram, aperiodicity = gen_world_params(
+    mgc, lf0, vuv, bap = gen_spsvs_static_features(
         duration_modified_labels,
         acoustic_features,
         binary_dict,
@@ -141,6 +142,10 @@ def synthesis(
         config.frame_period,
         config.acoustic.relative_f0,
         config.vibrato_scale,
+    )
+
+    f0, spectrogram, aperiodicity = gen_world_params(
+        mgc, lf0, vuv, bap, config.sample_rate
     )
 
     wav = pyworld.synthesize(
