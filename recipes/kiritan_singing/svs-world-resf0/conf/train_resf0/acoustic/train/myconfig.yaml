@@ -1,8 +1,8 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
-nepochs: 50
-checkpoint_epoch_interval: 20
+nepochs: 100
+checkpoint_epoch_interval: 50
 
 # Weight for pitch regularization loss
 # If > 0.0, add a pitch regularization loss that biases the model to
