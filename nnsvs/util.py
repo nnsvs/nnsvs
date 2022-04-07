@@ -13,6 +13,14 @@ from torch import nn
 EXAMPLE_DIR = "_example_data"
 
 
+def load_utt_list(utt_list):
+    with open(utt_list) as f:
+        utt_ids = f.readlines()
+    utt_ids = map(lambda utt_id: utt_id.strip(), utt_ids)
+    utt_ids = filter(lambda utt_id: len(utt_id) > 0, utt_ids)
+    return list(utt_ids)
+
+
 def example_xml_file(key="haruga_kita"):
     """Get the path to an included xml file.
 

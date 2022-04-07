@@ -7,16 +7,9 @@ import numpy as np
 from hydra.utils import to_absolute_path
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features
+from nnsvs.util import load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
-
-
-def load_utt_list(utt_list):
-    with open(utt_list) as f:
-        utt_ids = f.readlines()
-    utt_ids = map(lambda utt_id: utt_id.strip(), utt_ids)
-    utt_ids = filter(lambda utt_id: len(utt_id) > 0, utt_ids)
-    return list(utt_ids)
 
 
 def _gen_static_features(
