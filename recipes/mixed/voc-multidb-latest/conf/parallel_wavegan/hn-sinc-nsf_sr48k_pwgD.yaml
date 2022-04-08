@@ -68,10 +68,10 @@ discriminator_params:
 #                   STFT LOSS SETTING                     #
 ###########################################################
 stft_loss_params:
-    fft_sizes: [1024, 2048, 256]  # List of FFT size for STFT-based loss.
-    hop_sizes: [120, 240, 50]     # List of hop size for STFT-based loss
-    win_lengths: [600, 1200, 240] # List of window length for STFT-based loss.
-    window: "hann_window"        # Window function for STFT-based loss
+    fft_sizes: [2048, 4096, 512]   # List of FFT size for STFT-based loss.
+    hop_sizes: [240, 480, 100]     # List of hop size for STFT-based loss
+    win_lengths: [1200, 2400, 480] # List of window length for STFT-based loss.
+    window: "hann_window"          # Window function for STFT-based loss
 
 ###########################################################
 #               ADVERSARIAL LOSS SETTING                  #
