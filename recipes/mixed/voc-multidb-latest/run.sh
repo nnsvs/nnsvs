@@ -185,7 +185,6 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training vocoder using parallel_wavegan"
-    . $NNSVS_COMMON_ROOT/train_duration.sh
     xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
         --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
         --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
