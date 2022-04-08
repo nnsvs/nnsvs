@@ -2,7 +2,7 @@
 # Please don't try to run the shell script directory.
 
 if [ -z ${sample_rate+x} ]; then
-    echo "ERROR: sampler_rate must be set explictly. Please add 'sample_rate: <value>' to config.yaml."
+    echo "ERROR: sampler_rate must be set explicitly. Please add 'sample_rate: <value>' to config.yaml."
     echo "e.g., sample_rate: 48000"
     exit -1
 fi
