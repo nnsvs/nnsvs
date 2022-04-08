@@ -160,7 +160,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Normalize audio if sv56 is available
     for dbname in $dbnames;
     do
-        if command -v sv56dsemo &> /dev/null; then
+        if command -v sv56demo &> /dev/null; then
             echo "Normalize audio gain with sv56"
             python $NNSVS_COMMON_ROOT/sv56.py $out_dir/$dbname/acoustic/wav $out_dir/$dbname/acoustic/wav
         fi
