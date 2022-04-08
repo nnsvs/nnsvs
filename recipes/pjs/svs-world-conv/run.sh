@@ -56,7 +56,7 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    python local/data_prep.py downloads/PJS_corpus_ver1.1 data --gain-normalize
+    python local/data_prep.py downloads/PJS_corpus_ver1.1 data
     echo "train/dev/eval split"
     mkdir -p data/list
     # exclude utts that are not strictly aligned
