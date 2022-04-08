@@ -55,8 +55,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     kiritan_singing=downloads/kiritan_singing
     cd $kiritan_singing && git checkout .
-    echo "" >> config.py
-    echo "wav_dir = \"$wav_root\"" >> config.py
+    if [ ! -z "${kiritan_wav_root}" ]; then
+        echo "" >> config.py
+        echo "wav_dir = \"$kiritan_wav_root\"" >> config.py
+    fi
     ./run.sh
     cd -
     mkdir -p data/list
@@ -75,7 +77,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         | sort > data/list/utt_list.txt
     # train: 40
     # dev: 9
-    # eval: 1    
+    # eval: 1
     grep 05_ data/list/utt_list.txt > data/list/$eval_set.list
     grep -e 01_ -e 02_ -e 03_ -e 04_ -e 06_ -e 07_ -e 08_ -e 09_ -e 10_ data/list/utt_list.txt > data/list/$dev_set.list
     grep -v 01_ data/list/utt_list.txt | grep -v 02_ | grep -v 03_ | grep -v 04_ | grep -v 05_ | grep -v 06_ | grep -v 07_ | grep -v 08_ | grep -v 09_ | grep -v 10_ > data/list/$train_set.list

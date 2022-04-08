@@ -10,7 +10,7 @@ tag:
 ###########################################################
 
 # **CHANGE** this to your database path
-wav_root: "/home/ryuichi/data/kiritan_singing/wav"
+wav_root:
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
