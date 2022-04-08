@@ -21,7 +21,7 @@ trim_silence: false      # Whether to trim the start and end of silence.
 trim_threshold_in_db: 60 # Need to tune carefully if the recording is not good.
 trim_frame_size: 2048    # Frame size in trimming.
 trim_hop_size: 512       # Hop size in trimming.
-format: "npy"           # Feature file format. "npy" or "hdf5" is supported.
+format: "npy"            # Feature file format. "npy" or "hdf5" is supported.
 
 ###########################################################
 #         GENERATOR NETWORK ARCHITECTURE SETTING          #
