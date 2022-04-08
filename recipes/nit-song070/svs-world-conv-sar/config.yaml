@@ -1,5 +1,6 @@
 # General settings.
 spk: "yoko"
+sample_rate: 48000
 
 # exp tag(for managing experiments)
 tag:

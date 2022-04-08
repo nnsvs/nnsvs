@@ -129,6 +129,7 @@ class WORLDAcousticSource(FileDataSource):
         relative_f0=True,
         interp_unvoiced_aperiodicity=True,
         vibrato_mode="none",  # diff, sine
+        sample_rate=48000,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -146,6 +147,7 @@ class WORLDAcousticSource(FileDataSource):
         self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
         self.vibrato_mode = vibrato_mode
         self.windows = get_windows(num_windows)
+        self.sample_rate = sample_rate
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -178,6 +180,10 @@ class WORLDAcousticSource(FileDataSource):
 
         fs, x = wavfile.read(wav_path)
         x = x.astype(np.float64)
+        if fs != self.sample_rate:
+            raise RuntimeError(
+                "Sample rate mismatch! {} != {}".format(fs, self.sample_rate)
+            )
 
         if self.use_harvest:
             f0, timeaxis = pyworld.harvest(

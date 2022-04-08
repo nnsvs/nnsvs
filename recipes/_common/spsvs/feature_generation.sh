@@ -1,6 +1,12 @@
 # NOTE: the script is supposed to be used called from nnsvs recipes.
 # Please don't try to run the shell script directory.
 
+if [ -z ${sample_rate+x} ]; then
+    echo "ERROR: sampler_rate must be set explictly. Please add 'sample_rate: <value>' to config.yaml."
+    echo "e.g., sample_rate: 48000"
+    exit -1
+fi
+
 for s in ${datasets[@]};
 do
     if [ -d conf/prepare_features ]; then
@@ -9,9 +15,10 @@ do
         ext=""
     fi
     xrun nnsvs-prepare-features $ext \
-        utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/  \
+        utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/ \
         question_path=$question_path \
-        timelag=$timelag_features duration=$duration_features acoustic=$acoustic_features
+        timelag=$timelag_features duration=$duration_features acoustic=$acoustic_features \
+        acoustic.sample_rate=$sample_rate
 done
 
 # Compute normalization stats for each input/output

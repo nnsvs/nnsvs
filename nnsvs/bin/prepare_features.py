@@ -156,6 +156,7 @@ def my_app(config: DictConfig) -> None:
         num_windows=config.acoustic.num_windows,
         relative_f0=config.acoustic.relative_f0,
         vibrato_mode=config.acoustic.vibrato_mode,
+        sample_rate=config.acoustic.sample_rate,
     )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)

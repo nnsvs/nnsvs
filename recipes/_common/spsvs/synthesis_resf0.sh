@@ -24,7 +24,7 @@ for s in ${testsets[@]}; do
         else
             ground_truth_duration=true
         fi
-        xrun nnsvs-synthesis $ext \
+        xrun nnsvs-synthesis $ext sample_rate=$sample_rate \
             question_path=$question_path \
             timelag=$timelag_synthesis \
             duration=$duration_synthesis \

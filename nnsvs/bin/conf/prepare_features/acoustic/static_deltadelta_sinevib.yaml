@@ -3,6 +3,8 @@ question_path:
 wav_dir: data/acoustic/wav
 label_dir: data/acoustic/label_phone_align
 
+sample_rate: 48000
+
 subphone_features: coarse_coding
 
 # kiritan

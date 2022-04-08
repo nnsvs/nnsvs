@@ -1,6 +1,7 @@
 ### General settings.
 ## The name of singer
 spk: "ofuton_p"
+sample_rate: 48000
 
 ## exp tag(for managing experiments)
 tag:
