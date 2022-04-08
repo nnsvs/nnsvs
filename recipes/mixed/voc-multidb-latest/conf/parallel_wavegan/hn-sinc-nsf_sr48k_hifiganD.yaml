@@ -123,7 +123,7 @@ lambda_feat_match: 2.0 # Loss balancing coefficient for feat match loss..
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 8               # Batch size.
-batch_max_steps: 24000      # Length of each audio in batch. Make sure dividable by hop_size.
+batch_max_steps: 48000      # Length of each audio in batch. Make sure dividable by hop_size.
 pin_memory: true            # Whether to pin memory in Pytorch DataLoader.
 num_workers: 0              # Number of workers in Pytorch DataLoader.
 remove_short_samples: false # Whether to remove samples the length of which are less than batch_max_steps.
