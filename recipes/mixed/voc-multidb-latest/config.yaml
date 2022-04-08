@@ -58,6 +58,9 @@ acoustic_model: acoustic_resf0convlstm
 acoustic_train: myconfig
 acoustic_data: myconfig
 
+# NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
+vocoder_model: hn-sinc-nsf_sr48k_pwgD
+
 # Pretrained model dir (leave empty to disable)
 pretrained_expdir:
 

@@ -178,55 +178,16 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "stage 3: Training with parallel wavegan"
-    . $NNSVS_COMMON_ROOT/train_duration.sh
+    echo "stage 3: Compute statistics of vocoder's input features"
+    xrun python $NNSVS_COMMON_ROOT/scaler_joblib2npy_voc.py \
+        $dump_norm_dir/out_acoustic_scaler.joblib $dump_norm_dir/
 fi
 
-# if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-#     echo "stage 4: Training acoustic model"
-#     . $NNSVS_COMMON_ROOT/train_resf0_acoustic.sh
-# fi
-
-# if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-#     echo "stage 5: Generate features from timelag/duration/acoustic models"
-#     . $NNSVS_COMMON_ROOT/generate.sh
-# fi
-
-# if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-#     echo "stage 6: Synthesis waveforms"
-#     . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
-# fi
-
-if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
-    echo "Pack models for SVS"
-    dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
-    mkdir -p $dst_dir
-    # global config file
-    # NOTE: New residual F0 prediction models require relative_f0 to be false.
-    cat > ${dst_dir}/config.yaml <<EOL
-# Global configs
-sample_rate: 48000
-frame_period: 5
-log_f0_conditioning: true
-
-# Model-specific synthesis configs
-timelag:
-    allowed_range: [-20, 20]
-    allowed_range_rest: [-40, 40]
-    force_clip_input_features: true
-duration:
-    force_clip_input_features: true
-acoustic:
-    subphone_features: "coarse_coding"
-    force_clip_input_features: true
-    relative_f0: false
-    post_filter: true
-
-# Model definitions
-timelag_model: ${timelag_model}
-duration_model: ${duration_model}
-acoustic_model: ${acoustic_model}
-EOL
-
-    . $NNSVS_COMMON_ROOT/pack_model.sh
- fi
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    echo "stage 4: Training vocoder using parallel_wavegan"
+    . $NNSVS_COMMON_ROOT/train_duration.sh
+    xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
+        --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
+        --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
+        --outdir $expdir/$vocoder_model
+fi
