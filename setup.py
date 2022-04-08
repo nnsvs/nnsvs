@@ -68,6 +68,7 @@ setup(
     entry_points={
         "console_scripts": [
             "nnsvs-prepare-features = nnsvs.bin.prepare_features:entry",
+            "nnsvs-gen-static-features = nnsvs.bin.gen_static_features:entry",
             "nnsvs-fit-scaler = nnsvs.bin.fit_scaler:entry",
             "nnsvs-preprocess-normalize = nnsvs.bin.preprocess_normalize:entry",
             "nnsvs-train = nnsvs.bin.train:entry",
