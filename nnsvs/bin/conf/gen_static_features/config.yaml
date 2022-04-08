@@ -1,9 +1,9 @@
 defaults:
-  - acoustic: defaults
+  # Musical/linguistic context -> acoustic parameters (f0, mgc, bap, vuv)
+  - acoustic: static_deltadelta
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
   - _self_
-
 
 verbose: 100
 

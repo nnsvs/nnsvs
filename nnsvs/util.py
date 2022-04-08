@@ -5,12 +5,40 @@ from typing import Any
 
 import numpy as np
 import pkg_resources
+import pyworld
 import torch
 from torch import nn
 
 # mask-related functions were adapted from https://github.com/espnet/espnet
 
 EXAMPLE_DIR = "_example_data"
+
+
+def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
+    # [mgc, lf0, vuv, bap]
+    stream_sizes = [
+        (mgc_order + 1) * num_windows,
+        num_windows,
+        1,
+        pyworld.get_num_aperiodicities(sr) * 3,
+    ]
+    has_dynamic_features = [True, True, False, True]
+    if vibrato_mode == "diff":
+        # vib
+        stream_sizes.append(num_windows)
+        has_dynamic_features.append(True)
+    elif vibrato_mode == "sine":
+        # vib + vib_flags
+        stream_sizes.append(num_windows)
+        has_dynamic_features.append(True)
+        stream_sizes.append(1)
+        has_dynamic_features.append(False)
+    elif vibrato_mode == "none":
+        pass
+    else:
+        raise RuntimeError("Unknown vibrato mode: {}".format(vibrato_mode))
+
+    return stream_sizes, has_dynamic_features
 
 
 def load_utt_list(utt_list):

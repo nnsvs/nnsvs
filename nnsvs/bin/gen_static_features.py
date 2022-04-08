@@ -7,7 +7,7 @@ import numpy as np
 from hydra.utils import to_absolute_path
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features
-from nnsvs.util import load_utt_list
+from nnsvs.util import get_world_stream_info, load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
@@ -16,18 +16,20 @@ def _gen_static_features(
     in_dir,
     out_dir,
     utt_id,
-    config,
+    num_windows,
+    stream_sizes,
+    has_dynamic_features,
 ) -> None:
     feats = np.load(join(in_dir, utt_id + "-feats.npy"))
     in_wave_path = join(in_dir, utt_id + "-wave.npy")
     assert exists(in_wave_path)
 
-    assert np.any(config.has_dynamic_features)
+    assert np.any(has_dynamic_features)
     streams = get_static_features(
         feats.reshape(1, -1, feats.shape[-1]),
-        config.num_windows,
-        config.stream_sizes,
-        config.has_dynamic_features,
+        num_windows,
+        stream_sizes,
+        has_dynamic_features,
     )
 
     # remove batch-axis
@@ -35,9 +37,6 @@ def _gen_static_features(
 
     assert len(streams) >= 4
     mgc, lf0, vuv, bap = streams[0], streams[1], streams[2], streams[3]
-
-    if config.relative_f0:
-        raise ValueError("Relative lf0 is not supported")
 
     static_feats = np.hstack((mgc, lf0, vuv, bap)).astype(np.float32)
 
@@ -59,6 +58,16 @@ def my_app(config: DictConfig) -> None:
 
     utt_ids = load_utt_list(utt_list)
 
+    if config.acoustic.relative_f0:
+        raise ValueError("Relative F0 is not supported")
+
+    stream_sizes, has_dynamic_features = get_world_stream_info(
+        config.acoustic.sample_rate,
+        config.acoustic.mgc_order,
+        config.acoustic.num_windows,
+        config.acoustic.vibrato_mode,
+    )
+
     os.makedirs(out_dir, exist_ok=True)
     with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
         futures = [
@@ -67,7 +76,9 @@ def my_app(config: DictConfig) -> None:
                 in_dir,
                 out_dir,
                 utt_id,
-                config.acoustic,
+                config.acoustic.num_windows,
+                stream_sizes,
+                has_dynamic_features,
             )
             for utt_id in utt_ids
         ]
