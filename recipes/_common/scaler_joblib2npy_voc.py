@@ -76,8 +76,8 @@ if __name__ == "__main__":
         f"""
 If you are going to train NSF-based vocoders, please set the following parameters:
 
-out_lf0_mean = {lf0_params["mean"]}
-out_lf0_scale = {lf0_params["scale"]}
+out_lf0_mean: {lf0_params["mean"]}
+out_lf0_scale: {lf0_params["scale"]}
 
 NOTE: If you are using the same data for training acoustic/vocoder models, the F0 statitics
 for those models should be the same. If you are using different data for training
