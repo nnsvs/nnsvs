@@ -110,6 +110,43 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
 fi
 
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    echo "stage 7: Generate static features"
+    . $NNSVS_COMMON_ROOT/gen_static_features.sh
+fi
+
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    echo "stage 8: Compute statistics of vocoder's input features"
+    xrun python $NNSVS_COMMON_ROOT/scaler_joblib2npy_voc.py \
+        $dump_norm_dir/out_acoustic_scaler.joblib $dump_norm_dir/
+fi
+
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+    echo "stage 9: Training vocoder using parallel_wavegan"
+    if [ ! -z ${pretrained_vocoder_checkpoint} ]; then
+        extra_args="--resume $pretrained_vocoder_checkpoint"
+    else
+        extra_args=""
+    fi
+    xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
+        --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
+        --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
+        --outdir $expdir/$vocoder_model $extra_args
+fi
+
+if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
+    echo "stage 10: Synthesis waveforms by parallel_wavegan"
+    if [ -z "${vocoder_eval_checkpoint}" ]; then
+        vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"
+    fi
+    outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
+    for s in ${testsets[@]}; do
+        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/out_acoustic_static/ \
+            --checkpoint $vocoder_eval_checkpoint \
+            --outdir $outdir
+    done
+fi
+
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
     dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
