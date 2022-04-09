@@ -185,8 +185,13 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training vocoder using parallel_wavegan"
+    if [ ! -z ${pretrained_vocoder_checkpoint} ]; then
+        extra_args="--resume $pretrained_vocoder_checkpoint"
+    else
+        extra_args=""
+    fi
     xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
         --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
         --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
-        --outdir $expdir/$vocoder_model
+        --outdir $expdir/$vocoder_model $extra_args
 fi
