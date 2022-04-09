@@ -208,3 +208,17 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --outdir $outdir
     done
 fi
+
+if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
+    echo "Pack vocoder for SVS"
+    dst_dir=packed_models/${expname}_${vocoder_model}
+    mkdir -p $dst_dir
+
+    if [ -z "${vocoder_eval_checkpoint}" ]; then
+        vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
+    fi
+    python $NNSVS_COMMON_ROOT/clean_checkpoint_state.py $vocoder_eval_checkpoint \
+        $dst_dir/vocoder_model.pth
+    cp $expdir/${vocoder_model}/config.yml $dst_dir/vocoder_model.yaml
+    cp $dump_norm_dir/in_vocoder*.npy $dst_dir/
+ fi

@@ -91,3 +91,4 @@ acoustic_synthesis: defaults
 timelag_eval_checkpoint: latest.pth
 duration_eval_checkpoint: latest.pth
 acoustic_eval_checkpoint: latest.pth
+vocoder_eval_checkpoint:
