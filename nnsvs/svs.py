@@ -280,7 +280,7 @@ WORLD is only supported for waveform generation"""
         elif vocoder_type == "pwg":
             voc_inp = (
                 torch.from_numpy(
-                    self.svocoder_in_scaler.transform(
+                    self.vocoder_in_scaler.transform(
                         np.concatenate([mgc, lf0, vuv, bap], axis=-1)
                     )
                 )
