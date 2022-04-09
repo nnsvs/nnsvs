@@ -23,7 +23,7 @@ train_set="train_no_dev"
 dev_set="dev"
 eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
-testsets=($eval_set)
+testsets=($dev_set $eval_set)
 
 dumpdir=dump
 
