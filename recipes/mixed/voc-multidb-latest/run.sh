@@ -195,3 +195,16 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
         --outdir $expdir/$vocoder_model $extra_args
 fi
+
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+    echo "stage 5: Synthesis waveforms by parallel_wavegan"
+    if [ -z "${vocoder_eval_checkpoint}" ]; then
+        vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"
+    fi
+    outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
+    for s in ${testsets[@]}; do
+        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/out_acoustic_static/ \
+            --checkpoint $vocoder_eval_checkpoint \
+            --outdir $outdir
+    done
+fi
