@@ -1,13 +1,13 @@
 # voc-multidb-latest
 
-A recipe to build a universal neural vocoder on multiple databases. So far the following academic-friendly databases are used:
+A recipe to build a universal neural vocoder on multiple databases. The following academic-friendly databases are used but not limited to:
 
 1. nit-song070
 2. kiritan_singing
 3. jsut-song
 4. PJS
 
-If you want to maximize the performane of a vocoder for your database, please consider the two options below:
+If you want to maximize the performance of a vocoder for your database, please consider the two options below:
 1. Add your database and train a universal neural vocoder
 2. Train a singer-dependent vocoder for your database
 
@@ -26,7 +26,6 @@ pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
 ```
 
 The fork of ParallelWaveGAN supports neural source filter (NSF) models, which work nicely for singing voice synthesis. Furthermore, thanks to the flexible design of ParallelWaveGAN, it is possible to train NSF with adversarial training.
-
 
 ## Configs
 
