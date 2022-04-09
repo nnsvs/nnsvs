@@ -221,4 +221,7 @@ if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
         $dst_dir/vocoder_model.pth
     cp $expdir/${vocoder_model}/config.yml $dst_dir/vocoder_model.yaml
     cp $dump_norm_dir/in_vocoder*.npy $dst_dir/
+
+    echo "All the files are ready for SVS!"
+    echo "Please check the $dst_dir directory"
  fi
