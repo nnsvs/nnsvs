@@ -10,7 +10,7 @@ dev:
 
 # data loader
 num_workers: 2
-batch_size: 4
+batch_size: 8
 pin_memory: true
 
 in_scaler_path: null
