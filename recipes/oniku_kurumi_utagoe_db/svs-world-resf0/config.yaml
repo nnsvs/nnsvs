@@ -96,3 +96,14 @@ acoustic_synthesis: defaults
 timelag_eval_checkpoint: latest.pth
 duration_eval_checkpoint: latest.pth
 acoustic_eval_checkpoint: latest.pth
+
+###########################################################
+#                VOCODER SETTING                          #
+###########################################################
+
+# NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
+vocoder_model:
+# Pretrained checkpoint path for the vocoder model
+pretrained_vocoder_checkpoint:
+# absolute/relative path to the checkpoint
+vocoder_eval_checkpoint:
