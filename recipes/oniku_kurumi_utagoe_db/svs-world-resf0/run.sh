@@ -114,7 +114,7 @@ if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     # NOTE: New residual F0 prediction models require relative_f0 to be false.
     cat > ${dst_dir}/config.yaml <<EOL
 # Global configs
-sample_rate: 48000
+sample_rate: ${sample_rate}
 frame_period: 5
 log_f0_conditioning: true
 
