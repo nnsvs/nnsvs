@@ -108,7 +108,7 @@ fi
 
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
-    if [[ -z "${vocoder_eval_checkpoint}" && -d ${expdir}/${vocoder_model} ]]; then
+    if [[ -z "${vocoder_eval_checkpoint}" && -d ${expdir}/${vocoder_model}/config.yml ]]; then
         vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
     fi
     # Determine the directory name of a packed model
