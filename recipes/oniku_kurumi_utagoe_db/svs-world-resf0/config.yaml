@@ -104,6 +104,9 @@ acoustic_eval_checkpoint: latest.pth
 # NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
 vocoder_model:
 # Pretrained checkpoint path for the vocoder model
+# NOTE: if you want to try fine-tuning, please specify the path here
 pretrained_vocoder_checkpoint:
 # absolute/relative path to the checkpoint
+# NOTE: the checkpoint is used for synthesis and packing
+# This doesn't have any effect on training
 vocoder_eval_checkpoint:
