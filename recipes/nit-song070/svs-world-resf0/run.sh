@@ -107,7 +107,29 @@ fi
 
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
-    dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
+    if [[ -z "${vocoder_eval_checkpoint}" && -d ${expdir}/${vocoder_model} ]]; then
+        vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
+    fi
+    # Determine the directory name of a packed model
+    if [ -e "$vocoder_eval_checkpoint" ]; then
+        # PWG's expdir or packed model's dir
+        voc_dir=$(dirname $vocoder_eval_checkpoint)
+        # PWG's expdir
+        if [ -e ${voc_dir}/config.yml ]; then
+            voc_config=${voc_dir}/config.yml
+        # Packed model's dir
+        elif [ -e ${voc_dir}/vocoder_model.yaml ]; then
+            voc_config=${voc_dir}/vocoder_model.yaml
+        else
+            echo "ERROR: vocoder config is not found!"
+            exit 1
+        fi
+        vocoder_config_name=$(basename $(grep config: ${voc_config} | awk '{print $2}'))
+        vocoder_config_name=${vocoder_config_name/.yaml/}
+        dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}_${vocoder_config_name}
+    else
+        dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
+    fi
     mkdir -p $dst_dir
     # global config file
     # NOTE: New residual F0 prediction models require relative_f0 to be false.
