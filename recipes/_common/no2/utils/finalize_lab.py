@@ -23,7 +23,7 @@ if config is None:
     sys.exit(-1)
 
 full_align_dir = join(config["out_dir"], "full_dtw_seg")
-full_score_dir = join(config["out_dir"], "sinsy_full_round_seg")
+full_score_dir = join(config["out_dir"], "generated_full_round_seg")
 
 
 def sanity_check_lab(lab):
@@ -51,7 +51,7 @@ for d in [lab_align_dst_dir, lab_score_dst_dir]:
 
 
 base_files = sorted(glob(join(config["out_dir"], "full_dtw", "*.lab")))
-
+black_list = []
 print("Prepare data for time-lag models")
 for base in tqdm(base_files):
     utt_id = splitext(basename(base))[0]
@@ -59,7 +59,7 @@ for base in tqdm(base_files):
 
     # Compute offset for the entire song
     lab_align_path = join(config["out_dir"], "full_dtw", f"{utt_id}.lab")
-    lab_score_path = join(config["out_dir"], "sinsy_full_round", f"{utt_id}.lab")
+    lab_score_path = join(config["out_dir"], "generated_full_round", f"{utt_id}.lab")
     lab_align = trim_sil_and_pau(hts.load(lab_align_path))
     lab_score = trim_sil_and_pau(hts.load(lab_score_path))
 
@@ -144,6 +144,12 @@ for base in tqdm(base_files):
         if len(valid_note_indices) < len(note_indices):
             D = len(note_indices) - len(valid_note_indices)
             print(f"{utt_id}.lab: {D}/{len(note_indices)} time-lags are excluded.")
+        if (
+            len(valid_note_indices) < 2
+            or len(valid_note_indices) < len(note_indices) / 2
+        ):
+            print(f"{utt_id} is excluded from training due to incomplete data.")
+            black_list.append(splitext(name)[0])
 
         # Note onsets as labels
         lab_align = lab_align[valid_note_indices]
@@ -159,7 +165,6 @@ for base in tqdm(base_files):
             of.write(str(lab_score))
 
         seg_idx += 1
-
 
 # Prepare data for duration models
 
@@ -177,6 +182,8 @@ for base in tqdm(base_files):
     while True:
         lab_align_path = join(full_align_dir, f"{utt_id}_seg{seg_idx}.lab")
         name = basename(lab_align_path)
+        if name in black_list:
+            continue
         assert seg_idx > 0 or exists(lab_align_path)
         if not exists(lab_align_path):
             break
@@ -184,6 +191,9 @@ for base in tqdm(base_files):
         lab_align = hts.load(lab_align_path)
         sanity_check_lab(lab_align)
         lab_align = fix_offset(lab_align)
+        if len(lab_align) < 2:
+            print(f"{utt_id} is excluded from training due to incomplete data.")
+            black_list.append(splitext(name)[0])
 
         # Save lab file
         lab_align_dst_path = join(lab_align_dst_dir, name)
@@ -205,15 +215,16 @@ for d in [wav_dst_dir, lab_align_dst_dir, lab_score_dst_dir]:
 print("Prepare data for acoustic models")
 for base in tqdm(base_files):
     utt_id = splitext(basename(base))[0]
-    if config["spk"] == "natsumeyuuri":
-        # natsume_singing
-        wav_path = join(expanduser(config["db_root"]), f"wav/{utt_id}.wav")
-    else:
-        # ofuton_p_utagoe_db, oniku_kurumi_utagoe_db
-        wav_path = join(expanduser(config["db_root"]), f"{utt_id}/{utt_id}.wav")
 
-    assert exists(wav_path)
-    # sr, wave = wavfile.read(wav_path)
+    _wav_path = glob(
+        join(expanduser(config["db_root"]), f"**/{utt_id}.wav"), recursive=True
+    )
+    if _wav_path == None:
+        sys.exit(f"wav_path: {wav_path} is not found.")
+    elif len(_wav_path) >= 2:
+        print(f"Multiple {utt_id} is found, so {_wav_path[0]} is used.")
+    wav_path = _wav_path[0]
+
     wav, sr = librosa.load(wav_path, sr=config["sample_rate"])
     assert sr == config["sample_rate"]
 
@@ -224,7 +235,11 @@ for base in tqdm(base_files):
     while True:
         lab_align_path = join(full_align_dir, f"{utt_id}_seg{seg_idx}.lab")
         lab_score_path = join(full_score_dir, f"{utt_id}_seg{seg_idx}.lab")
-        name = basename(lab_align_path)
+        name = splitext(basename(lab_align_path))[0]
+        if name in black_list:
+            # skip
+            seg_idx += 1
+            continue
         assert seg_idx > 0 or exists(lab_align_path)
         if not exists(lab_align_path):
             break
@@ -234,7 +249,7 @@ for base in tqdm(base_files):
         # Make a slice of audio and then save it
         b, e = int(lab_align[0][0] * 1e-7 * sr), int(lab_align[-1][1] * 1e-7 * sr)
         wav_silce = wav[b:e]
-        wav_slice_path = join(wav_dst_dir, name.replace(".lab", ".wav"))
+        wav_slice_path = join(wav_dst_dir, f"{name}.wav")
         # TODO: consider explicit subtype
         sf.write(wav_slice_path, wav_silce, sr)
 
@@ -244,14 +259,13 @@ for base in tqdm(base_files):
         lab_score = fix_offset(lab_score)
 
         # Save label
-        lab_align_dst_path = join(lab_align_dst_dir, name)
+        lab_align_dst_path = join(lab_align_dst_dir, f"{name}.lab")
         with open(lab_align_dst_path, "w") as of:
             of.write(str(lab_align))
 
-        lab_score_dst_path = join(lab_score_dst_dir, name)
+        lab_score_dst_path = join(lab_score_dst_dir, f"{name}.lab")
         with open(lab_score_dst_path, "w") as of:
             of.write(str(lab_score))
 
         seg_idx += 1
-
 sys.exit(0)

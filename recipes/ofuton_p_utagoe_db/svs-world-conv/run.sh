@@ -62,7 +62,7 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    sh $NO2_ROOT/utils/data_prep.sh ./config.yaml
+    sh $NO2_ROOT/utils/data_prep.sh ./config.yaml musicxml
     mkdir -p data/list
 
     echo "train/dev/eval split"

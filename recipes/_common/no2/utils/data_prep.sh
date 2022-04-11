@@ -2,23 +2,32 @@
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 
-if [ $# -ne 1 ];then
-    echo "USAGE: data_prep.sh config_path"
+if [ $# -ne 2 ];then
+    echo "USAGE: data_prep.sh config_path data_type"
     exit 1
 fi
 
 config_path=$1
 
 # Step 1:
-# Generate full-context labels from music xml using pysinsy
+# Generate full-context labels from music xml using pysinsy/utaupy and round them.
 # pysinsy: https://github.com/r9y9/pysinsy
+# utaupy: https://github.com/oatsu-gh/utaupy
 
-python $script_dir/gen_lab.py $config_path
+if [ $2 = "musicxml" ]; then
+    python $script_dir/musicxml2lab.py $config_path
+elif [ $2 = "ust" ]; then
+    python $script_dir/ust2lab.py $config_path
+else
+    echo "Unsupported file format."
+    exit 1
+fi
+python $script_dir/round_lab.py $config_path
 
 # Step 2
-# Align sinsy's labels and singing voice database's alignment file by DTW
+# Align generated labels and singing voice database's alignment file by DTW
 # The reason we need this is because there are some mismatches between
-# sinsy output and singing voice database's provided alignment.
+# sinsy/utaupy output and singing voice database's provided alignment.
 # e.g., number of pau/sil
 # One solution for this is to correct alignment manually, but it would be laborious to work.
 # To mitigate the problem, I decided to follow the following strategy:

@@ -1,0 +1,12 @@
+stream_sizes: [1]
+has_dynamic_features: [false]
+stream_weights: [1]
+
+netG:
+  _target_: nnsvs.model.LSTMRNN
+  in_dim: 420
+  out_dim: 1
+  hidden_dim: 64
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.5

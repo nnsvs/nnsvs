@@ -1,0 +1,103 @@
+### General settings.
+## The name of singer
+spk: "ameboshi_ciphyer"
+
+## exp tag(for managing experiments)
+tag:
+
+## Directory of Unzipped singing voice database
+# PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
+db_root: "~/data/雨星サイファ歌声DB/"
+
+## Output directory
+# All the generated labels, intermediate files, and segmented wav files
+# will be saved in the following directory
+out_dir: "./data"
+
+## Songs to be excluded from trainig.
+exclude_songs: []
+
+### Utaupy related settings.
+## Utaupy table path
+# This singing voice database contains the unvoiced vowels "I" and "U".
+# To enable the unvoiced vowels, modified version of sinsy dictionary files
+# are needed.
+utaupy_table_path: "../../_common/no2/utaupy/kana2phonemes_002_oto2lab.table"
+
+## HTS-style question used for extracting musical/linguistic context from musicxml files
+question_path: "../../_common/hed/jp_qst001_nnsvs.hed"
+
+### Data preparation related settings.
+## Song segmentation by silence durations.
+# TODO: would be better to split songs by phrasal information in the musical scores
+# Split song by silences (in sec)
+segmentation_threshold: 0.4
+# Min duration for a segment
+# note: there could be some execptions (e.g., the last segment of a song)
+segment_min_duration: 5.0
+# Force split segments if long silence is found regardless of min_duration
+force_split_threshold: 5.0
+# Offset correction
+# If True, offset is computed in an entire song
+# otherwise offset is computed for each segment
+global_offset_correction: False
+offset_correction_threshold: 0.01
+# Time-lag constraints to filter outliers
+timelag_allowed_range: [-20, 19]
+timelag_allowed_range_rest: [-40, 39]
+
+suppress_start_end_pau: True
+start_end_pau_suppression_ratio: 0.2
+
+# Audio sampling rate
+# CAUTION: Changing sample_rate may affect the dimension number of acoustic features.
+# DO NOT CHANGE this unless you know the relationship between the dim of bap and sample_rate.
+sample_rate: 48000
+
+gain_normalize: False
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+
+timelag_features: defaults
+duration_features: defaults
+acoustic_features: static_deltadelta
+
+###########################################################
+#                TRAINING SETTING                         #
+###########################################################
+
+# Models
+# To customize, put your config or change ones in
+# conf/train/{timelag,duration,acoustic}/ and
+# specify the config name below
+# NOTE: *_model: model definition, *_train: general train configs,
+# *_data: data configs (e.g., batch size)
+
+timelag_model: timelag_ffn
+timelag_train: myconfig
+timelag_data: myconfig
+
+duration_model: duration_lstm
+duration_train: myconfig
+duration_data: myconfig
+
+acoustic_model: acoustic_conv
+acoustic_train: myconfig
+acoustic_data: myconfig
+
+# Pretrained model dir (leave empty to disable)
+pretrained_expdir:
+
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults
+
+# latest.pth or best.pth
+timelag_eval_checkpoint: latest.pth
+duration_eval_checkpoint: latest.pth
+acoustic_eval_checkpoint: latest.pth
