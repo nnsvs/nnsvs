@@ -3,8 +3,6 @@ from os.path import isdir, isfile, join
 import jaconv
 import numpy as np
 from nnmnkwii.io import hts
-from tqdm import tqdm
-
 
 def merge_sil(lab):
     N = len(lab)
@@ -276,14 +274,12 @@ def _fix_mono_lab_after_align_default(lab):
     f = hts.HTSLabelFile()
     f.append(lab[0])
     for i in range(1, len(lab)):
-        # fix contiguous pau
-        if (
-            f.contexts[-1] == "pau"
-            and lab.contexts[i] == "pau"
-            and f.start_times[-1] == lab.start_times[i]
-            and f.end_times[-1] == lab.end_times[i]
+        # fix consecutive pau/sil
+        if (f.contexts[-1] == "pau" or f.contexts[-1] == "sil") and (
+            lab.contexts[i] == "pau" or lab.contexts[i] == "sil"
         ):
-            d = round((lab.end_times[i] - lab.start_times[i]) / 2)
+            print("Consecutive pau/sil-s are detected.")
+            d = round((f.end_times[-1] - f.start_times[-1]) / 2)
             f.end_times[-1] = f.start_times[-1] + d
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
         elif f.end_times[-1] != lab.start_times[i]:

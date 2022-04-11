@@ -1,7 +1,7 @@
 import os
 import sys
 from glob import glob
-from os.path import basename, expanduser, join, splitext
+from os.path import basename, join
 
 import yaml
 from fastdtw import fastdtw

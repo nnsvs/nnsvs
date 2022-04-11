@@ -6,7 +6,7 @@ from os.path import basename, expanduser, join, splitext
 import yaml
 from nnmnkwii.io import hts
 from tqdm import tqdm
-from util import fix_mono_lab_before_align, merge_sil
+from util import fix_mono_lab_before_align
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")

@@ -44,6 +44,6 @@ for ust_path in tqdm(files):
         dst_dir = join(config["out_dir"], f"{n}")
         os.makedirs(dst_dir, exist_ok=True)
         with open(join(dst_dir, name + ".lab"), "w") as f:
-            f.write(str(lab))
+            f.write(str(fix_mono_lab_before_align(lab, config["spk"])))
 
         f.close()

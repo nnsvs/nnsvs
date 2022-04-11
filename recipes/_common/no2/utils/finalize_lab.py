@@ -219,8 +219,8 @@ for base in tqdm(base_files):
     _wav_path = glob(
         join(expanduser(config["db_root"]), f"**/{utt_id}.wav"), recursive=True
     )
-    if _wav_path == None:
-        sys.exit(f"wav_path: {wav_path} is not found.")
+    if _wav_path is None:
+        sys.exit(f"{utt_id} is not found.")
     elif len(_wav_path) >= 2:
         print(f"Multiple {utt_id} is found, so {_wav_path[0]} is used.")
     wav_path = _wav_path[0]
