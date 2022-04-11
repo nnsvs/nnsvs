@@ -6,6 +6,7 @@ import pyworld
 import torch
 from hydra.utils import instantiate
 from nnmnkwii.io import hts
+from nnsvs.dsp import bandpass_filter
 from nnsvs.gen import (
     gen_spsvs_static_features,
     gen_world_params,
@@ -312,6 +313,8 @@ WORLD is only supported for waveform generation"""
         return wav, self.config.sample_rate
 
     def post_process(self, wav):
+        wav = bandpass_filter(wav, self.config.sample_rate)
+
         if np.max(wav) > 10:
             # data is likely already in [-32768, 32767]
             wav = wav.astype(np.int16)

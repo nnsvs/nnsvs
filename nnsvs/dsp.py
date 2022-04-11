@@ -1,9 +1,31 @@
 import torch
+from scipy import signal
 from torch import nn
 from torch.nn import functional as F
 
 # Part of code was adapted from:
 # https://github.com/nii-yamagishilab/project-NN-Pytorch-scripts
+
+
+def bandpass_filter(x, sr, cutoff=70):
+    """Band-pass filter
+
+    Args:
+        x (np.ndarray): input signal
+        fs (int): sampling rate
+        cutoff (int): cutoff frequency
+
+    Returns:
+        np.ndarray: filtered signal
+    """
+    nyquist = sr // 2
+    norm_cutoff = cutoff / nyquist
+    Wn = [norm_cutoff, 0.999]
+
+    b, a = signal.butter(5, Wn, "bandpass")
+    y = signal.filtfilt(b, a, x)
+
+    return y
 
 
 class TimeInvFIRFilter(nn.Conv1d):
