@@ -4,6 +4,7 @@ import jaconv
 import numpy as np
 from nnmnkwii.io import hts
 
+
 def merge_sil(lab):
     N = len(lab)
     f = hts.HTSLabelFile()
