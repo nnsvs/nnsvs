@@ -289,6 +289,8 @@ WORLD is only supported for waveform generation"""
                 self.config.frame_period,
             )
         elif vocoder_type == "pwg":
+            # NOTE: So far vocoder models are trained on binary V/UV features
+            vuv = (vuv > vuv_threshold).astype(np.float32)
             voc_inp = (
                 torch.from_numpy(
                     self.vocoder_in_scaler.transform(
