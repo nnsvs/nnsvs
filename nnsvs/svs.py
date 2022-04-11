@@ -178,7 +178,15 @@ Acoustic model: {acoustic_str}
         self.acoustic_model.to(device)
 
     @torch.no_grad()
-    def svs(self, labels, vocoder_type="world", return_states=False):
+    def svs(
+        self,
+        labels,
+        vocoder_type="world",
+        post_filter=True,
+        vuv_threshold=0.1,
+        vibrato_scale=1.0,
+        return_states=False,
+    ):
         """Synthesize waveform given HTS-style labels
 
         Args:
@@ -259,10 +267,12 @@ WORLD is only supported for waveform generation"""
             self.config.acoustic.subphone_features,
             self.pitch_idx,
             self.acoustic_config.num_windows,
-            self.config.acoustic.post_filter,
+            post_filter,
             self.config.sample_rate,
             self.config.frame_period,
             self.config.acoustic.relative_f0,
+            vibrato_scale=vibrato_scale,
+            vuv_threshold=vuv_threshold,
         )
 
         # Waveform generation by (1) WORLD or (2) neural vocoder
