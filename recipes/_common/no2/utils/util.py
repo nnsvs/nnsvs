@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import isdir, isfile, join
 
 import jaconv
 import numpy as np
@@ -149,19 +149,25 @@ def segment_labels(
     return segments2, start_indices_new, end_indices_new
 
 
-def prep_ph2num(sinsy_dic):
-    sinsy_phone_mapping = {}
-    with open(join(sinsy_dic, "japanese.utf_8.table"), encoding="UTF-8") as f:
+def prep_ph2num(dic_path):
+    if isdir(dic_path):
+        _dic_path = join(dic_path, "japanese.utf_8.table")
+    elif isfile(dic_path):
+        _dic_path = dic_path
+
+    phone_mapping = {}
+
+    with open(_dic_path, encoding="UTF-8") as f:
         for label in f:
             s = label.strip().split()
             key = jaconv.hira2kata(s[0])
-            sinsy_phone_mapping[key] = s[1:]
+            phone_mapping[key] = s[1:]
     ph2num = {}
     counter = 0
     for p in ["sil", "pau", "br"]:
         ph2num[p] = counter
         counter += 1
-    for _, v in sinsy_phone_mapping.items():
+    for _, v in phone_mapping.items():
         for p in v:
             if p not in ph2num:
                 ph2num[p] = counter
@@ -257,7 +263,7 @@ def _fix_mono_lab_after_align_natsume_singing(lab):
                     f.end_times[-1], f.contexts[-1], lab.start_times[i], lab.contexts[i]
                 )
             )
-            print("There seems to be a missing phoneme in sinsy_mono_round.")
+            print("There seems to be a missing phoneme in generated_mono_round.")
             # expand lab.start_times[i] to f.end_times[-1]
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
         else:
@@ -269,15 +275,24 @@ def _fix_mono_lab_after_align_default(lab):
     f = hts.HTSLabelFile()
     f.append(lab[0])
     for i in range(1, len(lab)):
-        # fix contiguous pau
-        if (
-            f.contexts[-1] == "pau"
-            and lab.contexts[i] == "pau"
-            and f.start_times[-1] == lab.start_times[i]
-            and f.end_times[-1] == lab.end_times[i]
+        # fix consecutive pau/sil
+        if (f.contexts[-1] == "pau" or f.contexts[-1] == "sil") and (
+            lab.contexts[i] == "pau" or lab.contexts[i] == "sil"
         ):
-            d = round((lab.end_times[i] - lab.start_times[i]) / 2)
+            print("Consecutive pau/sil-s are detected.")
+            d = round((f.end_times[-1] - f.start_times[-1]) / 2)
             f.end_times[-1] = f.start_times[-1] + d
+            f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
+        elif f.end_times[-1] != lab.start_times[i]:
+            # There is a gap between the end_times of the last phoneme and
+            # the start_times of the next phoneme
+            print(
+                "end_time {} of the phoneme {} and start_time {} of the phoneme {} is not the same.".format(  # noqa
+                    f.end_times[-1], f.contexts[-1], lab.start_times[i], lab.contexts[i]
+                )
+            )
+            print("There seems to be a missing phoneme in generated_mono_round.")
+            # expand lab.start_times[i] to f.end_times[-1]
             f.append((f.end_times[-1], lab.end_times[i], lab.contexts[i]))
         else:
             f.append(lab[i], strict=False)

@@ -25,19 +25,22 @@ with open(sys.argv[1], "r") as yml:
 
 # Get rough alignment between
 # 1) mono-phone labels of singing voice database and
-# 2) generated labels by sinsy
+# 2) generated labels by sinsy/utaupy
 
-ph2num = prep_ph2num(config["sinsy_dic"])
+if "sinsy_dic" in config:
+    ph2num = prep_ph2num(config["sinsy_dic"])
+elif "utaupy_table_path" in config:
+    ph2num = prep_ph2num(config["utaupy_table_path"])
 
-sinsy_files = sorted(glob(join(config["out_dir"], "sinsy_mono_round/*.lab")))
+generated_files = sorted(glob(join(config["out_dir"], "generated_mono_round/*.lab")))
 mono_label_files = sorted(glob(join(config["out_dir"], "mono_label_round/*.lab")))
 
 dst_dir = join(config["out_dir"], "mono_dtw")
 os.makedirs(dst_dir, exist_ok=True)
 
 excludes = []
-for (path1, path2) in tqdm(zip(sinsy_files, mono_label_files)):
-    lab_sinsy = hts.load(path1)
+for (path1, path2) in tqdm(zip(generated_files, mono_label_files)):
+    lab_generated = hts.load(path1)
     lab_mono_label = hts.load(path2)
     name = basename(path1)
     if name in excludes:
@@ -46,19 +49,19 @@ for (path1, path2) in tqdm(zip(sinsy_files, mono_label_files)):
 
     # align two labels roughly based on the phoneme labels
     d, path = fastdtw(
-        ph2numeric(lab_sinsy.contexts, ph2num),
+        ph2numeric(lab_generated.contexts, ph2num),
         ph2numeric(lab_mono_label.contexts, ph2num),
         radius=len(lab_mono_label),
     )
 
-    # Edit sinsy labels with hand-annontated alignments
+    # Edit generated labels with hand-annontated alignments
     for x, y in path:
-        lab_sinsy.start_times[x] = lab_mono_label.start_times[y]
-        lab_sinsy.end_times[x] = lab_mono_label.end_times[y]
+        lab_generated.start_times[x] = lab_mono_label.start_times[y]
+        lab_generated.end_times[x] = lab_mono_label.end_times[y]
 
-    lab_sinsy = fix_mono_lab_after_align(lab_sinsy, config["spk"])
+    lab_generated = fix_mono_lab_after_align(lab_generated, config["spk"])
     with open(join(dst_dir, name), "w") as of:
-        of.write(str(lab_sinsy))
+        of.write(str(lab_generated))
     print(name, d)
 
 sys.exit(0)
