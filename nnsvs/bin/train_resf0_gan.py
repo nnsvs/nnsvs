@@ -294,7 +294,7 @@ def my_app(config: DictConfig) -> None:
         D_in_dim = (
             np.asarray(config.model.stream_sizes) * np.asarray(config.train.adv_streams)
         ).sum()
-        config.model.netD.in_dim = D_in_dim
+        config.model.netD.in_dim = int(D_in_dim)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
