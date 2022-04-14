@@ -73,6 +73,7 @@ setup(
             "nnsvs-preprocess-normalize = nnsvs.bin.preprocess_normalize:entry",
             "nnsvs-train = nnsvs.bin.train:entry",
             "nnsvs-train-resf0 = nnsvs.bin.train_resf0:entry",
+            "nnsvs-train-resf0-gan = nnsvs.bin.train_resf0_gan:entry",
             "nnsvs-generate = nnsvs.bin.generate:entry",
             "nnsvs-synthesis = nnsvs.bin.synthesis:entry",
         ],
