@@ -314,7 +314,7 @@ def train_loop(
     return last_dev_loss
 
 
-def _check_resf0_config(logger, model, config, in_scaler, out_scaler):
+def check_resf0_config(logger, model, config, in_scaler, out_scaler):
     logger.info("Checking model configs for residual F0 prediction")
     if in_scaler is None or out_scaler is None:
         raise ValueError("in_scaler and out_scaler must be specified")
@@ -432,7 +432,7 @@ def my_app(config: DictConfig) -> None:
         out_scaler,
     ) = setup(config, device)
 
-    _check_resf0_config(logger, model, config, in_scaler, out_scaler)
+    check_resf0_config(logger, model, config, in_scaler, out_scaler)
 
     out_scaler = PyTorchStandardScaler(
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)
