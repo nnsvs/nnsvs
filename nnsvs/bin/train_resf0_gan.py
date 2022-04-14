@@ -96,7 +96,7 @@ def train_step(
         optD.step()
 
     # Update generator
-    loss = criterion(
+    loss_feats = criterion(
         pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
     ).mean()
 
@@ -107,13 +107,13 @@ def train_step(
         loss_adv = loss_adv.masked_select(mask).mean()
     else:
         loss_adv = loss_adv.mean()
-    loss += adv_weight * loss_adv
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
     loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
-    loss += pitch_reg_weight * loss_pitch
+
+    loss = loss_feats + adv_weight * loss_adv + pitch_reg_weight * loss_pitch
 
     distortions = compute_distortions(
         pred_out_feats, out_feats, lengths, out_scaler, model_config
@@ -122,11 +122,12 @@ def train_step(
     log_metrics.update(
         {
             "Loss": loss.item(),
+            "Loss_Feats": loss_feats.item(),
+            "Loss_Adv": loss_adv.item(),
+            "Loss_Pitch": loss_pitch.item(),
             "Loss_Real": loss_real.item(),
             "Loss_Fake": loss_fake.item(),
             "Loss_D": loss_d.item(),
-            "Loss_Adv": loss_adv.item(),
-            "Loss_Pitch": loss_pitch.item(),
         }
     )
 
