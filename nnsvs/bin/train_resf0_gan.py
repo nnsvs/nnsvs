@@ -102,7 +102,7 @@ def train_step(
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, lengths)
-    loss_adv = 1 - D_fake ** 2
+    loss_adv = (1 - D_fake) ** 2
     if netD_time_length_preserving:
         loss_adv = loss_adv.masked_select(mask).mean()
     else:
