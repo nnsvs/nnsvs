@@ -2,6 +2,7 @@ from pathlib import Path
 
 import hydra
 import mlflow
+import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii import metrics
@@ -27,9 +28,13 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler):
     out_feats = out_scaler.inverse_transform(out_feats)
     pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
 
-    dist = {
-        "rmse": metrics.mean_squared_error(out_feats, pred_out_feats, lengths=lengths)
-    }
+    dist = {}
+    try:
+        dist["rmse"] = np.sqrt(
+            metrics.mean_squared_error(out_feats, pred_out_feats, lengths=lengths)
+        )
+    except ZeroDivisionError:
+        pass
 
     return dist
 
