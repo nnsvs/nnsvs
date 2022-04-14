@@ -2,6 +2,7 @@ from pathlib import Path
 
 import hydra
 import mlflow
+import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
@@ -288,6 +289,13 @@ def train_loop(
 
 @hydra.main(config_path="conf/train_resf0", config_name="config")
 def my_app(config: DictConfig) -> None:
+    # NOTE: set discriminator's in_dim automatically
+    if config.model.netD.in_dim is None:
+        D_in_dim = (
+            np.asarray(config.model.stream_sizes) * np.asarray(config.train.adv_streams)
+        ).sum()
+        config.model.netD.in_dim = D_in_dim
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
         (netG, optG, schedulerG),

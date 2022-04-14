@@ -24,7 +24,8 @@ netG:
 
 netD:
   _target_: nnsvs.model.Conv1dResnet
-  in_dim: 206
+  # If in_dim is not specified, it will be automatically set based on adv_streams
+  in_dim: null
   out_dim: 1
   hidden_dim: 128
   num_layers: 4
