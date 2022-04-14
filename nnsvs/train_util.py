@@ -119,16 +119,23 @@ def get_data_loaders(data_config, collate_fn):
 
 
 def save_checkpoint(
-    logger, out_dir, model, optimizer, lr_scheduler, epoch, is_best=False
+    logger,
+    out_dir,
+    model,
+    optimizer,
+    lr_scheduler,
+    epoch,
+    is_best=False,
+    postfix="",
 ):
     if isinstance(model, nn.DataParallel):
         model = model.module
 
     out_dir.mkdir(parents=True, exist_ok=True)
     if is_best:
-        path = out_dir / "best_loss.pth"
+        path = out_dir / f"best_loss{postfix}.pth"
     else:
-        path = out_dir / "epoch{:04d}.pth".format(epoch)
+        path = out_dir / "epoch{:04d}{}.pth".format(epoch, postfix)
     torch.save(
         {
             "state_dict": model.state_dict(),
@@ -140,7 +147,7 @@ def save_checkpoint(
 
     logger.info(f"Saved checkpoint at {path}")
     if not is_best:
-        shutil.copyfile(path, out_dir / "latest.pth")
+        shutil.copyfile(path, out_dir / f"latest{postfix}.pth")
 
 
 def get_stream_weight(stream_weights, stream_sizes):
