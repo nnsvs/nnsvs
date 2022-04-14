@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Utils for multi-stream features
 
 import numpy as np
