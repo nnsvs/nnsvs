@@ -4,7 +4,10 @@ from torch import nn
 
 # Adapted from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
 def init_weights(net, init_type="normal", init_gain=0.02):
-    def init_func(m):  # define the initialization function
+    if init_type == "none":
+        return
+
+    def init_func(m):
         classname = m.__class__.__name__
         if hasattr(m, "weight") and (
             classname.find("Conv") != -1 or classname.find("Linear") != -1
@@ -28,7 +31,7 @@ def init_weights(net, init_type="normal", init_gain=0.02):
             nn.init.normal_(m.weight.data, 1.0, init_gain)
             nn.init.constant_(m.bias.data, 0.0)
 
-    net.apply(init_func)  # apply the initialization function <init_func>
+    net.apply(init_func)
 
 
 class Conv2dGLU(nn.Module):
@@ -76,7 +79,7 @@ class Conv2dGLU(nn.Module):
 
 
 class CycleGANVC2D(nn.Module):
-    def __init__(self, in_dim=None, hidden_dim=64, padding=None, init="normal"):
+    def __init__(self, in_dim=None, hidden_dim=64, padding=None, init_type="normal"):
         super().__init__()
         C = hidden_dim
         self.conv_in = Conv2dGLU(
@@ -101,7 +104,7 @@ class CycleGANVC2D(nn.Module):
             )
         else:
             self.conv_out = nn.Conv2d(8 * C, 1, (1, 3), padding=padding)
-        init_weights(self, init)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths):
         # W: frame-axis
