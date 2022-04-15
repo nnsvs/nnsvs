@@ -9,7 +9,11 @@ fi
 
 if [ ! -z "${pretrained_expdir}" ]; then
     resume_checkpoint_g=$pretrained_expdir/${acoustic_model}/latest.pth
-    resume_checkpoint_d=$pretrained_expdir/${acoustic_model}/latest_D.pth
+    if [ -e $pretrained_expdir/${acoustic_model}/latest_D.pth ]; then
+        resume_checkpoint_d=$pretrained_expdir/${acoustic_model}/latest_D.pth
+    else
+        resume_checkpoint_d=
+    fi
 else
     resume_checkpoint_g=
     resume_checkpoint_d=
