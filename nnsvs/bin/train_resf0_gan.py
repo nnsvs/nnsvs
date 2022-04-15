@@ -78,14 +78,20 @@ def train_step(
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
+    if hasattr(netD, "downsample_scale"):
+        D_mask = mask[:, :: netD.downsample_scale, :]
+    else:
+        if D_real.shape[1] == real_netD_in_feats.shape[1]:
+            D_mask = mask
+        else:
+            D_mask = None
 
     # Update discriminator
     loss_real = (D_real - 1) ** 2
     loss_fake = D_fake_det ** 2
-    netD_time_length_preserving = mask.shape[1] == pred_out_feats.shape[1]
-    if netD_time_length_preserving:
-        loss_real = loss_real.masked_select(mask).mean()
-        loss_fake = loss_fake.masked_select(mask).mean()
+    if D_mask is not None:
+        loss_real = loss_real.masked_select(D_mask).mean()
+        loss_fake = loss_fake.masked_select(D_mask).mean()
     else:
         loss_real = loss_real.mean()
         loss_fake = loss_fake.mean()
@@ -103,8 +109,8 @@ def train_step(
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, lengths)
     loss_adv = (1 - D_fake) ** 2
-    if netD_time_length_preserving:
-        loss_adv = loss_adv.masked_select(mask).mean()
+    if D_mask is not None:
+        loss_adv = loss_adv.masked_select(D_mask).mean()
     else:
         loss_adv = loss_adv.mean()
 
