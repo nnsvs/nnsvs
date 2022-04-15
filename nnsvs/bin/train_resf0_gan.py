@@ -11,7 +11,11 @@ from nnsvs.bin.train_resf0 import (
     compute_batch_pitch_regularization_weight,
     compute_distortions,
 )
-from nnsvs.multistream import select_streams
+from nnsvs.multistream import (
+    get_static_features,
+    get_static_stream_sizes,
+    select_streams,
+)
 from nnsvs.train_util import (
     log_params_from_omegaconf_dict,
     save_checkpoint,
@@ -40,6 +44,8 @@ def train_step(
     pitch_reg_weight=1.0,
     adv_weight=1.0,
     adv_streams=None,
+    adv_use_static_feats_only=True,
+    mask_nth_mgc_for_adv_loss=0,
 ):
     optG.zero_grad()
     optD.zero_grad()
@@ -65,12 +71,41 @@ def train_step(
     pred_out_feats, lf0_residual = netG(in_feats, lengths)
 
     # Select streams for computing adversarial loss
-    real_netD_in_feats = select_streams(
-        out_feats, model_config.stream_sizes, adv_streams
-    )
-    fake_netD_in_feats = select_streams(
-        pred_out_feats, model_config.stream_sizes, adv_streams
-    )
+    if adv_use_static_feats_only:
+        real_netD_in_feats = torch.cat(
+            get_static_features(
+                out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                adv_streams,
+            ),
+            dim=-1,
+        )
+        fake_netD_in_feats = torch.cat(
+            get_static_features(
+                pred_out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                adv_streams,
+            ),
+            dim=-1,
+        )
+    else:
+        real_netD_in_feats = select_streams(
+            out_feats, model_config.stream_sizes, adv_streams
+        )
+        fake_netD_in_feats = select_streams(
+            pred_out_feats, model_config.stream_sizes, adv_streams
+        )
+
+    # Ref: http://sython.org/papers/ASJ/saito2017asja.pdf
+    # 0-th mgc with adversarial trainging affects speech quality
+    # NOTE: assuming that the first stream contains mgc
+    if mask_nth_mgc_for_adv_loss > 0:
+        real_netD_in_feats = real_netD_in_feats[:, :, mask_nth_mgc_for_adv_loss:]
+        fake_netD_in_feats = fake_netD_in_feats[:, :, mask_nth_mgc_for_adv_loss:]
 
     # Real
     D_real = netD(real_netD_in_feats, lengths)
@@ -227,6 +262,8 @@ def train_loop(
                     pitch_reg_weight,
                     adv_weight,
                     adv_streams,
+                    config.train.adv_use_static_feats_only,
+                    config.train.mask_nth_mgc_for_adv_loss,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
@@ -304,14 +341,22 @@ def train_loop(
     return last_dev_loss
 
 
-@hydra.main(config_path="conf/train_resf0", config_name="config")
+@hydra.main(config_path="conf/train_resf0_gan", config_name="config")
 def my_app(config: DictConfig) -> None:
     # NOTE: set discriminator's in_dim automatically
     if config.model.netD.in_dim is None:
-        D_in_dim = (
-            np.asarray(config.model.stream_sizes) * np.asarray(config.train.adv_streams)
-        ).sum()
-        config.model.netD.in_dim = int(D_in_dim)
+        if config.train.adv_use_static_feats_only:
+            stream_sizes = get_static_stream_sizes(
+                config.model.stream_sizes,
+                config.model.has_dynamic_features,
+                config.model.num_windows,
+            )
+        else:
+            stream_sizes = np.asarray(config.model.stream_sizes)
+        D_in_dim = int((stream_sizes * np.asarray(config.train.adv_streams)).sum())
+        if config.train.mask_nth_mgc_for_adv_loss > 0:
+            D_in_dim -= config.train.mask_nth_mgc_for_adv_loss
+        config.model.netD.in_dim = D_in_dim
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (

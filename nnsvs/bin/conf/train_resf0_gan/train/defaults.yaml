@@ -17,6 +17,14 @@ adv_weight: 1.0
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [True, False, False, False, False, False]
 
+# Use static features as the input of the discriminator or not
+adv_use_static_feats_only: true
+
+# Don't set the value > 0 unless you are sure what you are doing
+# mask 0 to n-th mgc for adversarial loss
+# e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
+mask_nth_mgc_for_adv_loss: 2
+
 stream_wise_loss: false
 use_detect_anomaly: true
 
