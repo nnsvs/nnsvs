@@ -26,6 +26,7 @@ from tqdm import tqdm
 
 def train_step(
     model_config,
+    optim_config,
     netG,
     optG,
     netD,
@@ -99,6 +100,10 @@ def train_step(
 
     if train:
         loss_d.backward()
+        grad_norm_d = torch.nn.utils.clip_grad_norm_(
+            netD.parameters(), optim_config.netD.clip_norm
+        )
+        log_metrics["GradNorm_D"] = grad_norm_d
         optD.step()
 
     # Update generator
@@ -139,6 +144,10 @@ def train_step(
 
     if train:
         loss.backward()
+        grad_norm_g = torch.nn.utils.clip_grad_norm_(
+            netG.parameters(), optim_config.netG.clip_norm
+        )
+        log_metrics["GradNorm_G"] = grad_norm_g
         optG.step()
 
     return loss, log_metrics
@@ -204,6 +213,7 @@ def train_loop(
 
                 loss, log_metrics = train_step(
                     config.model,
+                    config.train.optim,
                     netG,
                     optG,
                     netD,

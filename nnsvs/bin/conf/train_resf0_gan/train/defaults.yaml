@@ -33,6 +33,7 @@ optim:
       params:
         step_size: 20
         gamma: 0.5
+    clip_norm: 1.0
   netD:
     optimizer:
       name: Adam
@@ -45,6 +46,7 @@ optim:
       params:
         step_size: 20
         gamma: 0.5
+    clip_norm: 1.0
 
 resume:
   netG:
