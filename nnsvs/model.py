@@ -4,6 +4,7 @@ from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
+from nnsvs.util import init_weights
 from torch import nn
 from torch.nn.utils import weight_norm
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -382,6 +383,7 @@ class ResF0Conv1dResnet(BaseModel):
         out_lf0_idx=180,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
+        init_type="none",
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -403,6 +405,7 @@ class ResF0Conv1dResnet(BaseModel):
             WNConv1d(hidden_dim, out_dim, kernel_size=7, padding=0),
         ]
         self.model = nn.Sequential(*model)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
@@ -514,6 +517,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
         skip_inputs=False,
+        init_type="none",
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -564,6 +568,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
             last_in_dim = num_direction * lstm_hidden_dim
 
         self.fc = nn.Linear(last_in_dim, out_dim)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
         if isinstance(lengths, torch.Tensor):
