@@ -1,3 +1,5 @@
+from warnings import warn
+
 import numpy as np
 import torch
 from nnsvs.base import BaseModel, PredictionType
@@ -37,10 +39,15 @@ class Conv1dResnet(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=4,
-        dropout=0.0,
         init_type="none",
+        **kwargs,
     ):
         super().__init__()
+        if "dropout" in kwargs:
+            warn(
+                "dropout argment in Conv1dResnet is deprecated and will be removed in future versions"
+            )
+
         model = [
             nn.ReflectionPad1d(3),
             WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
@@ -290,12 +297,16 @@ class MDN(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=1,
-        dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
         init_type="none",
+        **kwargs,
     ):
         super(MDN, self).__init__()
+        if "dropout" in kwargs:
+            warn(
+                "dropout argment in MDN is deprecated and will be removed in future versions"
+            )
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         if num_layers > 1:
             for _ in range(num_layers - 1):
