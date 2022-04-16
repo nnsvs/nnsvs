@@ -45,7 +45,8 @@ class Conv1dResnet(BaseModel):
         super().__init__()
         if "dropout" in kwargs:
             warn(
-                "dropout argment in Conv1dResnet is deprecated and will be removed in future versions"
+                "dropout argument in Conv1dResnet is deprecated"
+                " and will be removed in future versions"
             )
 
         model = [
@@ -305,7 +306,8 @@ class MDN(BaseModel):
         super(MDN, self).__init__()
         if "dropout" in kwargs:
             warn(
-                "dropout argment in MDN is deprecated and will be removed in future versions"
+                "dropout argument in MDN is deprecated"
+                " and will be removed in future versions"
             )
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         if num_layers > 1:
