@@ -14,7 +14,14 @@ from torch import nn
 
 class FFN(nn.Module):
     def __init__(
-        self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0, init_type="normal"
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=2,
+        dropout=0.0,
+        init_type="normal",
+        cin_dim=None,
     ):
         super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
@@ -24,16 +31,28 @@ class FFN(nn.Module):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.LeakyReLU()
         self.dropout = nn.Dropout(dropout)
+
+        if cin_dim > 0:
+            self.cond = nn.Linear(cin_dim, hidden_dim)
+        else:
+            self.cond = None
+
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, c, lengths=None):
         outs = []
         h = self.relu(self.first_linear(x))
         outs.append(h)
         for hl in self.hidden_layers:
             h = self.dropout(self.relu(hl(h)))
             outs.append(h)
-        outs.append(self.last_linear(h))
+        out = self.last_linear(h)
+        if self.cond is not None:
+            # NOTE: sum against the last feature-axis (B, T, C)
+            inner_product = (h * self.cond(c)).sum(dim=-1, keepdim=True)
+            out = out + inner_product
+        outs.append(out)
+
         return outs
 
 
@@ -109,7 +128,7 @@ class CycleGANVC2D(nn.Module):
             self.conv_out = nn.Conv2d(8 * C, 1, (1, 3), padding=padding)
         init_weights(self, init_type)
 
-    def forward(self, x, lengths):
+    def forward(self, x, c, lengths):
         # W: frame-axis
         # H: feature-axis
         # (B, W, H) -> (B, H, W) -> (B, 1, H, W)
