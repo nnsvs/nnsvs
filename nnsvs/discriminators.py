@@ -8,6 +8,7 @@ Multi-scale architecture is not supported yet.
 """
 
 import torch
+from nnsvs.model import ResnetBlock, WNConv1d
 from nnsvs.util import init_weights
 from torch import nn
 
@@ -51,6 +52,57 @@ class FFN(nn.Module):
             # NOTE: sum against the last feature-axis (B, T, C)
             inner_product = (h * self.cond(c)).sum(dim=-1, keepdim=True)
             out = out + inner_product
+        outs.append(out)
+
+        return outs
+
+
+class Conv1dResnet(nn.Module):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=2,
+        init_type="normal",
+        cin_dim=-1,
+    ):
+        super().__init__()
+        model = [
+            nn.ReflectionPad1d(3),
+            WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
+        ]
+        for n in range(num_layers):
+            model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
+        model += [
+            nn.LeakyReLU(0.2),
+        ]
+        self.model = nn.ModuleList(model)
+        self.last_conv = WNConv1d(hidden_dim, out_dim, kernel_size=1, padding=0)
+
+        if cin_dim > 0:
+            self.cond = WNConv1d(cin_dim, hidden_dim, kernel_size=1, padding=0)
+        else:
+            self.cond = None
+
+        init_weights(self, init_type)
+
+    def forward(self, x, c, lengths=None):
+        # (B, T, C) -> (B, C, T)
+        x = x.transpose(1, 2)
+        outs = []
+        for f in self.model:
+            x = f(x)
+            outs.append(x)
+        out = self.last_conv(x)
+
+        if self.cond is not None:
+            # NOTE: sum against the last feature-axis (B, C, T)
+            inner_product = (x * self.cond(c.transpose(1, 2))).sum(dim=1, keepdim=True)
+            out = out + inner_product
+
+        # (B, C, T) -> (B, T, C)
+        out = out.transpose(1, 2)
         outs.append(out)
 
         return outs
