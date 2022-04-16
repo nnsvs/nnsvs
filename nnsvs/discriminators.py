@@ -13,7 +13,9 @@ from torch import nn
 
 
 class FFN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
+    def __init__(
+        self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0, init_type="normal"
+    ):
         super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
         self.hidden_layers = nn.ModuleList(
@@ -22,6 +24,7 @@ class FFN(nn.Module):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.LeakyReLU()
         self.dropout = nn.Dropout(dropout)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
         outs = []
