@@ -118,9 +118,9 @@ class Conv1dResnetSAR(Conv1dResnet):
         return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)
 
 
-class FeedForwardNet(BaseModel):
+class FFN(BaseModel):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
-        super(FeedForwardNet, self).__init__()
+        super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
         self.hidden_layers = nn.ModuleList(
             [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)]
@@ -134,6 +134,10 @@ class FeedForwardNet(BaseModel):
         for hl in self.hidden_layers:
             h = self.dropout(self.relu(hl(h)))
         return self.last_linear(h)
+
+
+# For compatibility
+FeedForwardNet = FFN
 
 
 class LSTMRNN(BaseModel):
