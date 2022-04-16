@@ -110,9 +110,9 @@ def train_step(
         fake_netD_in_feats = fake_netD_in_feats[:, :, mask_nth_mgc_for_adv_loss:]
 
     # Real
-    D_real = netD(real_netD_in_feats, lengths)
+    D_real = netD(real_netD_in_feats, in_feats, lengths)
     # Fake
-    D_fake_det = netD(fake_netD_in_feats.detach(), lengths)
+    D_fake_det = netD(fake_netD_in_feats.detach(), in_feats, lengths)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
@@ -149,7 +149,7 @@ def train_step(
     ).mean()
 
     # adversarial loss
-    D_fake = netD(fake_netD_in_feats, lengths)
+    D_fake = netD(fake_netD_in_feats, in_feats, lengths)
     loss_adv = (1 - D_fake[-1]) ** 2
     if D_mask is not None:
         loss_adv = loss_adv.masked_select(D_mask).mean()
