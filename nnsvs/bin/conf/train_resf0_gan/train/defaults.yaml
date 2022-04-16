@@ -12,21 +12,20 @@ checkpoint_epoch_interval: 20
 # https://arxiv.org/abs/2108.02776
 pitch_reg_weight: 1.0
 
-adv_weight: 1.0
-
+# Adverdarial loss weight
+adv_weight: 0.25
+# NOTE: If true, `adv_weight` above will be ignored
+dynamic_adv_weight: false
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [True, False, False, False, False, False]
-
 # Use static features as the input of the discriminator or not
 adv_use_static_feats_only: true
-
+# Feature matching loss weight
+fm_weight: 0.1
 # Don't set the value > 0 unless you are sure what you are doing
 # mask 0 to n-th mgc for adversarial loss
 # e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
 mask_nth_mgc_for_adv_loss: 2
-
-# Feature matching loss weight
-fm_weight: 10.0
 
 stream_wise_loss: false
 use_detect_anomaly: true

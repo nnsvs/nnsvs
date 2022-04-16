@@ -228,12 +228,13 @@ def train_loop(
     if in_lf0_idx is None or in_rest_idx is None:
         raise ValueError("in_lf0_idx and in_rest_idx must be specified")
     pitch_reg_weight = config.train.pitch_reg_weight
-    adv_weight = config.train.adv_weight
     fm_weight = config.train.fm_weight
     adv_streams = config.train.adv_streams
     if len(adv_streams) != len(config.model.stream_sizes):
         raise ValueError("adv_streams must be specified for all streams")
 
+    E_loss_feats = 1.0
+    E_loss_adv = 1.0
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
@@ -261,6 +262,12 @@ def train_loop(
                 pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
                     lf0_score_denorm
                 )
+
+                # Adv weight
+                if config.train.dynamic_adv_weight:
+                    adv_weight = np.clip(E_loss_feats / E_loss_adv, 0, 1e3)
+                else:
+                    adv_weight = config.train.adv_weight
 
                 loss, log_metrics = train_step(
                     config.model,
@@ -316,6 +323,23 @@ def train_loop(
                         epoch,
                         is_best=True,
                         postfix=postfix,
+                    )
+            # Update dynamic adv_weight parameters
+            if train:
+                N = len(data_loaders[phase])
+                E_loss_feats = running_metrics["Loss_Feats"] / N
+                E_loss_adv = running_metrics["Loss_Adv"] / N
+                logger.info(
+                    "[%s] [Epoch %s]: dynamic adv weight %s",
+                    phase,
+                    epoch,
+                    E_loss_feats / E_loss_adv,
+                )
+                if writer is not None:
+                    writer.add_scalar(
+                        f"Dynamic_Adv_Weight/{phase}",
+                        np.clip(E_loss_feats / E_loss_adv, 0, 1e3),
+                        epoch,
                     )
 
         schedulerG.step()
