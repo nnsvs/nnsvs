@@ -31,7 +31,15 @@ class ResnetBlock(nn.Module):
 
 
 class Conv1dResnet(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=4, dropout=0.0):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=4,
+        dropout=0.0,
+        init_type="none",
+    ):
         super().__init__()
         model = [
             nn.ReflectionPad1d(3),
@@ -46,6 +54,7 @@ class Conv1dResnet(BaseModel):
         ]
 
         self.model = nn.Sequential(*model)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
         return self.model(x.transpose(1, 2)).transpose(1, 2)
@@ -94,8 +103,9 @@ class Conv1dResnetSAR(Conv1dResnet):
         dropout=0.0,
         stream_sizes=None,
         ar_orders=None,
+        init_type="none",
     ):
-        super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout)
+        super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout, init_type)
         if stream_sizes is None:
             stream_sizes = [180, 3, 1, 15]
         if ar_orders is None:
@@ -119,7 +129,9 @@ class Conv1dResnetSAR(Conv1dResnet):
 
 
 class FFN(BaseModel):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
+    def __init__(
+        self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0, init_type="none"
+    ):
         super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
         self.hidden_layers = nn.ModuleList(
@@ -128,6 +140,7 @@ class FFN(BaseModel):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
+        init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
         h = self.relu(self.first_linear(x))
@@ -142,7 +155,14 @@ FeedForwardNet = FFN
 
 class LSTMRNN(BaseModel):
     def __init__(
-        self, in_dim, hidden_dim, out_dim, num_layers=1, bidirectional=True, dropout=0.0
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=1,
+        bidirectional=True,
+        dropout=0.0,
+        init_type="none",
     ):
         super(LSTMRNN, self).__init__()
         self.hidden_dim = hidden_dim
@@ -157,6 +177,7 @@ class LSTMRNN(BaseModel):
             dropout=dropout,
         )
         self.hidden2out = nn.Linear(self.num_direction * self.hidden_dim, out_dim)
+        init_weights(self, init_type)
 
     def forward(self, sequence, lengths):
         if isinstance(lengths, torch.Tensor):
@@ -186,9 +207,10 @@ class LSTMRNNSAR(LSTMRNN):
         dropout=0.0,
         stream_sizes=None,
         ar_orders=None,
+        init_type="none",
     ):
         super().__init__(
-            in_dim, hidden_dim, out_dim, num_layers, bidirectional, dropout
+            in_dim, hidden_dim, out_dim, num_layers, bidirectional, dropout, init_type
         )
         if stream_sizes is None:
             stream_sizes = [180, 3, 1, 15]
@@ -223,6 +245,7 @@ class RMDN(BaseModel):
         dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
+        init_type="none",
     ):
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
@@ -239,6 +262,7 @@ class RMDN(BaseModel):
         self.mdn = MDNLayer(
             self.num_direction * hidden_dim, out_dim, num_gaussians, dim_wise
         )
+        init_weights(self, init_type)
 
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
@@ -269,6 +293,7 @@ class MDN(BaseModel):
         dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
+        init_type="none",
     ):
         super(MDN, self).__init__()
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
@@ -277,6 +302,7 @@ class MDN(BaseModel):
                 model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
         model += [MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)]
         self.model = nn.Sequential(*model)
+        init_weights(self, init_type)
 
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
@@ -300,6 +326,7 @@ class Conv1dResnetMDN(BaseModel):
         dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
+        init_type="none",
     ):
         super().__init__()
         model = [
@@ -308,6 +335,7 @@ class Conv1dResnetMDN(BaseModel):
             MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise),
         ]
         self.model = nn.Sequential(*model)
+        init_weights(self, init_type)
 
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
@@ -450,6 +478,7 @@ class ResF0Conv1dResnetMDN(BaseModel):
         out_lf0_idx=180,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
+        init_type="none",
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -473,6 +502,7 @@ class ResF0Conv1dResnetMDN(BaseModel):
         ]
         self.model = nn.Sequential(*model)
         self.mdn_layer = MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)
+        init_weights(self, init_type)
 
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
