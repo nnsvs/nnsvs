@@ -1,6 +1,37 @@
+"""Discriminator implementations
+
+All the discriminators must returns list of tensors.
+The last tensor of the list is regarded as the output of the discrminator.
+The others are used as intermedieate feature maps.
+
+Multi-scale architecture is not supported yet.
+"""
+
 import torch
 from nnsvs.util import init_weights
 from torch import nn
+
+
+class FFN(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0):
+        super(FFN, self).__init__()
+        self.first_linear = nn.Linear(in_dim, hidden_dim)
+        self.hidden_layers = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers)]
+        )
+        self.last_linear = nn.Linear(hidden_dim, out_dim)
+        self.relu = nn.LeakyReLU()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, lengths=None):
+        outs = []
+        h = self.relu(self.first_linear(x))
+        outs.append(h)
+        for hl in self.hidden_layers:
+            h = self.dropout(self.relu(hl(h)))
+            outs.append(h)
+        outs.append(self.last_linear(h))
+        return outs
 
 
 class Conv2dGLU(nn.Module):
@@ -79,10 +110,14 @@ class CycleGANVC2D(nn.Module):
         # W: frame-axis
         # H: feature-axis
         # (B, W, H) -> (B, H, W) -> (B, 1, H, W)
+        outs = []
         x = x.transpose(1, 2).unsqueeze(1)
         x = self.conv_in(x)
+        outs.append(x)
         for f in self.downsample:
             x = f(x)
+            outs.append(x)
         x = self.conv_out(x)
         x = x.squeeze(1).transpose(1, 2)
-        return x
+        outs.append(x)
+        return outs

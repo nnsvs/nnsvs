@@ -25,6 +25,9 @@ adv_use_static_feats_only: true
 # e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
 mask_nth_mgc_for_adv_loss: 2
 
+# Feature matching loss weight
+fm_weight: 10.0
+
 stream_wise_loss: false
 use_detect_anomaly: true
 

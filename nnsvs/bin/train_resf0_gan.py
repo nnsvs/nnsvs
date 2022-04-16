@@ -25,6 +25,7 @@ from nnsvs.train_util import (
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
+from torch.nn import functional as F
 from tqdm import tqdm
 
 
@@ -44,6 +45,7 @@ def train_step(
     pitch_reg_weight=1.0,
     adv_weight=1.0,
     adv_streams=None,
+    fm_weight=0.0,
     adv_use_static_feats_only=True,
     mask_nth_mgc_for_adv_loss=0,
 ):
@@ -117,14 +119,14 @@ def train_step(
     if hasattr(netD, "downsample_scale"):
         D_mask = mask[:, :: netD.downsample_scale, :]
     else:
-        if D_real.shape[1] == real_netD_in_feats.shape[1]:
+        if D_real[-1].shape[1] == real_netD_in_feats.shape[1]:
             D_mask = mask
         else:
             D_mask = None
 
     # Update discriminator
-    loss_real = (D_real - 1) ** 2
-    loss_fake = D_fake_det ** 2
+    loss_real = (D_real[-1] - 1) ** 2
+    loss_fake = D_fake_det[-1] ** 2
     if D_mask is not None:
         loss_real = loss_real.masked_select(D_mask).mean()
         loss_fake = loss_fake.masked_select(D_mask).mean()
@@ -148,33 +150,28 @@ def train_step(
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, lengths)
-    loss_adv = (1 - D_fake) ** 2
+    loss_adv = (1 - D_fake[-1]) ** 2
     if D_mask is not None:
         loss_adv = loss_adv.masked_select(D_mask).mean()
     else:
         loss_adv = loss_adv.mean()
+
+    # Feature matching loss
+    loss_fm = 0
+    for fake_fmap, real_fmap in zip(D_fake[:-1], D_real[:-1]):
+        loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+    loss_fm /= len(D_fake[:-1])
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
     loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
-    loss = loss_feats + adv_weight * loss_adv + pitch_reg_weight * loss_pitch
-
-    distortions = compute_distortions(
-        pred_out_feats, out_feats, lengths, out_scaler, model_config
-    )
-    log_metrics.update(distortions)
-    log_metrics.update(
-        {
-            "Loss": loss.item(),
-            "Loss_Feats": loss_feats.item(),
-            "Loss_Adv": loss_adv.item(),
-            "Loss_Pitch": loss_pitch.item(),
-            "Loss_Real": loss_real.item(),
-            "Loss_Fake": loss_fake.item(),
-            "Loss_D": loss_d.item(),
-        }
+    loss = (
+        loss_feats
+        + adv_weight * loss_adv
+        + pitch_reg_weight * loss_pitch
+        + fm_weight * loss_fm
     )
 
     if train:
@@ -184,6 +181,24 @@ def train_step(
         )
         log_metrics["GradNorm_G"] = grad_norm_g
         optG.step()
+
+    # Metrics
+    distortions = compute_distortions(
+        pred_out_feats, out_feats, lengths, out_scaler, model_config
+    )
+    log_metrics.update(distortions)
+    log_metrics.update(
+        {
+            "Loss": loss.item(),
+            "Loss_Feats": loss_feats.item(),
+            "Loss_Adv": loss_adv.item(),
+            "Loss_Feature_Matching": loss_fm.item(),
+            "Loss_Pitch": loss_pitch.item(),
+            "Loss_Real": loss_real.item(),
+            "Loss_Fake": loss_fake.item(),
+            "Loss_D": loss_d.item(),
+        }
+    )
 
     return loss, log_metrics
 
@@ -214,6 +229,7 @@ def train_loop(
         raise ValueError("in_lf0_idx and in_rest_idx must be specified")
     pitch_reg_weight = config.train.pitch_reg_weight
     adv_weight = config.train.adv_weight
+    fm_weight = config.train.fm_weight
     adv_streams = config.train.adv_streams
     if len(adv_streams) != len(config.model.stream_sizes):
         raise ValueError("adv_streams must be specified for all streams")
@@ -262,6 +278,7 @@ def train_loop(
                     pitch_reg_weight,
                     adv_weight,
                     adv_streams,
+                    fm_weight,
                     config.train.adv_use_static_feats_only,
                     config.train.mask_nth_mgc_for_adv_loss,
                 )
