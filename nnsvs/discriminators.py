@@ -99,7 +99,7 @@ class Conv1dResnet(nn.Module):
         out = self.last_conv(x)
 
         if self.cond is not None:
-            # NOTE: sum against the last feature-axis (B, C, T)
+            # NOTE: sum against the feature-axis (B, C, T)
             inner_product = (x * self.cond(c.transpose(1, 2))).sum(dim=1, keepdim=True)
             out = out + inner_product
 
