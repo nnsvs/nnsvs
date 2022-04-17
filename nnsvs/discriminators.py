@@ -64,6 +64,7 @@ class Conv1dResnet(nn.Module):
         hidden_dim,
         out_dim,
         num_layers=2,
+        dropout=0.0,
         init_type="normal",
         cin_dim=-1,
     ):
@@ -79,6 +80,7 @@ class Conv1dResnet(nn.Module):
         ]
         self.model = nn.ModuleList(model)
         self.last_conv = WNConv1d(hidden_dim, out_dim, kernel_size=1, padding=0)
+        self.dropout = nn.Dropout(dropout)
 
         if cin_dim > 0:
             self.cond = WNConv1d(cin_dim, hidden_dim, kernel_size=1, padding=0)
@@ -92,7 +94,7 @@ class Conv1dResnet(nn.Module):
         x = x.transpose(1, 2)
         outs = []
         for f in self.model:
-            x = f(x)
+            x = self.dropout(f(x))
             outs.append(x)
         out = self.last_conv(x)
 
