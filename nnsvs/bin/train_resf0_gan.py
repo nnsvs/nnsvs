@@ -119,7 +119,7 @@ def train_step(
     if hasattr(netD, "downsample_scale"):
         D_mask = mask[:, :: netD.downsample_scale, :]
     else:
-        if D_real[-1].shape[1] == real_netD_in_feats.shape[1]:
+        if D_real[-1].shape[1] == out_feats.shape[1]:
             D_mask = mask
         else:
             D_mask = None
