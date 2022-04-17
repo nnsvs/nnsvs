@@ -48,6 +48,7 @@ def train_step(
     fm_weight=0.0,
     adv_use_static_feats_only=True,
     mask_nth_mgc_for_adv_loss=0,
+    gan_type="lsgan",
 ):
     optG.zero_grad()
     optD.zero_grad()
@@ -125,8 +126,15 @@ def train_step(
             D_mask = None
 
     # Update discriminator
-    loss_real = (D_real[-1] - 1) ** 2
-    loss_fake = D_fake_det[-1] ** 2
+    eps = 1e-7
+    if gan_type == "lsgan":
+        loss_real = (D_real[-1] - 1) ** 2
+        loss_fake = D_fake_det[-1] ** 2
+    elif gan_type == "vanilla-gan":
+        loss_real = -torch.log(D_real[-1] + eps)
+        loss_fake = -torch.log(1 - D_fake_det[-1])
+    else:
+        raise ValueError(f"Unknown gan type: {gan_type}")
     if D_mask is not None:
         loss_real = loss_real.masked_select(D_mask).mean()
         loss_fake = loss_fake.masked_select(D_mask).mean()
@@ -150,7 +158,12 @@ def train_step(
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
-    loss_adv = (1 - D_fake[-1]) ** 2
+    if gan_type == "lsgan":
+        loss_adv = (1 - D_fake[-1]) ** 2
+    elif gan_type == "vanilla-gan":
+        loss_adv = -torch.log(D_fake[-1] + eps)
+    else:
+        raise ValueError(f"Unknown gan type: {gan_type}")
     if D_mask is not None:
         loss_adv = loss_adv.masked_select(D_mask).mean()
     else:
@@ -288,6 +301,7 @@ def train_loop(
                     fm_weight,
                     config.train.adv_use_static_feats_only,
                     config.train.mask_nth_mgc_for_adv_loss,
+                    config.train.gan_type,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():

@@ -12,6 +12,8 @@ checkpoint_epoch_interval: 20
 # https://arxiv.org/abs/2108.02776
 pitch_reg_weight: 1.0
 
+# GAN type (lsgan or vanilla-gan)
+gan_type: vanilla-gan
 # Adverdarial loss weight
 adv_weight: 0.25
 # NOTE: If true, `adv_weight` above will be ignored
