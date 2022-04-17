@@ -22,7 +22,8 @@ class FFN(nn.Module):
         num_layers=2,
         dropout=0.0,
         init_type="normal",
-        cin_dim=None,
+        cin_dim=-1,
+        last_sigmoid=False,
     ):
         super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
@@ -32,6 +33,7 @@ class FFN(nn.Module):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.LeakyReLU()
         self.dropout = nn.Dropout(dropout)
+        self.last_sigmoid = last_sigmoid
 
         if cin_dim > 0:
             self.cond = nn.Linear(cin_dim, hidden_dim)
@@ -52,6 +54,8 @@ class FFN(nn.Module):
             # NOTE: sum against the last feature-axis (B, T, C)
             inner_product = (h * self.cond(c)).sum(dim=-1, keepdim=True)
             out = out + inner_product
+
+        out = torch.sigmoid(out) if self.last_sigmoid else out
         outs.append(out)
 
         return outs
@@ -67,6 +71,7 @@ class Conv1dResnet(nn.Module):
         dropout=0.0,
         init_type="normal",
         cin_dim=-1,
+        last_sigmoid=False,
     ):
         super().__init__()
         model = [
@@ -81,6 +86,7 @@ class Conv1dResnet(nn.Module):
         self.model = nn.ModuleList(model)
         self.last_conv = WNConv1d(hidden_dim, out_dim, kernel_size=1, padding=0)
         self.dropout = nn.Dropout(dropout)
+        self.last_sigmoid = last_sigmoid
 
         if cin_dim > 0:
             self.cond = WNConv1d(cin_dim, hidden_dim, kernel_size=1, padding=0)
@@ -102,6 +108,8 @@ class Conv1dResnet(nn.Module):
             # NOTE: sum against the feature-axis (B, C, T)
             inner_product = (x * self.cond(c.transpose(1, 2))).sum(dim=1, keepdim=True)
             out = out + inner_product
+
+        out = torch.sigmoid(out) if self.last_sigmoid else out
 
         # (B, C, T) -> (B, T, C)
         out = out.transpose(1, 2)
