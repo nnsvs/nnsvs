@@ -163,7 +163,14 @@ class Conv2dGLU(nn.Module):
 
 
 class CycleGANVC2D(nn.Module):
-    def __init__(self, in_dim=None, hidden_dim=64, padding=None, init_type="normal"):
+    def __init__(
+        self,
+        in_dim=None,
+        hidden_dim=64,
+        padding=None,
+        init_type="normal",
+        last_sigmoid=False,
+    ):
         super().__init__()
         C = hidden_dim
         self.conv_in = Conv2dGLU(
@@ -188,6 +195,7 @@ class CycleGANVC2D(nn.Module):
             )
         else:
             self.conv_out = nn.Conv2d(8 * C, 1, (1, 3), padding=padding)
+        self.last_sigmoid = last_sigmoid
         init_weights(self, init_type)
 
     def forward(self, x, c, lengths):
@@ -203,5 +211,6 @@ class CycleGANVC2D(nn.Module):
             outs.append(x)
         x = self.conv_out(x)
         x = x.squeeze(1).transpose(1, 2)
+        x = torch.sigmoid(x) if self.last_sigmoid else x
         outs.append(x)
         return outs
