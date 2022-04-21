@@ -375,7 +375,14 @@ def train_loop(
             # Update dynamic adv_weight parameters
             if train:
                 N = len(data_loaders[phase])
-                E_loss_feats = running_metrics["Loss_Feats"] / N
+                keys = sorted(
+                    [k for k in running_metrics.keys() if "Loss_Feats_scale" in k]
+                )
+                # Multi-scale case: use the last scale's feats loss
+                if len(keys) > 0:
+                    E_loss_feats = running_metrics[keys[-1]] / N
+                else:
+                    E_loss_feats = running_metrics["Loss_Feats"] / N
                 E_loss_adv = running_metrics["Loss_Adv"] / N
                 logger.info(
                     "[%s] [Epoch %s]: dynamic adv weight %s",
