@@ -6,6 +6,7 @@ from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
+from nnsvs.tacotron.postnet import Postnet
 from nnsvs.util import init_weights
 from torch import nn
 from torch.nn.utils import weight_norm
@@ -651,3 +652,121 @@ class ResSkipF0FFConvLSTM(BaseModel):
 
     def inference(self, x, lengths=None):
         return self(x, lengths)[0]
+
+
+class ResF0Conv1dResnetWithPostnet(ResF0Conv1dResnet):
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=4,
+        # NOTE: you must carefully set the following parameters
+        in_lf0_idx=300,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=180,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+        init_type="none",
+        postnet_layers=2,
+        postnet_dropout=0.1,
+        postnet_kernel_size=5,
+        postnet_channels=16,
+    ):
+        super().__init__(
+            in_dim=in_dim,
+            hidden_dim=hidden_dim,
+            out_dim=out_dim,
+            num_layers=num_layers,
+            in_lf0_idx=in_lf0_idx,
+            in_lf0_min=in_lf0_min,
+            in_lf0_max=in_lf0_max,
+            out_lf0_idx=out_lf0_idx,
+            out_lf0_mean=out_lf0_mean,
+            out_lf0_scale=out_lf0_scale,
+            init_type=init_type,
+        )
+        self.postnet = Postnet(
+            out_dim,
+            layers=postnet_layers,
+            channels=postnet_channels,
+            kernel_size=postnet_kernel_size,
+            dropout=postnet_dropout,
+        )
+        init_weights(self, init_type)
+
+    def forward(self, x, lengths=None):
+        out, lf0_residual = super().forward(x, lengths)
+        # NOTE: use detach here so that gradients from the postnet outputs only propagate to
+        # the parameters of the postnet
+        out_det = out.detach()
+        out_fine = out_det + self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        outs = [out, out_fine]
+        return outs, lf0_residual
+
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0][-1]
+
+
+class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
+    def __init__(
+        self,
+        in_dim,
+        ff_hidden_dim=2048,
+        conv_hidden_dim=1024,
+        lstm_hidden_dim=256,
+        out_dim=199,
+        dropout=0.0,
+        bidirectional=True,
+        # NOTE: you must carefully set the following parameters
+        in_lf0_idx=300,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=180,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+        skip_inputs=False,
+        init_type="none",
+        postnet_layers=5,
+        postnet_dropout=0.1,
+        postnet_kernel_size=5,
+        postnet_channels=512,
+    ):
+        super().__init__(
+            in_dim=in_dim,
+            ff_hidden_dim=ff_hidden_dim,
+            conv_hidden_dim=conv_hidden_dim,
+            lstm_hidden_dim=lstm_hidden_dim,
+            out_dim=out_dim,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            in_lf0_idx=in_lf0_idx,
+            in_lf0_min=in_lf0_min,
+            in_lf0_max=in_lf0_max,
+            out_lf0_idx=out_lf0_idx,
+            out_lf0_mean=out_lf0_mean,
+            out_lf0_scale=out_lf0_scale,
+            skip_inputs=skip_inputs,
+            init_type=init_type,
+        )
+        self.postnet = Postnet(
+            out_dim,
+            layers=postnet_layers,
+            channels=postnet_channels,
+            kernel_size=postnet_kernel_size,
+            dropout=postnet_dropout,
+        )
+        init_weights(self, init_type)
+
+    def forward(self, x, lengths=None):
+        out, lf0_residual = super().forward(x, lengths)
+        # NOTE: use detach here so that gradients from the postnet outputs only propagate to
+        # the parameters of the postnet
+        out_det = out.detach()
+        out_fine = out_det + self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        outs = [out, out_fine]
+        return outs, lf0_residual
+
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0][-1]
