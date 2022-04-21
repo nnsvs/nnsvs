@@ -137,7 +137,7 @@ def train_step(
         loss_fake = D_fake_det[-1] ** 2
     elif gan_type == "vanilla-gan":
         loss_real = -torch.log(D_real[-1] + eps)
-        loss_fake = -torch.log(1 - D_fake_det[-1])
+        loss_fake = -torch.log(1 - D_fake_det[-1] + eps)
     else:
         raise ValueError(f"Unknown gan type: {gan_type}")
     if D_mask is not None:
