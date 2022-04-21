@@ -264,6 +264,7 @@ def eval_model(
 ):
     utt_indices = [-1, -2, -3]
     utt_indices = utt_indices[: min(3, len(in_feats))]
+    out_scaler_cpu = out_scaler.cpu()
 
     if np.any(model_config.has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
@@ -298,14 +299,14 @@ def eval_model(
 
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
             pred_out_feats_ = pred_out_feats_.squeeze(0).cpu().numpy()
-            pred_out_feats_denorm = out_scaler.inverse_transform(
+            pred_out_feats_denorm = out_scaler_cpu.inverse_transform(
                 torch.from_numpy(pred_out_feats_)
             ).numpy()
             if np.any(model_config.has_dynamic_features):
                 # (T, D_out) -> (T, static_dim)
                 pred_out_feats_denorm = multi_stream_mlpg(
                     pred_out_feats_denorm,
-                    out_scaler.scale_ ** 2,
+                    out_scaler_cpu.scale_ ** 2,
                     get_windows(model_config.num_windows),
                     model_config.stream_sizes,
                     model_config.has_dynamic_features,
