@@ -73,6 +73,11 @@ def train_step(
     # Run forward
     pred_out_feats, lf0_residual = netG(in_feats, lengths)
 
+    # Multi-scale: multiple outputs or not.
+    # Only the last output is used for computing adversarial loss
+    # and discriminator loss.
+    is_multiscale = isinstance(pred_out_feats, list)
+
     # Select streams for computing adversarial loss
     if adv_use_static_feats_only:
         real_netD_in_feats = torch.cat(
@@ -87,7 +92,7 @@ def train_step(
         )
         fake_netD_in_feats = torch.cat(
             get_static_features(
-                pred_out_feats,
+                pred_out_feats[-1] if is_multiscale else pred_out_feats,
                 model_config.num_windows,
                 model_config.stream_sizes,
                 model_config.has_dynamic_features,
@@ -152,9 +157,18 @@ def train_step(
         optD.step()
 
     # Update generator
-    loss_feats = criterion(
-        pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-    ).mean()
+    loss_feats = 0
+    if is_multiscale:
+        for idx, pred_out_feats_ in enumerate(pred_out_feats):
+            loss_feats_ = criterion(
+                pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
+            ).mean()
+            log_metrics[f"Loss_Feats_scale{idx}"] = loss_feats_.item()
+            loss_feats += loss_feats_
+    else:
+        loss_feats = criterion(
+            pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+        ).mean()
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
@@ -196,9 +210,20 @@ def train_step(
         optG.step()
 
     # Metrics
-    distortions = compute_distortions(
-        pred_out_feats, out_feats, lengths, out_scaler, model_config
-    )
+    if is_multiscale:
+        distortions = {}
+        for idx, pred_out_feats_ in enumerate(pred_out_feats):
+            distortions_ = compute_distortions(
+                pred_out_feats_, out_feats, lengths, out_scaler, model_config
+            )
+            for k, v in distortions_.items():
+                log_metrics[f"{k}_scale{idx}"] = v
+            # Keep the last-scale distortion
+            distortions = distortions_
+    else:
+        distortions = compute_distortions(
+            pred_out_feats, out_feats, lengths, out_scaler, model_config
+        )
     log_metrics.update(distortions)
     log_metrics.update(
         {
