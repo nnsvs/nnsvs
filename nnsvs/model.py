@@ -701,9 +701,23 @@ class ResF0Conv1dResnetWithPostnet(ResF0Conv1dResnet):
         # NOTE: use detach here so that gradients from the postnet outputs only propagate to
         # the parameters of the postnet
         out_det = out.detach()
-        out_fine = out_det + self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        post_out = self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        out_fine = out_det + post_out
+
+        # special treatment for the lf0 prediction
+        lf0_residual_fine = post_out[:, :, self.out_lf0_idx].unsqueeze(-1)
+        # To avoid unbounded residual f0 that would potentially cause artifacts,
+        # let's constrain the residual F0 to be in a certain range by the scaled tanh
+        max_lf0_ratio = 600 * np.log(2) / 1200 / self.out_lf0_scale
+        lf0_residual_fine = max_lf0_ratio * torch.tanh(lf0_residual_fine)
+        out_fine[:, :, self.out_lf0_idx] = out_det[
+            :, :, self.out_lf0_idx
+        ] + lf0_residual_fine.squeeze(-1)
+
         outs = [out, out_fine]
-        return outs, lf0_residual
+        lf0_residuals = [lf0_residual, lf0_residual_fine]
+
+        return outs, lf0_residuals
 
     def inference(self, x, lengths=None):
         return self(x, lengths)[0][-1]
@@ -764,9 +778,23 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
         # NOTE: use detach here so that gradients from the postnet outputs only propagate to
         # the parameters of the postnet
         out_det = out.detach()
-        out_fine = out_det + self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        post_out = self.postnet(out_det.transpose(1, 2)).transpose(1, 2)
+        out_fine = out_det + post_out
+
+        # special treatment for the lf0 prediction
+        lf0_residual_fine = post_out[:, :, self.out_lf0_idx].unsqueeze(-1)
+        # To avoid unbounded residual f0 that would potentially cause artifacts,
+        # let's constrain the residual F0 to be in a certain range by the scaled tanh
+        max_lf0_ratio = 600 * np.log(2) / 1200 / self.out_lf0_scale
+        lf0_residual_fine = max_lf0_ratio * torch.tanh(lf0_residual_fine)
+        out_fine[:, :, self.out_lf0_idx] = out_det[
+            :, :, self.out_lf0_idx
+        ] + lf0_residual_fine.squeeze(-1)
+
         outs = [out, out_fine]
-        return outs, lf0_residual
+        lf0_residuals = [lf0_residual, lf0_residual_fine]
+
+        return outs, lf0_residuals
 
     def inference(self, x, lengths=None):
         return self(x, lengths)[0][-1]
