@@ -194,7 +194,7 @@ def train_step(
     # we could use l2 loss as suggested in the sinsy's paper
     if isinstance(lf0_residual, list):
         loss_pitch = 0
-        for lf0_residual_ in lf0_residual:
+        for idx, lf0_residual_ in enumerate(lf0_residual):
             loss_pitch_ = (
                 (pitch_reg_dyn_ws * lf0_residual_.abs()).masked_select(mask).mean()
             )
