@@ -157,8 +157,8 @@ def train_step(
         optD.step()
 
     # Update generator
-    loss_feats = 0
     if is_multiscale:
+        loss_feats = 0
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
             loss_feats_ = criterion(
                 pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
@@ -192,7 +192,16 @@ def train_step(
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+    if isinstance(lf0_residual, list):
+        loss_pitch = 0
+        for lf0_residual_ in lf0_residual:
+            loss_pitch_ = (
+                (pitch_reg_dyn_ws * lf0_residual_.abs()).masked_select(mask).mean()
+            )
+            log_metrics[f"Loss_Pitch_scale{idx}"] = loss_pitch_.item()
+            loss_pitch += loss_pitch_
+    else:
+        loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
     loss = (
         loss_feats
