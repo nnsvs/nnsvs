@@ -298,14 +298,18 @@ def eval_model(
 
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
             pred_out_feats_ = pred_out_feats_.squeeze(0).cpu().numpy()
-            pred_out_feats_denorm = out_scaler.inverse_transform(
-                torch.from_numpy(pred_out_feats_)
-            ).numpy()
+            pred_out_feats_denorm = (
+                out_scaler.inverse_transform(
+                    torch.from_numpy(pred_out_feats_).to(in_feats.device)
+                )
+                .cpu()
+                .numpy()
+            )
             if np.any(model_config.has_dynamic_features):
                 # (T, D_out) -> (T, static_dim)
                 pred_out_feats_denorm = multi_stream_mlpg(
                     pred_out_feats_denorm,
-                    out_scaler.scale_ ** 2,
+                    (out_scaler.scale_ ** 2).cpu().numpy(),
                     get_windows(model_config.num_windows),
                     model_config.stream_sizes,
                     model_config.has_dynamic_features,
