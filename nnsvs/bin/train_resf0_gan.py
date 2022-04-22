@@ -113,7 +113,9 @@ def train_step(
             out_feats, model_config.stream_sizes, adv_streams
         )
         fake_netD_in_feats = select_streams(
-            pred_out_feats, model_config.stream_sizes, adv_streams
+            pred_out_feats[-1] if is_multiscale else pred_out_feats,
+            model_config.stream_sizes,
+            adv_streams,
         )
 
     # Ref: http://sython.org/papers/ASJ/saito2017asja.pdf
