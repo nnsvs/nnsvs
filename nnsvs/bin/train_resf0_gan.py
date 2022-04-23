@@ -16,7 +16,7 @@ from nnsvs.bin.train_resf0 import (
     compute_batch_pitch_regularization_weight,
     compute_distortions,
 )
-from nnsvs.gen import get_windows
+from nnsvs.gen import gen_world_params, get_windows
 from nnsvs.multistream import (
     get_static_features,
     get_static_stream_sizes,
@@ -291,6 +291,13 @@ def eval_model(
         vuv = vuv.squeeze(0).cpu().numpy()
         bap = bap.squeeze(0).cpu().numpy()
 
+        sr = 48000
+        f0, spectrogram, aperiodicity = gen_world_params(mgc, lf0, vuv, bap, sr)
+        wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
+        group = f"utt{np.abs(utt_idx)}_reference"
+        wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
+        writer.add_audio(group, wav, step, sr)
+
         # Run forward
         pred_out_feats, _ = netG(
             in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
@@ -319,6 +326,16 @@ def eval_model(
             pred_mgc, pred_lf0, pred_vuv, pred_bap = split_streams(
                 pred_out_feats_denorm, static_stream_sizes
             )[:4]
+
+            # Generated sample
+            f0, spectrogram, aperiodicity = gen_world_params(
+                pred_mgc, pred_lf0, pred_vuv, pred_bap, sr
+            )
+            wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
+            wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
+            group = f"utt{np.abs(utt_idx)}_scale{idx}_generated"
+            writer.add_audio(group, wav, step, sr)
+
             group = f"utt{np.abs(utt_idx)}_scale{idx}"
             _plot_spss_params(
                 step,
