@@ -517,7 +517,9 @@ def train_loop(
 
                 # Adv weight
                 if config.train.adv_weight > 0 and config.train.dynamic_adv_weight:
-                    adv_weight = np.clip(E_loss_feats / E_loss_adv, 0, 1e3)
+                    adv_weight = config.train.adv_weight * np.clip(
+                        E_loss_feats / E_loss_adv, 0, 1e3
+                    )
                 else:
                     adv_weight = config.train.adv_weight
 
