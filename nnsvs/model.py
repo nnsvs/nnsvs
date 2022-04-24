@@ -798,3 +798,65 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
 
     def inference(self, x, lengths=None):
         return self(x, lengths)[0][-1]
+
+
+class ResSkipF0FFConvLSTMSAR(ResSkipF0FFConvLSTM):
+    def __init__(
+        self,
+        in_dim,
+        ff_hidden_dim=2048,
+        conv_hidden_dim=1024,
+        lstm_hidden_dim=256,
+        out_dim=199,
+        dropout=0.0,
+        bidirectional=True,
+        # NOTE: you must carefully set the following parameters
+        in_lf0_idx=300,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=180,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+        skip_inputs=False,
+        init_type="none",
+        stream_sizes=None,
+        ar_orders=None,
+    ):
+        super().__init__(
+            in_dim=in_dim,
+            ff_hidden_dim=ff_hidden_dim,
+            conv_hidden_dim=conv_hidden_dim,
+            lstm_hidden_dim=lstm_hidden_dim,
+            out_dim=out_dim,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            in_lf0_idx=in_lf0_idx,
+            in_lf0_min=in_lf0_min,
+            in_lf0_max=in_lf0_max,
+            out_lf0_idx=out_lf0_idx,
+            out_lf0_mean=out_lf0_mean,
+            out_lf0_scale=out_lf0_scale,
+            skip_inputs=skip_inputs,
+            init_type=init_type,
+        )
+        init_weights(self, init_type)
+        if stream_sizes is None:
+            stream_sizes = [180, 3, 1, 15]
+        if ar_orders is None:
+            ar_orders = [20, 200, 20, 20]
+
+        self.stream_sizes = stream_sizes
+        self.analysis_filts = nn.ModuleList()
+        for s, K in zip(stream_sizes, ar_orders):
+            self.analysis_filts += [TrTimeInvFIRFilter(s, K + 1)]
+
+    def preprocess_target(self, y):
+        assert sum(self.stream_sizes) == y.shape[-1]
+        ys = split_streams(y, self.stream_sizes)
+        for idx, yi in enumerate(ys):
+            ys[idx] = self.analysis_filts[idx](yi.transpose(1, 2)).transpose(1, 2)
+        return torch.cat(ys, -1)
+
+    def inference(self, x, lengths=None):
+        out = self.forward(x, lengths)[0]
+        return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)

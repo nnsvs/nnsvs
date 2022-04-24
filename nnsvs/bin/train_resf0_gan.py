@@ -11,11 +11,6 @@ import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
-from nnsvs.bin.train_resf0 import (
-    check_resf0_config,
-    compute_batch_pitch_regularization_weight,
-    compute_distortions,
-)
 from nnsvs.gen import gen_world_params, get_windows
 from nnsvs.multistream import (
     get_static_features,
@@ -25,6 +20,9 @@ from nnsvs.multistream import (
     split_streams,
 )
 from nnsvs.train_util import (
+    check_resf0_config,
+    compute_batch_pitch_regularization_weight,
+    compute_distortions,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,
