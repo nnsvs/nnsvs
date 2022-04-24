@@ -1,28 +1,21 @@
 from pathlib import Path
 
 import hydra
-import librosa
-import librosa.display
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
-import pysptk
-import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
-from nnsvs.gen import gen_world_params, get_windows
 from nnsvs.multistream import (
     get_static_features,
     get_static_stream_sizes,
-    multi_stream_mlpg,
     select_streams,
-    split_streams,
 )
 from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
+    eval_spss_model,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,
@@ -258,187 +251,6 @@ def train_step(
     return loss, log_metrics
 
 
-@torch.no_grad()
-def eval_model(
-    step, netG, in_feats, out_feats, lengths, model_config, out_scaler, writer
-):
-    utt_indices = [-1, -2, -3]
-    utt_indices = utt_indices[: min(3, len(in_feats))]
-
-    if np.any(model_config.has_dynamic_features):
-        static_stream_sizes = get_static_stream_sizes(
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            model_config.num_windows,
-        )
-    else:
-        static_stream_sizes = model_config.stream_sizes
-
-    for utt_idx in utt_indices:
-        out_feats_ = out_scaler.inverse_transform(
-            out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0)
-        )
-        mgc, lf0, vuv, bap = get_static_features(
-            out_feats_,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-        )[:4]
-        mgc = mgc.squeeze(0).cpu().numpy()
-        lf0 = lf0.squeeze(0).cpu().numpy()
-        vuv = vuv.squeeze(0).cpu().numpy()
-        bap = bap.squeeze(0).cpu().numpy()
-
-        sr = 48000
-        f0, spectrogram, aperiodicity = gen_world_params(mgc, lf0, vuv, bap, sr)
-        wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
-        group = f"utt{np.abs(utt_idx)}_reference"
-        wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
-        writer.add_audio(group, wav, step, sr)
-
-        # Run forward
-        pred_out_feats, _ = netG(
-            in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-        )
-        if not isinstance(pred_out_feats, list):
-            pred_out_feats = [pred_out_feats]
-
-        for idx, pred_out_feats_ in enumerate(pred_out_feats):
-            pred_out_feats_ = pred_out_feats_.squeeze(0).cpu().numpy()
-            pred_out_feats_denorm = (
-                out_scaler.inverse_transform(
-                    torch.from_numpy(pred_out_feats_).to(in_feats.device)
-                )
-                .cpu()
-                .numpy()
-            )
-            if np.any(model_config.has_dynamic_features):
-                # (T, D_out) -> (T, static_dim)
-                pred_out_feats_denorm = multi_stream_mlpg(
-                    pred_out_feats_denorm,
-                    (out_scaler.scale_ ** 2).cpu().numpy(),
-                    get_windows(model_config.num_windows),
-                    model_config.stream_sizes,
-                    model_config.has_dynamic_features,
-                )
-            pred_mgc, pred_lf0, pred_vuv, pred_bap = split_streams(
-                pred_out_feats_denorm, static_stream_sizes
-            )[:4]
-
-            # Generated sample
-            f0, spectrogram, aperiodicity = gen_world_params(
-                pred_mgc, pred_lf0, pred_vuv, pred_bap, sr
-            )
-            wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
-            wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
-            group = f"utt{np.abs(utt_idx)}_scale{idx}_generated"
-            writer.add_audio(group, wav, step, sr)
-
-            group = f"utt{np.abs(utt_idx)}_scale{idx}"
-            _plot_spss_params(
-                step,
-                writer,
-                mgc,
-                lf0,
-                vuv,
-                bap,
-                pred_mgc,
-                pred_lf0,
-                pred_vuv,
-                pred_bap,
-                group=group,
-            )
-
-
-@torch.no_grad()
-def _plot_spss_params(
-    step, writer, mgc, lf0, vuv, bap, pred_mgc, pred_lf0, pred_vuv, pred_bap, group
-):
-    sr = 48000
-    fftlen = pyworld.get_cheaptrick_fft_size(sr)
-    alpha = pysptk.util.mcepalpha(sr)
-    hop_length = int(sr * 0.005)
-
-    # F0
-    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
-    timeaxis = np.arange(len(lf0)) * 0.005
-    f0 = np.exp(lf0)
-    f0[vuv < 0.5] = 0
-    pred_f0 = np.exp(pred_lf0)
-    pred_f0[pred_vuv < 0.5] = 0
-    ax.plot(timeaxis, f0, linewidth=2, label="F0 of natural speech")
-    ax.plot(timeaxis, pred_f0, "--", linewidth=2, label="F0 of generated speech")
-    ax.set_xlabel("Time [sec]")
-    ax.set_ylabel("Frequency [Hz]")
-    ax.set_xlim(timeaxis[0], timeaxis[-1])
-    plt.legend()
-    plt.tight_layout()
-    writer.add_figure(f"{group}/F0", fig, step)
-    plt.close()
-
-    # Spectrogram
-    fig, ax = plt.subplots(2, 1, figsize=(8, 6))
-    spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha).T
-    mesh = librosa.display.specshow(
-        librosa.power_to_db(np.abs(spectrogram), ref=np.max),
-        sr=sr,
-        hop_length=hop_length,
-        x_axis="time",
-        y_axis="hz",
-        cmap="viridis",
-        ax=ax[0],
-    )
-    fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
-    pred_spectrogram = pysptk.mc2sp(pred_mgc, fftlen=fftlen, alpha=alpha).T
-    mesh = librosa.display.specshow(
-        librosa.power_to_db(np.abs(pred_spectrogram), ref=np.max),
-        sr=sr,
-        hop_length=hop_length,
-        x_axis="time",
-        y_axis="hz",
-        cmap="viridis",
-        ax=ax[1],
-    )
-    fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
-    for a in ax:
-        a.set_ylim(0, 14000)
-    plt.tight_layout()
-    writer.add_figure(f"{group}/Spectrogram", fig, step)
-    plt.close()
-
-    # Aperiodicity
-    fig, ax = plt.subplots(2, 1, figsize=(8, 6))
-    aperiodicity = pyworld.decode_aperiodicity(bap.astype(np.float64), sr, fftlen).T
-    mesh = librosa.display.specshow(
-        20 * np.log10(aperiodicity),
-        sr=sr,
-        hop_length=hop_length,
-        x_axis="time",
-        y_axis="linear",
-        cmap="viridis",
-        ax=ax[0],
-    )
-    fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
-    pred_aperiodicity = pyworld.decode_aperiodicity(
-        pred_bap.astype(np.float64), sr, fftlen
-    ).T
-    mesh = librosa.display.specshow(
-        20 * np.log10(pred_aperiodicity),
-        sr=sr,
-        hop_length=hop_length,
-        x_axis="time",
-        y_axis="linear",
-        cmap="viridis",
-        ax=ax[1],
-    )
-    fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
-    for a in ax:
-        a.set_ylim(0, 14000)
-    plt.tight_layout()
-    writer.add_figure(f"{group}/Aperiodicity", fig, step)
-    plt.close()
-
-
 def train_loop(
     config,
     logger,
@@ -487,7 +299,7 @@ def train_loop(
                     out_feats[indices].to(device),
                 )
                 if (not train) and (not evaluated):
-                    eval_model(
+                    eval_spss_model(
                         epoch,
                         netG,
                         in_feats,
@@ -496,6 +308,7 @@ def train_loop(
                         config.model,
                         out_scaler,
                         writer,
+                        sr=48000,
                     )
                     evaluated = True
 

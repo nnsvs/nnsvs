@@ -10,6 +10,7 @@ from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
+    eval_spss_model,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,
@@ -122,6 +123,7 @@ def train_loop(
             model.train() if train else model.eval()
             running_loss = 0
             running_metrics = {}
+            evaluated = False
             for in_feats, out_feats, lengths in data_loaders[phase]:
                 # NOTE: This is needed for pytorch's PackedSequence
                 lengths, indices = torch.sort(lengths, dim=0, descending=True)
@@ -129,6 +131,20 @@ def train_loop(
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
+                if (not train) and (not evaluated):
+                    eval_spss_model(
+                        epoch,
+                        model,
+                        in_feats,
+                        out_feats,
+                        lengths,
+                        config.model,
+                        out_scaler,
+                        writer,
+                        sr=48000,
+                    )
+                    evaluated = True
+
                 # Compute denormalized log-F0 in the musical scores
                 # test - s.min_[in_lf0_idx]) / s.scale_[in_lf0_idx]
                 lf0_score_denorm = (
