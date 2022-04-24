@@ -48,26 +48,26 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 	cat<<EOF
 stage -1: Downloading
 
-This recipe does not download ONIKU_KURUMI_UTAGOE_DB.zip automatically to
+This recipe does not download the archive of singing voice database automatically to 
 provide you the opportunity to read the original license.
 
-Please visit http://onikuru.info/db-download/ and read the term of services,
-and then download the singing voice database manually.
+Please visit https://drive.google.com/drive/folders/1XA2cm3UyRpAk_BJb1LTytOWrhjsZKbSN
+and read the term of services, and then download the singing voice database manually.
 EOF
     fi
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    sh $NO2_ROOT/utils/data_prep.sh ./config.yaml musicxml
+    sh $NO2_ROOT/utils/data_prep.sh ./config.yaml ust
     mkdir -p data/list
 
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
-        | sort > data/list/utt_list.txt
-    grep haruga_kita_ data/list/utt_list.txt > data/list/$eval_set.list
-    grep kagome_kagome_ data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v haruga_kita_ data/list/utt_list.txt | grep -v kagome_kagome_ > data/list/$train_set.list
+	| sort > data/list/utt_list.txt
+    grep 2018 data/list/utt_list.txt > data/list/$eval_set.list
+    grep ARROW data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v 2018 data/list/utt_list.txt | grep -v ARROW > data/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then

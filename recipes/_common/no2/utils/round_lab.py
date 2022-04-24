@@ -3,11 +3,10 @@ import sys
 from glob import glob
 from os.path import basename, expanduser, join, splitext
 
-import pysinsy
 import yaml
 from nnmnkwii.io import hts
 from tqdm import tqdm
-from util import fix_mono_lab_before_align, merge_sil
+from util import fix_mono_lab_before_align
 
 if len(sys.argv) != 2:
     print(f"USAGE: {sys.argv[0]} config_path")
@@ -19,32 +18,6 @@ with open(sys.argv[1], "r") as yml:
 if config is None:
     print(f"Cannot read config file: {sys.argv[1]}.")
     sys.exit(-1)
-
-sinsy = pysinsy.sinsy.Sinsy()
-
-assert sinsy.setLanguages("j", config["sinsy_dic"])
-
-# generate full/mono labels by sinsy
-print("Convert musicxml to label files.")
-files = sorted(glob(join(expanduser(config["db_root"]), "**/*.*xml"), recursive=True))
-for path in tqdm(files):
-    name = splitext(basename(path))[0]
-    if name in config["exclude_songs"]:
-        continue
-
-    assert sinsy.loadScoreFromMusicXML(path)
-    for is_mono in [True, False]:
-        n = "sinsy_mono" if is_mono else "sinsy_full"
-        labels = sinsy.createLabelData(is_mono, 1, 1).getData()
-        lab = hts.HTSLabelFile()
-        for label in labels:
-            lab.append(label.split(), strict=False)
-        lab = merge_sil(lab)
-        dst_dir = join(config["out_dir"], f"{n}")
-        os.makedirs(dst_dir, exist_ok=True)
-        with open(join(dst_dir, name + ".lab"), "w") as f:
-            f.write(str(lab))
-    sinsy.clearScore()
 
 print("Copy original label files.")
 files = sorted(glob(join(expanduser(config["db_root"]), "**/*.lab"), recursive=True))
@@ -76,7 +49,7 @@ for m in tqdm(files):
 
 # Rounding
 print("Round label files.")
-for name in ["sinsy_mono", "sinsy_full", "mono_label"]:
+for name in ["generated_mono", "generated_full", "mono_label"]:
     files = sorted(glob(join(config["out_dir"], name, "*.lab")))
     dst_dir = join(config["out_dir"], name + "_round")
     os.makedirs(dst_dir, exist_ok=True)

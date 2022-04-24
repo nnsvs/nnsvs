@@ -22,7 +22,7 @@ if config is None:
 
 # copy mono alignments to full
 mono_files = sorted(glob(join(config["out_dir"], "mono_dtw", "*.lab")))
-full_files = sorted(glob(join(config["out_dir"], "sinsy_full_round", "*.lab")))
+full_files = sorted(glob(join(config["out_dir"], "generated_full_round", "*.lab")))
 dst_dir = join(config["out_dir"], "full_dtw")
 os.makedirs(dst_dir, exist_ok=True)
 
@@ -41,7 +41,7 @@ base_files = sorted(glob(join(config["out_dir"], "mono_dtw", "*.lab")))
 
 lengths = {}
 
-for name in ["full_dtw", "sinsy_full_round", "sinsy_mono_round"]:
+for name in ["full_dtw", "generated_full_round", "generated_mono_round"]:
     files = sorted(glob(join(config["out_dir"], name, "*.lab")))
     for idx, base in tqdm(enumerate(base_files)):
         utt_id = splitext(basename(base))[0]
