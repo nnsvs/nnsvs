@@ -118,35 +118,53 @@ def train_step(
 
     # Real
     D_real = netD(real_netD_in_feats, in_feats, lengths)
+    # NOTE: must be list of list to support multi-scale discriminators
+    assert isinstance(D_real, list) and isinstance(D_real[-1], list)
     # Fake
     D_fake_det = netD(fake_netD_in_feats.detach(), in_feats, lengths)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
-    if hasattr(netD, "downsample_scale"):
-        D_mask = mask[:, :: netD.downsample_scale, :]
-    else:
-        if D_real[-1].shape[1] == out_feats.shape[1]:
-            D_mask = mask
-        else:
-            D_mask = None
 
     # Update discriminator
     eps = 1e-14
-    if gan_type == "lsgan":
-        loss_real = (D_real[-1] - 1) ** 2
-        loss_fake = D_fake_det[-1] ** 2
-    elif gan_type == "vanilla-gan":
-        loss_real = -torch.log(D_real[-1] + eps)
-        loss_fake = -torch.log(1 - D_fake_det[-1] + eps)
-    else:
-        raise ValueError(f"Unknown gan type: {gan_type}")
-    if D_mask is not None:
-        loss_real = loss_real.masked_select(D_mask).mean()
-        loss_fake = loss_fake.masked_select(D_mask).mean()
-    else:
-        loss_real = loss_real.mean()
-        loss_fake = loss_fake.mean()
+    loss_real = 0
+    loss_fake = 0
+    for idx, (D_real_, D_fake_det_) in enumerate(zip(D_real, D_fake_det)):
+        if gan_type == "lsgan":
+            loss_real_ = (D_real_[-1] - 1) ** 2
+            loss_fake_ = D_fake_det_[-1] ** 2
+        elif gan_type == "vanilla-gan":
+            loss_real_ = -torch.log(D_real_[-1] + eps)
+            loss_fake_ = -torch.log(1 - D_fake_det_[-1] + eps)
+        else:
+            raise ValueError(f"Unknown gan type: {gan_type}")
+
+        # mask for D
+        if (
+            hasattr(netD, "downsample_scale")
+            and mask.shape[1] // netD.downsample_scale == D_real_[-1].shape[1]
+        ):
+            D_mask = mask[:, :: netD.downsample_scale, :]
+        else:
+            if D_real_[-1].shape[1] == out_feats.shape[1]:
+                D_mask = mask
+            else:
+                D_mask = None
+
+        if D_mask is not None:
+            loss_real_ = loss_real_.masked_select(D_mask).mean()
+            loss_fake_ = loss_fake_.masked_select(D_mask).mean()
+        else:
+            loss_real_ = loss_real_.mean()
+            loss_fake_ = loss_fake_.mean()
+
+        log_metrics[f"Loss_Real_scale{idx}"] = loss_real_.item()
+        log_metrics[f"Loss_Fake_scale{idx}"] = loss_fake_.item()
+
+        loss_real += loss_real_
+        loss_fake += loss_fake_
+
     loss_d = loss_real + loss_fake
 
     if train:
@@ -173,22 +191,40 @@ def train_step(
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
-    if gan_type == "lsgan":
-        loss_adv = (1 - D_fake[-1]) ** 2
-    elif gan_type == "vanilla-gan":
-        loss_adv = -torch.log(D_fake[-1] + eps)
-    else:
-        raise ValueError(f"Unknown gan type: {gan_type}")
-    if D_mask is not None:
-        loss_adv = loss_adv.masked_select(D_mask).mean()
-    else:
-        loss_adv = loss_adv.mean()
+    loss_adv = 0
+    for idx, D_fake_ in enumerate(D_fake):
+        if gan_type == "lsgan":
+            loss_adv_ = (1 - D_fake_[-1]) ** 2
+        elif gan_type == "vanilla-gan":
+            loss_adv_ = -torch.log(D_fake_[-1] + eps)
+        else:
+            raise ValueError(f"Unknown gan type: {gan_type}")
+
+        if (
+            hasattr(netD, "downsample_scale")
+            and mask.shape[1] // netD.downsample_scale == D_fake_[-1].shape[1]
+        ):
+            D_mask = mask[:, :: netD.downsample_scale, :]
+        else:
+            if D_real_[-1].shape[1] == out_feats.shape[1]:
+                D_mask = mask
+            else:
+                D_mask = None
+
+        if D_mask is not None:
+            loss_adv_ = loss_adv_.masked_select(D_mask).mean()
+        else:
+            loss_adv_ = loss_adv_.mean()
+
+        log_metrics[f"Loss_Adv_scale{idx}"] = loss_adv_.item()
+
+        loss_adv += loss_adv_
 
     # Feature matching loss
     loss_fm = 0
-    for fake_fmap, real_fmap in zip(D_fake[:-1], D_real[:-1]):
-        loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
-    loss_fm /= len(D_fake[:-1])
+    for D_fake_, D_real_ in zip(D_fake, D_real):
+        for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+            loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
