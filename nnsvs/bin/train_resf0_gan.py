@@ -405,7 +405,7 @@ def _plot_spss_params(
     for a in ax:
         a.set_ylim(0, 14000)
     plt.tight_layout()
-    writer.add_figure(f"{group}/spectrogram", fig, step)
+    writer.add_figure(f"{group}/Spectrogram", fig, step)
     plt.close()
 
     # Aperiodicity
