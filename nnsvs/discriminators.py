@@ -214,3 +214,51 @@ class CycleGANVC2D(nn.Module):
         x = torch.sigmoid(x) if self.last_sigmoid else x
         outs.append(x)
         return outs
+
+
+class NUGAND(nn.Module):
+    def __init__(
+        self,
+        in_dim,
+        groups,
+        n_layers=3,
+        kernel_size=3,
+        stride=2,
+        init_type="normal",
+        last_sigmoid=False,
+    ):
+        super().__init__()
+        model = nn.ModuleDict()
+
+        for n in range(0, n_layers):
+            model["layer_%d" % n] = nn.Sequential(
+                WNConv1d(
+                    in_dim,
+                    in_dim,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    groups=groups,
+                ),
+                nn.LeakyReLU(0.2),
+            )
+
+        model["layer_%d" % (n_layers)] = nn.Sequential(
+            WNConv1d(in_dim, groups, kernel_size=kernel_size, stride=1),
+            nn.LeakyReLU(0.2),
+        )
+        model["layer_%d" % (n_layers + 2)] = WNConv1d(
+            groups, 1, kernel_size=kernel_size, stride=1
+        )
+        self.last_sigmoid = last_sigmoid
+        self.model = model
+        init_weights(self, init_type)
+
+    def forward(self, x, c, lengths):
+        outs = []
+        x = x.transpose(1, 2)
+        for _, layer in self.model.items():
+            x = layer(x)
+            outs.append(x.transpose(1, 2))
+        if self.last_sigmoid:
+            outs[-1] = torch.sigmoid(outs[-1])
+        return outs
