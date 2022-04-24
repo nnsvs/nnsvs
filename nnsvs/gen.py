@@ -547,9 +547,9 @@ def gen_spsvs_static_features(
 def gen_world_params(mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3):
     fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
     alpha = pysptk.util.mcepalpha(sample_rate)
-    spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha)
+    spectrogram = pysptk.mc2sp(np.ascontiguousarray(mgc), fftlen=fftlen, alpha=alpha)
     aperiodicity = pyworld.decode_aperiodicity(
-        bap.astype(np.float64), sample_rate, fftlen
+        np.ascontiguousarray(bap).astype(np.float64), sample_rate, fftlen
     )
 
     # fill aperiodicity with ones for unvoiced regions
