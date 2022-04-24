@@ -132,7 +132,7 @@ def train_step(
             D_mask = None
 
     # Update discriminator
-    eps = 1e-7
+    eps = 1e-14
     if gan_type == "lsgan":
         loss_real = (D_real[-1] - 1) ** 2
         loss_fake = D_fake_det[-1] ** 2
