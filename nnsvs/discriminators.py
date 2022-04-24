@@ -58,7 +58,7 @@ class FFN(nn.Module):
         out = torch.sigmoid(out) if self.last_sigmoid else out
         outs.append(out)
 
-        return outs
+        return [outs]
 
 
 class Conv1dResnet(nn.Module):
@@ -115,7 +115,7 @@ class Conv1dResnet(nn.Module):
         out = out.transpose(1, 2)
         outs.append(out)
 
-        return outs
+        return [outs]
 
 
 class Conv2dGLU(nn.Module):
@@ -213,10 +213,10 @@ class CycleGANVC2D(nn.Module):
         x = x.squeeze(1).transpose(1, 2)
         x = torch.sigmoid(x) if self.last_sigmoid else x
         outs.append(x)
-        return outs
+        return [outs]
 
 
-class NUGAND(nn.Module):
+class NUGANDImpl(nn.Module):
     def __init__(
         self,
         in_dim,
@@ -261,4 +261,23 @@ class NUGAND(nn.Module):
             outs.append(x.transpose(1, 2))
         if self.last_sigmoid:
             outs[-1] = torch.sigmoid(outs[-1])
+        return outs
+
+
+class NUGAND(nn.Module):
+    def __init__(
+        self,
+        in_dim,
+        groups,
+        **kwargs,
+    ):
+        super().__init__()
+        self.models = nn.ModuleList()
+        for group in groups:
+            self.models.append(NUGANDImpl(in_dim, group, **kwargs))
+
+    def forward(self, x, c, lengths):
+        outs = []
+        for model in self.models:
+            outs.append(model(x, c, lengths))
         return outs
