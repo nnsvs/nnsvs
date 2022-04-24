@@ -797,7 +797,7 @@ def plot_spss_params(
     )
     fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
     for a in ax:
-        a.set_ylim(0, 14000)
+        a.set_ylim(0, sr // 2)
     plt.tight_layout()
     writer.add_figure(f"{group}/Spectrogram", fig, step)
     plt.close()
@@ -829,7 +829,7 @@ def plot_spss_params(
     )
     fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
     for a in ax:
-        a.set_ylim(0, 14000)
+        a.set_ylim(0, sr // 2)
     plt.tight_layout()
     writer.add_figure(f"{group}/Aperiodicity", fig, step)
     plt.close()
