@@ -120,6 +120,7 @@ def predict_timelag(
             max_sigma_sq = (
                 max_sigma.squeeze(0).cpu().data.numpy() ** 2 * timelag_out_scaler.var_
             )
+            max_sigma_sq = np.maxinum(max_sigma_sq, 1e-14)
             max_mu = timelag_out_scaler.inverse_transform(
                 max_mu.squeeze(0).cpu().data.numpy()
             )
@@ -234,6 +235,7 @@ def predict_duration(
         max_sigma_sq = (
             max_sigma.squeeze(0).cpu().data.numpy() ** 2 * duration_out_scaler.var_
         )
+        max_sigma_sq = np.maxinum(max_sigma_sq, 1e-14)
         max_mu = duration_out_scaler.inverse_transform(
             max_mu.squeeze(0).cpu().data.numpy()
         )
@@ -410,6 +412,7 @@ def predict_acoustic(
             max_sigma_sq = (
                 max_sigma.squeeze(0).cpu().data.numpy() ** 2 * acoustic_out_scaler.var_
             )
+            max_sigma_sq = np.maxinum(max_sigma_sq, 1e-14)
             max_mu = acoustic_out_scaler.inverse_transform(
                 max_mu.squeeze(0).cpu().data.numpy()
             )
