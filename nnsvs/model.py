@@ -655,6 +655,73 @@ class ResSkipF0FFConvLSTM(BaseModel):
         return self(x, lengths)[0]
 
 
+class FFConvLSTM(BaseModel):
+    def __init__(
+        self,
+        in_dim,
+        ff_hidden_dim=2048,
+        conv_hidden_dim=1024,
+        lstm_hidden_dim=256,
+        out_dim=199,
+        dropout=0.0,
+        num_lstm_layers=2,
+        bidirectional=True,
+        init_type="none",
+    ):
+        super().__init__()
+
+        self.ff = nn.Sequential(
+            nn.Linear(in_dim, ff_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(ff_hidden_dim, ff_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(ff_hidden_dim, ff_hidden_dim),
+            nn.ReLU(),
+        )
+
+        self.conv = nn.Sequential(
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(ff_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+            nn.ReflectionPad1d(3),
+            nn.Conv1d(conv_hidden_dim, conv_hidden_dim, kernel_size=7, padding=0),
+            nn.BatchNorm1d(conv_hidden_dim),
+            nn.ReLU(),
+        )
+
+        num_direction = 2 if bidirectional else 1
+        self.lstm = nn.LSTM(
+            conv_hidden_dim,
+            lstm_hidden_dim,
+            num_lstm_layers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=dropout,
+        )
+
+        last_in_dim = num_direction * lstm_hidden_dim
+        self.fc = nn.Linear(last_in_dim, out_dim)
+        init_weights(self, init_type)
+
+    def forward(self, x, lengths=None):
+        if isinstance(lengths, torch.Tensor):
+            lengths = lengths.to("cpu")
+
+        out = self.ff(x)
+        out = self.conv(out.transpose(1, 2)).transpose(1, 2)
+        sequence = pack_padded_sequence(out, lengths, batch_first=True)
+        out, _ = self.lstm(sequence)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+        out = self.fc(out)
+
+        return out
+
+
 class ResF0Conv1dResnetWithPostnet(ResF0Conv1dResnet):
     def __init__(
         self,
