@@ -901,6 +901,59 @@ class VariancePredictor(nn.Module):
         return self.fc(x.transpose(1, 2))
 
 
+class ResF0VariancePredictor(VariancePredictor):
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        num_layers=5,
+        hidden_dim=256,
+        kernel_size=5,
+        dropout=0.5,
+        # NOTE: you must carefully set the following parameters
+        in_lf0_idx=300,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=180,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+    ):
+        super().__init__(
+            in_dim=in_dim,
+            out_dim=out_dim,
+            num_layers=num_layers,
+            hidden_dim=hidden_dim,
+            kernel_size=kernel_size,
+            dropout=dropout,
+        )
+        self.in_lf0_idx = in_lf0_idx
+        self.in_lf0_min = in_lf0_min
+        self.in_lf0_max = in_lf0_max
+        self.out_lf0_idx = out_lf0_idx
+        self.out_lf0_mean = out_lf0_mean
+        self.out_lf0_scale = out_lf0_scale
+
+    def forward(self, x, lengths=None):
+        out = self.conv(x.transpose(1, 2))
+        out = self.fc(out.transpose(1, 2))
+
+        lf0_pred, lf0_residual = predict_lf0_with_residual(
+            x,
+            out,
+            self.in_lf0_idx,
+            self.in_lf0_min,
+            self.in_lf0_max,
+            self.out_lf0_idx,
+            self.out_lf0_mean,
+            self.out_lf0_scale,
+        )
+
+        # Inject the predicted lf0 into the output features
+        out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+
+        return out, lf0_residual
+
+
 class MultistreamParametricModel(BaseModel):
     def __init__(
         self,
