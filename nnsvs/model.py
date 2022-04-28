@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
+from nnsvs.layer_norm import LayerNorm
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
 from nnsvs.tacotron.postnet import Postnet
@@ -868,3 +869,33 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
 
     def inference(self, x, lengths=None):
         return self(x, lengths)[0][-1]
+
+
+class VariancePredictor(nn.Module):
+    def __init__(
+        self, in_dim, out_dim, num_layers=5, hidden_dim=256, kernel_size=5, dropout=0.5
+    ):
+        super().__init__()
+        conv = nn.ModuleList()
+        for idx in range(num_layers):
+            in_channels = in_dim if idx == 0 else hidden_dim
+            conv += [
+                nn.Sequential(
+                    nn.Conv1d(
+                        in_channels,
+                        hidden_dim,
+                        kernel_size,
+                        stride=1,
+                        padding=(kernel_size - 1) // 2,
+                    ),
+                    nn.ReLU(),
+                    LayerNorm(hidden_dim, dim=1),
+                    nn.Dropout(dropout),
+                )
+            ]
+        self.conv = nn.Sequential(*conv)
+        self.fc = nn.Linear(hidden_dim, out_dim)
+
+    def forward(self, x, lengths=None):
+        x = self.conv(x.transpose(1, 2))
+        return self.fc(x.transpose(1, 2))
