@@ -5,6 +5,7 @@ Statistical parametric SVS
 --------------------------
 
 - :cite:t:`hono2021sinsy`
+- :cite:t:`zhuang2021litesing`
 - :cite:t:`hono2018recent`
 - :cite:t:`blaauw2017neural`
 - :cite:t:`oura2010recent`
