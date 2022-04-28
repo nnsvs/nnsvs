@@ -556,6 +556,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         lstm_hidden_dim=256,
         out_dim=199,
         dropout=0.0,
+        num_lstm_layers=2,
         bidirectional=True,
         # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
@@ -604,7 +605,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.lstm = nn.LSTM(
             conv_hidden_dim,
             lstm_hidden_dim,
-            num_direction,
+            num_lstm_layers,
             bidirectional=True,
             batch_first=True,
             dropout=dropout,
@@ -732,6 +733,7 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
         lstm_hidden_dim=256,
         out_dim=199,
         dropout=0.0,
+        num_lstm_layers=2,
         bidirectional=True,
         # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
@@ -754,6 +756,7 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
             lstm_hidden_dim=lstm_hidden_dim,
             out_dim=out_dim,
             dropout=dropout,
+            num_lstm_layers=num_lstm_layers,
             bidirectional=bidirectional,
             in_lf0_idx=in_lf0_idx,
             in_lf0_min=in_lf0_min,
