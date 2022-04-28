@@ -1012,14 +1012,19 @@ class MultistreamParametricModel(BaseModel):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
 
-        if hasattr(timbre_model, "in_lf0_idx"):
-            timbre_model.in_lf0_idx = in_lf0_idx
-            timbre_model.in_lf0_min = in_lf0_min
-            timbre_model.in_lf0_max = in_lf0_max
-            timbre_model.out_lf0_mean = out_lf0_mean
-            timbre_model.out_lf0_scale = out_lf0_scale
+    def _set_lf0_params(self):
+        # Special care for residual F0 prediction models
+        # NOTE: don't overwrite out_lf0_idx
+        if hasattr(self.pitch_model, "out_lf0_mean"):
+            self.pitch_model.in_lf0_idx = self.in_lf0_idx
+            self.pitch_model.in_lf0_min = self.in_lf0_min
+            self.pitch_model.in_lf0_max = self.in_lf0_max
+            self.pitch_model.out_lf0_mean = self.out_lf0_mean
+            self.pitch_model.out_lf0_scale = self.out_lf0_scale
 
     def forward(self, x, lengths=None):
+        self._set_lf0_params()
+
         out = self.energy_model(x, lengths)
         erg = split_streams(out, self.energy_stream_sizes)[0]
 
