@@ -1042,7 +1042,7 @@ class MultistreamParametricModel(BaseModel):
         out = self.timbre_model(x, lengths)
         if self.timbre_postnet is not None:
             noise = torch.randn_like(out)
-            out = self.timbre_postnet((out + noise).transpose(1, 2)).tranpose(1, 2)
+            out = self.timbre_postnet((out + noise).transpose(1, 2)).transpose(1, 2)
         mgc, bap = split_streams(out, self.timbre_stream_sizes)
 
         # concat mgcs' 0-th and rest dims
