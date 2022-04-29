@@ -130,6 +130,7 @@ class WORLDAcousticSource(FileDataSource):
         interp_unvoiced_aperiodicity=True,
         vibrato_mode="none",  # diff, sine
         sample_rate=48000,
+        d4c_threshold=0.85,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -148,6 +149,7 @@ class WORLDAcousticSource(FileDataSource):
         self.vibrato_mode = vibrato_mode
         self.windows = get_windows(num_windows)
         self.sample_rate = sample_rate
+        self.d4c_threshold = d4c_threshold
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -244,7 +246,7 @@ class WORLDAcousticSource(FileDataSource):
             raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
-        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
+        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
 
         mgc = pysptk.sp2mc(
             spectrogram, order=self.mgc_order, alpha=pysptk.util.mcepalpha(fs)
