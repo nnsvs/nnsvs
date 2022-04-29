@@ -644,6 +644,11 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
 def eval_spss_model(
     step, netG, in_feats, out_feats, lengths, model_config, out_scaler, writer, sr
 ):
+    is_autoregressive = (
+        netG.module.is_autoregressive()
+        if isinstance(netG, nn.DataParallel)
+        else netG.is_autoregressive()
+    )
     utt_indices = [-1, -2, -3]
     utt_indices = utt_indices[: min(3, len(in_feats))]
 
@@ -678,9 +683,16 @@ def eval_spss_model(
         writer.add_audio(group, wav, step, sr)
 
         # Run forward
-        pred_out_feats = netG(
-            in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-        )
+        if is_autoregressive:
+            pred_out_feats = netG(
+                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+                [lengths[utt_idx]],
+                out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+            )
+        else:
+            pred_out_feats = netG(
+                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
+            )
         if isinstance(pred_out_feats, tuple):
             pred_out_feats = pred_out_feats[0]
 
