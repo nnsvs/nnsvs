@@ -969,6 +969,7 @@ class MultistreamParametricModel(BaseModel):
         timbre_stream_sizes: list,
         timbre_has_dynamic_features: list,
         timbre_num_windows: int,
+        timbre_postnet: nn.Module,
         # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
         in_lf0_min=5.3936276,
@@ -1004,6 +1005,7 @@ class MultistreamParametricModel(BaseModel):
             assert self.timbre_model.out_dim == sum(
                 self.timbre_stream_sizes
             ), "Timbre model output dimension is not consistent with the stream sizes"
+        self.timbre_postnet = timbre_postnet
 
         self.in_lf0_idx = in_lf0_idx
         self.in_lf0_min = in_lf0_min
@@ -1038,6 +1040,9 @@ class MultistreamParametricModel(BaseModel):
             lf0, vuv, vib, vib_flags = split_streams(out, self.pitch_stream_sizes)
 
         out = self.timbre_model(x, lengths)
+        if self.timbre_postnet is not None:
+            noise = torch.randn_like(out)
+            out = self.timbre_postnet(out + noise)
         mgc, bap = split_streams(out, self.timbre_stream_sizes)
 
         # concat mgcs' 0-th and rest dims
