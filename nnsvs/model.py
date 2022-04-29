@@ -1022,7 +1022,7 @@ class MultistreamParametricModel(BaseModel):
             self.pitch_model.out_lf0_mean = self.out_lf0_mean
             self.pitch_model.out_lf0_scale = self.out_lf0_scale
 
-    def forward(self, x, lengths=None, is_inference=False):
+    def forward(self, x, lengths=None, y=None, is_inference=False):
         self._set_lf0_params()
 
         if is_inference:
@@ -1043,7 +1043,10 @@ class MultistreamParametricModel(BaseModel):
         if is_inference:
             out = self.timbre_model.inference(x, lengths)
         else:
-            out = self.timbre_model(x, lengths)
+            if self.timbre_model.is_autoregressive():
+                out = self.timbre_model(x, lengths, y)
+            else:
+                out = self.timbre_model(x, lengths)
         mgc, bap = split_streams(out, self.timbre_stream_sizes)
 
         # concat mgcs' 0-th and rest dims
@@ -1062,3 +1065,12 @@ class MultistreamParametricModel(BaseModel):
     def inference(self, x, lengths=None):
         out, _ = self(x, lengths, is_inference=True)
         return out
+
+    def is_autoregressive(self):
+        if self.energy_model.is_autoregressive():
+            return True
+        if self.timbre_model.is_autoregressive():
+            return True
+        if self.pitch_model.is_autoregressive():
+            return True
+        return False
