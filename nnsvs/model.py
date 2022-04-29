@@ -871,7 +871,7 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
         return self(x, lengths)[0][-1]
 
 
-class VariancePredictor(nn.Module):
+class VariancePredictor(BaseModel):
     def __init__(
         self, in_dim, out_dim, num_layers=5, hidden_dim=256, kernel_size=5, dropout=0.5
     ):
@@ -1022,10 +1022,13 @@ class MultistreamParametricModel(BaseModel):
             self.pitch_model.out_lf0_mean = self.out_lf0_mean
             self.pitch_model.out_lf0_scale = self.out_lf0_scale
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, is_inference=False):
         self._set_lf0_params()
 
-        out = self.energy_model(x, lengths)
+        if is_inference:
+            out = self.energy_model.inference(x, lengths)
+        else:
+            out = self.energy_model(x, lengths)
         erg = split_streams(out, self.energy_stream_sizes)[0]
 
         # NOTE: so far assuming residual F0 prediction models
@@ -1037,7 +1040,10 @@ class MultistreamParametricModel(BaseModel):
         else:
             lf0, vuv, vib, vib_flags = split_streams(out, self.pitch_stream_sizes)
 
-        out = self.timbre_model(x, lengths)
+        if is_inference:
+            out = self.timbre_model.inference(x, lengths)
+        else:
+            out = self.timbre_model(x, lengths)
         mgc, bap = split_streams(out, self.timbre_stream_sizes)
 
         # concat mgcs' 0-th and rest dims
@@ -1054,4 +1060,5 @@ class MultistreamParametricModel(BaseModel):
         return out, lf0_residual
 
     def inference(self, x, lengths=None):
-        return self(x, lengths)[0][-1]
+        out, _ = self(x, lengths, is_inference=True)
+        return out
