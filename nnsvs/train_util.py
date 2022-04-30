@@ -856,3 +856,38 @@ def plot_spss_params(
     plt.tight_layout()
     writer.add_figure(f"{group}/GV_mgc", fig, step)
     plt.close()
+
+
+def compute_ms_loss(pred_out_feats, out_feats, n_fft=1024, hop_length=256):
+    window = torch.hann_window(n_fft, periodic=True).to(pred_out_feats.device)
+    loss = 0
+
+    # Compute MS for each dim
+    D = pred_out_feats.shape[-1]
+    for dim in range(D):
+        pred_ms = torch.log(
+            torch.stft(
+                pred_out_feats[:, :, dim],
+                n_fft=n_fft,
+                hop_length=hop_length,
+                center=False,
+                window=window,
+                return_complex=True,
+            ).abs()
+            + 1e-8
+        )
+        ms = torch.log(
+            torch.stft(
+                out_feats[:, :, dim],
+                n_fft=n_fft,
+                hop_length=hop_length,
+                center=False,
+                window=window,
+                return_complex=True,
+            ).abs()
+            + 1e-8
+        )
+        loss += (pred_ms - ms).abs().mean()
+    loss /= D
+
+    return loss
