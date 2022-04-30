@@ -847,7 +847,7 @@ def plot_spss_params(
     plt.close()
 
     # GV
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
     ax.plot(np.var(mgc, axis=0), "--", linewidth=2, label="Natural: global variances")
     ax.plot(np.var(pred_mgc, axis=0), linewidth=2, label="Generated: global variances")
     ax.legend()
