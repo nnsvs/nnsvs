@@ -118,7 +118,7 @@ def train_step(
             )
         # Stream-wise MS loss
         for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
-            loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+            loss_ms += compute_ms_loss(ms_pred_out_feats_, ms_out_feats_)
 
     loss = loss_feats + pitch_reg_weight * loss_pitch + ms_weight * loss_ms
 

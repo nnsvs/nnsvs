@@ -243,7 +243,7 @@ def train_step(
                 for ms_out_feats_, ms_pred_out_feats_ in zip(
                     ms_out_feats, ms_pred_out_feats
                 ):
-                    loss_ms_ += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+                    loss_ms_ += compute_ms_loss(ms_pred_out_feats_, ms_out_feats_)
                 log_metrics[f"Loss_MS_scale{idx}"] = loss_ms_.item()
                 loss_ms += loss_ms_
         else:
@@ -275,7 +275,7 @@ def train_step(
             for ms_out_feats_, ms_pred_out_feats_ in zip(
                 ms_out_feats, ms_pred_out_feats
             ):
-                loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+                loss_ms += compute_ms_loss(ms_pred_out_feats_, ms_out_feats_)
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
