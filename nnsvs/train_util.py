@@ -845,3 +845,14 @@ def plot_spss_params(
     plt.tight_layout()
     writer.add_figure(f"{group}/Aperiodicity", fig, step)
     plt.close()
+
+    # GV
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(np.var(mgc, axis=0), "--", linewidth=2, label="Natural: global variances")
+    ax.plot(np.var(pred_mgc, axis=0), linewidth=2, label="Generated: global variances")
+    ax.legend()
+    ax.set_yscale("log")
+    ax.set_xlabel("Dimension of mgc")
+    plt.tight_layout()
+    writer.add_figure(f"{group}/GV_mgc", fig, step)
+    plt.close()
