@@ -210,7 +210,7 @@ def train_step(
         ).mean()
 
     # MS loss
-    loss_ms = 0
+    loss_ms = torch.tensor(0)
     if ms_weight > 0:
         if is_multiscale:
             for idx, pred_out_feats_ in enumerate(pred_out_feats):
