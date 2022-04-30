@@ -91,31 +91,34 @@ def train_step(
 
     # MS loss
     loss_ms = 0
-    if ms_use_static_feats_only:
-        ms_out_feats = get_static_features(
-            out_feats,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            ms_streams,
-        )
-        ms_pred_out_feats = get_static_features(
-            pred_out_feats,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            ms_streams,
-        )
-    else:
-        ms_out_feats = split_streams(out_feats, model_config.stream_sizes, ms_streams)
-        ms_pred_out_feats = split_streams(
-            pred_out_feats,
-            model_config.stream_sizes,
-            ms_streams,
-        )
-    # Stream-wise MS loss
-    for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
-        loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+    if ms_weight > 0:
+        if ms_use_static_feats_only:
+            ms_out_feats = get_static_features(
+                out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+            ms_pred_out_feats = get_static_features(
+                pred_out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+        else:
+            ms_out_feats = split_streams(
+                out_feats, model_config.stream_sizes, ms_streams
+            )
+            ms_pred_out_feats = split_streams(
+                pred_out_feats,
+                model_config.stream_sizes,
+                ms_streams,
+            )
+        # Stream-wise MS loss
+        for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
+            loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
 
     loss = loss_feats + pitch_reg_weight * loss_pitch + ms_weight * loss_ms
 

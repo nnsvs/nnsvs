@@ -211,8 +211,42 @@ def train_step(
 
     # MS loss
     loss_ms = 0
-    if is_multiscale:
-        for idx, pred_out_feats_ in enumerate(pred_out_feats):
+    if ms_weight > 0:
+        if is_multiscale:
+            for idx, pred_out_feats_ in enumerate(pred_out_feats):
+                if ms_use_static_feats_only:
+                    ms_out_feats = get_static_features(
+                        out_feats,
+                        model_config.num_windows,
+                        model_config.stream_sizes,
+                        model_config.has_dynamic_features,
+                        ms_streams,
+                    )
+                    ms_pred_out_feats = get_static_features(
+                        pred_out_feats_,
+                        model_config.num_windows,
+                        model_config.stream_sizes,
+                        model_config.has_dynamic_features,
+                        ms_streams,
+                    )
+                else:
+                    ms_out_feats = split_streams(
+                        out_feats, model_config.stream_sizes, ms_streams
+                    )
+                    ms_pred_out_feats = split_streams(
+                        pred_out_feats_,
+                        model_config.stream_sizes,
+                        ms_streams,
+                    )
+                loss_ms_ = 0
+                # Stream-wise MS loss
+                for ms_out_feats_, ms_pred_out_feats_ in zip(
+                    ms_out_feats, ms_pred_out_feats
+                ):
+                    loss_ms_ += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+                log_metrics[f"Loss_MS_scale{idx}"] = loss_ms_.item()
+                loss_ms += loss_ms_
+        else:
             if ms_use_static_feats_only:
                 ms_out_feats = get_static_features(
                     out_feats,
@@ -222,7 +256,7 @@ def train_step(
                     ms_streams,
                 )
                 ms_pred_out_feats = get_static_features(
-                    pred_out_feats_,
+                    pred_out_feats,
                     model_config.num_windows,
                     model_config.stream_sizes,
                     model_config.has_dynamic_features,
@@ -233,46 +267,15 @@ def train_step(
                     out_feats, model_config.stream_sizes, ms_streams
                 )
                 ms_pred_out_feats = split_streams(
-                    pred_out_feats_,
+                    pred_out_feats,
                     model_config.stream_sizes,
                     ms_streams,
                 )
-            loss_ms_ = 0
             # Stream-wise MS loss
             for ms_out_feats_, ms_pred_out_feats_ in zip(
                 ms_out_feats, ms_pred_out_feats
             ):
-                loss_ms_ += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
-            log_metrics[f"Loss_MS_scale{idx}"] = loss_ms_.item()
-            loss_ms += loss_ms_
-    else:
-        if ms_use_static_feats_only:
-            ms_out_feats = get_static_features(
-                out_feats,
-                model_config.num_windows,
-                model_config.stream_sizes,
-                model_config.has_dynamic_features,
-                ms_streams,
-            )
-            ms_pred_out_feats = get_static_features(
-                pred_out_feats,
-                model_config.num_windows,
-                model_config.stream_sizes,
-                model_config.has_dynamic_features,
-                ms_streams,
-            )
-        else:
-            ms_out_feats = split_streams(
-                out_feats, model_config.stream_sizes, ms_streams
-            )
-            ms_pred_out_feats = split_streams(
-                pred_out_feats,
-                model_config.stream_sizes,
-                ms_streams,
-            )
-        # Stream-wise MS loss
-        for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
-            loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+                loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
