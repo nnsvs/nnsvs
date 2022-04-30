@@ -10,11 +10,13 @@ from nnsvs.multistream import (
     get_static_features,
     get_static_stream_sizes,
     select_streams,
+    split_streams,
 )
 from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
+    compute_ms_loss,
     eval_spss_model,
     log_params_from_omegaconf_dict,
     save_checkpoint,
@@ -49,6 +51,9 @@ def train_step(
     mask_nth_mgc_for_adv_loss=0,
     gan_type="lsgan",
     adv_segment_length=-1,
+    ms_streams=None,
+    ms_use_static_feats_only=True,
+    ms_weight=1.0,
 ):
     optG.zero_grad()
     optD.zero_grad()
@@ -112,7 +117,7 @@ def train_step(
 
     # Rather than classifying whole features as real or fake, use smaller segments
     # that should ease the training of GANs I guess
-    # The idaa is similar to the trick used for training neural vocoders. i.e.,
+    # The idea is similar to the trick used for training neural vocoders. i.e.,
     # use small segments like 8000 or 24000 samples for training vocoders.
     if adv_segment_length > 0:
         if lengths.min() < adv_segment_length:
@@ -204,6 +209,71 @@ def train_step(
             pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
         ).mean()
 
+    # MS loss
+    loss_ms = 0
+    if is_multiscale:
+        for idx, pred_out_feats_ in enumerate(pred_out_feats):
+            if ms_use_static_feats_only:
+                ms_out_feats = get_static_features(
+                    out_feats,
+                    model_config.num_windows,
+                    model_config.stream_sizes,
+                    model_config.has_dynamic_features,
+                    ms_streams,
+                )
+                ms_pred_out_feats = get_static_features(
+                    pred_out_feats_,
+                    model_config.num_windows,
+                    model_config.stream_sizes,
+                    model_config.has_dynamic_features,
+                    ms_streams,
+                )
+            else:
+                ms_out_feats = split_streams(
+                    out_feats, model_config.stream_sizes, ms_streams
+                )
+                ms_pred_out_feats = split_streams(
+                    pred_out_feats_,
+                    model_config.stream_sizes,
+                    ms_streams,
+                )
+            loss_ms_ = 0
+            # Stream-wise MS loss
+            for ms_out_feats_, ms_pred_out_feats_ in zip(
+                ms_out_feats, ms_pred_out_feats
+            ):
+                loss_ms_ += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+            log_metrics[f"Loss_MS_scale{idx}"] = loss_ms_.item()
+            loss_ms += loss_ms_
+    else:
+        if ms_use_static_feats_only:
+            ms_out_feats = get_static_features(
+                out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+            ms_pred_out_feats = get_static_features(
+                pred_out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+        else:
+            ms_out_feats = split_streams(
+                out_feats, model_config.stream_sizes, ms_streams
+            )
+            ms_pred_out_feats = split_streams(
+                pred_out_feats,
+                model_config.stream_sizes,
+                ms_streams,
+            )
+        # Stream-wise MS loss
+        for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
+            loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
     loss_adv = 0
@@ -260,6 +330,7 @@ def train_step(
         + adv_weight * loss_adv
         + pitch_reg_weight * loss_pitch
         + fm_weight * loss_fm
+        + ms_weight * loss_ms
     )
 
     if train:
@@ -292,6 +363,7 @@ def train_step(
             "Loss_Feats": loss_feats.item(),
             "Loss_Adv": loss_adv.item(),
             "Loss_Feature_Matching": loss_fm.item(),
+            "Loss_MS": loss_ms.item(),
             "Loss_Pitch": loss_pitch.item(),
             "Loss_Real": loss_real.item(),
             "Loss_Fake": loss_fake.item(),
@@ -386,25 +458,29 @@ def train_loop(
                     adv_weight = config.train.adv_weight
 
                 loss, log_metrics = train_step(
-                    config.model,
-                    config.train.optim,
-                    netG,
-                    optG,
-                    netD,
-                    optD,
-                    train,
-                    in_feats,
-                    out_feats,
-                    lengths,
-                    out_scaler,
-                    pitch_reg_dyn_ws,
-                    pitch_reg_weight,
-                    adv_weight,
-                    adv_streams,
-                    fm_weight,
-                    config.train.adv_use_static_feats_only,
-                    config.train.mask_nth_mgc_for_adv_loss,
-                    config.train.gan_type,
+                    model_config=config.model,
+                    optim_config=config.train.optim,
+                    netG=netG,
+                    optG=optG,
+                    netD=netD,
+                    optD=optD,
+                    train=train,
+                    in_feats=in_feats,
+                    out_feats=out_feats,
+                    lengths=lengths,
+                    out_scaler=out_scaler,
+                    pitch_reg_dyn_ws=pitch_reg_dyn_ws,
+                    pitch_reg_weight=pitch_reg_weight,
+                    adv_weight=adv_weight,
+                    adv_streams=adv_streams,
+                    fm_weight=fm_weight,
+                    adv_segment_length=config.train.adv_segment_length,
+                    adv_use_static_feats_only=config.train.adv_use_static_feats_only,
+                    mask_nth_mgc_for_adv_loss=config.train.mask_nth_mgc_for_adv_loss,
+                    gan_type=config.train.gan_type,
+                    ms_streams=config.train.ms_streams,
+                    ms_use_static_feats_only=config.train.ms_use_static_feats_only,
+                    ms_weight=config.train.ms_weight,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():

@@ -6,10 +6,12 @@ import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
+from nnsvs.multistream import get_static_features, split_streams
 from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
+    compute_ms_loss,
     eval_spss_model,
     log_params_from_omegaconf_dict,
     save_checkpoint,
@@ -33,8 +35,12 @@ def train_step(
     out_scaler,
     pitch_reg_dyn_ws,
     pitch_reg_weight=1.0,
+    ms_streams=None,
+    ms_use_static_feats_only=True,
+    ms_weight=1.0,
 ):
     optimizer.zero_grad()
+    log_metrics = {}
 
     criterion = nn.MSELoss(reduction="none")
     prediction_type = (
@@ -71,20 +77,47 @@ def train_step(
         # (B, max(T)) or (B, max(T), D_out)
         mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
         # Compute loss and apply mask
-        loss = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
-        loss = loss.masked_select(mask_).mean()
+        loss_feats = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
+        loss_feats = loss_feats.masked_select(mask_).mean()
     else:
-        loss = criterion(
+        loss_feats = criterion(
             pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
         ).mean()
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    loss += (
-        pitch_reg_weight
-        * (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
-    )
+    loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+
+    # MS loss
+    loss_ms = 0
+    if ms_use_static_feats_only:
+        ms_out_feats = get_static_features(
+            out_feats,
+            model_config.num_windows,
+            model_config.stream_sizes,
+            model_config.has_dynamic_features,
+            ms_streams,
+        )
+        ms_pred_out_feats = get_static_features(
+            pred_out_feats,
+            model_config.num_windows,
+            model_config.stream_sizes,
+            model_config.has_dynamic_features,
+            ms_streams,
+        )
+    else:
+        ms_out_feats = split_streams(out_feats, model_config.stream_sizes, ms_streams)
+        ms_pred_out_feats = split_streams(
+            pred_out_feats,
+            model_config.stream_sizes,
+            ms_streams,
+        )
+    # Stream-wise MS loss
+    for ms_out_feats_, ms_pred_out_feats_ in zip(ms_out_feats, ms_pred_out_feats):
+        loss_ms += compute_ms_loss(ms_out_feats_, ms_pred_out_feats_)
+
+    loss = loss_feats + pitch_reg_weight * loss_pitch + ms_weight * loss_ms
 
     if prediction_type == PredictionType.PROBABILISTIC:
         with torch.no_grad():
@@ -99,7 +132,17 @@ def train_step(
         loss.backward()
         optimizer.step()
 
-    return loss, distortions
+    log_metrics.update(distortions)
+    log_metrics.update(
+        {
+            "Loss": loss.item(),
+            "Loss_Feats": loss_feats.item(),
+            "Loss_MS": loss_ms.item(),
+            "Loss_Pitch": loss_pitch.item(),
+        }
+    )
+
+    return loss, log_metrics
 
 
 def train_loop(
@@ -167,20 +210,23 @@ def train_loop(
                     lf0_score_denorm
                 )
 
-                loss, distortions = train_step(
-                    model,
-                    config.model,
-                    optimizer,
-                    train,
-                    in_feats,
-                    out_feats,
-                    lengths,
-                    out_scaler,
-                    pitch_reg_dyn_ws,
-                    pitch_reg_weight,
+                loss, log_metrics = train_step(
+                    model=model,
+                    model_config=config.model,
+                    optimizer=optimizer,
+                    train=train,
+                    in_feats=in_feats,
+                    out_feats=out_feats,
+                    lengths=lengths,
+                    out_scaler=out_scaler,
+                    pitch_reg_dyn_ws=pitch_reg_dyn_ws,
+                    pitch_reg_weight=pitch_reg_weight,
+                    ms_streams=config.train.ms_streams,
+                    ms_use_static_feats_only=config.train.ms_use_static_feats_only,
+                    ms_weight=config.train.ms_weight,
                 )
                 running_loss += loss.item()
-                for k, v in distortions.items():
+                for k, v in log_metrics.items():
                     try:
                         running_metrics[k] += float(v)
                     except KeyError:
