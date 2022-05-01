@@ -1,5 +1,5 @@
-# ameboshi_ciphyer_utagoe_db
-Recipe of Ameboshi Cipher's singing voice database (52 songs).
+# amaboshi_ciphyer_utagoe_db
+Recipe of Amaboshi Cipher's singing voice database (52 songs).
 
 ## Requirements
 - utaupy
