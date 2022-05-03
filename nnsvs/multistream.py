@@ -9,6 +9,7 @@ def select_streams(
     inputs,
     stream_sizes=None,
     streams=None,
+    concat=True,
 ):
     if stream_sizes is None:
         stream_sizes = [60, 1, 1, 1]
@@ -24,6 +25,9 @@ def select_streams(
         else:
             s = inputs[:, start_idx : start_idx + size]
         ret.append(s)
+
+    if not concat:
+        return ret
 
     if isinstance(inputs, torch.Tensor):
         return torch.cat(ret, dim=-1)

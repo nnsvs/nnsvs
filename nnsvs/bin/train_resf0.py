@@ -6,7 +6,7 @@ import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
-from nnsvs.multistream import get_static_features
+from nnsvs.multistream import get_static_features, select_streams
 from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
@@ -94,32 +94,43 @@ def train_step(
     # MS loss
     loss_ms = torch.tensor(0.0).to(in_feats.device)
     if ms_weight > 0:
-        assert ms_use_static_feats_only
         ms_means = ms_means.expand(
             in_feats.shape[0], ms_means.shape[1], ms_means.shape[2]
         )
         ms_vars = ms_vars.expand(in_feats.shape[0], ms_vars.shape[1], ms_vars.shape[2])
-        ms_pred_out_feats = get_static_features(
-            pred_out_feats,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            ms_streams,
-        )
-        ms_means_streams = get_static_features(
-            ms_means,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            ms_streams,
-        )
-        ms_vars_streams = get_static_features(
-            ms_vars,
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-            ms_streams,
-        )
+        if ms_use_static_feats_only:
+            ms_pred_out_feats = get_static_features(
+                pred_out_feats,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+            ms_means_streams = get_static_features(
+                ms_means,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+            ms_vars_streams = get_static_features(
+                ms_vars,
+                model_config.num_windows,
+                model_config.stream_sizes,
+                model_config.has_dynamic_features,
+                ms_streams,
+            )
+        else:
+            ms_pred_out_feats = select_streams(
+                pred_out_feats, model_config.stream_sizes, ms_streams, concat=False
+            )
+            ms_means_streams = select_streams(
+                ms_means, model_config.stream_sizes, ms_streams, concat=False
+            )
+            ms_vars_streams = select_streams(
+                ms_vars, model_config.stream_sizes, ms_streams, concat=False
+            )
+
         # Stream-wise MS loss
         T = (ms_means.shape[1] - 1) * 2
         for ms_pred_out_feats_, mean, var in zip(
