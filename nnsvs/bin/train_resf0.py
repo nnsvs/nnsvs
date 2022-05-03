@@ -90,7 +90,7 @@ def train_step(
     loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
     # MS loss
-    loss_ms = torch.tensor(0).to(in_feats.device)
+    loss_ms = torch.tensor(0.0).to(in_feats.device)
     if ms_weight > 0:
         if ms_use_static_feats_only:
             ms_out_feats = get_static_features(
