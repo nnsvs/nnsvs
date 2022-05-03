@@ -846,7 +846,7 @@ def plot_spss_params(
     writer.add_figure(f"{group}/Aperiodicity", fig, step)
     plt.close()
 
-    # GV
+    # GV for mgc
     fig, ax = plt.subplots(1, 1, figsize=(8, 3))
     ax.plot(np.var(mgc, axis=0), "--", linewidth=2, label="Natural: global variances")
     ax.plot(np.var(pred_mgc, axis=0), linewidth=2, label="Generated: global variances")
@@ -857,6 +857,19 @@ def plot_spss_params(
     ax.set_ylim(min_)
     plt.tight_layout()
     writer.add_figure(f"{group}/GV_mgc", fig, step)
+    plt.close()
+
+    # GV for bap
+    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+    ax.plot(np.var(bap, axis=0), "--", linewidth=2, label="Natural: global variances")
+    ax.plot(np.var(pred_bap, axis=0), linewidth=2, label="Generated: global variances")
+    ax.legend()
+    ax.set_yscale("log")
+    ax.set_xlabel("Dimension of bap")
+    min_ = min(np.var(bap, axis=0).min(), np.var(pred_bap, axis=0).min(), 1e-3)
+    ax.set_ylim(min_)
+    plt.tight_layout()
+    writer.add_figure(f"{group}/GV_bap", fig, step)
     plt.close()
 
 
