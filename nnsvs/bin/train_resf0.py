@@ -164,7 +164,7 @@ def compute_ms_params(data_loader, device):
     maxT = 0
     D = 0
     for _, out_feats, lengths in data_loader:
-        maxT = max(maxT, lengths.max())
+        maxT = int(max(maxT, lengths.max()))
         D = out_feats.shape[-1]
     ms_means = torch.zeros(maxT // 2 + 1, D).to(device)
     ms_vars = torch.zeros(maxT // 2 + 1, D).to(device)
