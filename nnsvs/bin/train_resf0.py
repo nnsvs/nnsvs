@@ -6,12 +6,11 @@ import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
-from nnsvs.multistream import get_static_features, split_streams
+from nnsvs.multistream import get_static_features
 from nnsvs.train_util import (
     check_resf0_config,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
-    compute_ms_loss,
     eval_spss_model,
     log_params_from_omegaconf_dict,
     save_checkpoint,
