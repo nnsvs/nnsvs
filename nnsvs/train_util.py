@@ -853,6 +853,8 @@ def plot_spss_params(
     ax.legend()
     ax.set_yscale("log")
     ax.set_xlabel("Dimension of mgc")
+    min_ = min(np.var(mgc, axis=0).min(), np.var(pred_mgc, axis=0).min(), 1e-6)
+    ax.set_ylim(min_)
     plt.tight_layout()
     writer.add_figure(f"{group}/GV_mgc", fig, step)
     plt.close()
