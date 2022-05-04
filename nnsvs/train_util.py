@@ -866,7 +866,7 @@ def plot_spss_params(
     ax.legend()
     ax.set_yscale("log")
     ax.set_xlabel("Dimension of bap")
-    min_ = min(np.var(bap, axis=0).min(), np.var(pred_bap, axis=0).min(), 1e-3)
+    min_ = min(np.var(bap, axis=0).min(), np.var(pred_bap, axis=0).min(), 1e-1)
     ax.set_ylim(min_)
     plt.tight_layout()
     writer.add_figure(f"{group}/GV_bap", fig, step)
