@@ -2,7 +2,7 @@
 # Please don't try to run the shell script directory.
 
 if [ -d conf/train_postfilter ]; then
-    ext="--config-dir conf/train_postfilter/acoustic"
+    ext="--config-dir conf/train_postfilter"
 else
     ext=""
 fi
