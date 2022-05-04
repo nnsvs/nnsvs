@@ -21,6 +21,12 @@ Vibrato modeling
 - :cite:t:`山田知彦2009hmm`
 - :cite:t:`nakano2006automatic`
 
+Post-filters
+-------------
+
+- :cite:t:`Kaneko2017Interspeech`
+- :cite:t:`kaneko2017generative`
+
 All bibliography
 -----------------
 
