@@ -1,0 +1,67 @@
+out_dir: exp
+log_dir: tensorboard/exp
+
+nepochs: 50
+checkpoint_epoch_interval: 20
+
+# GAN type (lsgan or vanilla-gan)
+gan_type: vanilla-gan
+# Adverdarial loss weight
+adv_weight: 1.0
+# NOTE: If true, `adv_weight` above will be ignored
+dynamic_adv_weight: false
+# [mgc, lf0, vuv, bap, vib, vib_flags]
+adv_streams: [True, False, False, False, False, False]
+# Feature matching loss weight
+fm_weight: 0.0
+# Don't set the value > 0 unless you are sure what you are doing
+# mask 0 to n-th mgc for adversarial loss
+# e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
+mask_nth_mgc_for_adv_loss: 1
+# Segment length for computing the adversarial/discriminator losses
+# If positive, segments with the length of `adv_segment_length` are sampled for each iteration
+# and used for computing the loss functions
+adv_segment_length: -1
+
+stream_wise_loss: false
+use_detect_anomaly: true
+
+optim:
+  netG:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 20
+        gamma: 0.5
+    clip_norm: 1.0
+  netD:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 20
+        gamma: 0.5
+    clip_norm: 1.0
+
+resume:
+  netG:
+    checkpoint:
+    load_optimizer: false
+  netD:
+    checkpoint:
+    load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: true

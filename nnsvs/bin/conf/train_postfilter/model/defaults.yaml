@@ -1,0 +1,20 @@
+# (mgc, lf0, vuv, bap, vib, vib_flags)
+stream_sizes: [60, 1, 1, 5, 2, 1]
+has_dynamic_features: [false, false, false, false, false, false]
+num_windows: 1
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.postfilters.MGCPostFilter
+  stream_sizes: [60, 1, 1, 5, 2, 1]
+  timbre_model:
+    _target_: nnsvs.postfilters.Conv2dPostFilter
+    channels: 1
+
+netD:
+  _target_: nnsvs.discriminators.Conv2dD
+  # If in_dim is not specified, it will be automatically set based on adv_streams
+  in_dim: null
+  channels: 1
+  last_sigmoid: false
