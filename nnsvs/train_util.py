@@ -27,6 +27,7 @@ from nnsvs.multistream import (
 from nnsvs.pitch import nonzero_segments
 from nnsvs.util import MinMaxScaler, StandardScaler, init_seed, pad_2d
 from omegaconf import DictConfig, ListConfig, OmegaConf
+from sklearn.preprocessing import MinMaxScaler as SKMinMaxScaler
 from torch import nn, optim
 from torch.utils import data as data_utils
 from torch.utils.tensorboard import SummaryWriter
@@ -391,9 +392,13 @@ def setup_gan(config, device):
     # Scalers
     if "in_scaler_path" in config.data and config.data.in_scaler_path is not None:
         in_scaler = joblib.load(to_absolute_path(config.data.in_scaler_path))
-        in_scaler = MinMaxScaler(
-            in_scaler.min_, in_scaler.scale_, in_scaler.data_min_, in_scaler.data_max_
-        )
+        if isinstance(in_scaler, SKMinMaxScaler):
+            in_scaler = MinMaxScaler(
+                in_scaler.min_,
+                in_scaler.scale_,
+                in_scaler.data_min_,
+                in_scaler.data_max_,
+            )
     else:
         in_scaler = None
     if "out_scaler_path" in config.data and config.data.out_scaler_path is not None:
