@@ -89,7 +89,6 @@ def my_app(config: DictConfig) -> None:
     model.load_state_dict(checkpoint["state_dict"])
 
     out_scaler = joblib.load(to_absolute_path(config.out_scaler_path))
-    in_feats = FileSourceDataset(NpyFileSource(in_dir))
 
     if config.normalize:
         mean_ = get_static_features(
