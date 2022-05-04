@@ -10,7 +10,7 @@ do
         else
             ext=""
         fi
-        xrun nnsvs-gen-static-features $ext acoustic=$acoustic_features \
+        xrun nnsvs-extract-static-features $ext acoustic=$acoustic_features \
             in_dir=$dump_norm_dir/$s/out_acoustic/ \
             out_dir=$dump_norm_dir/$s/out_acoustic_static \
             utt_list=data/$dbname/list/$s.list
