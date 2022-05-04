@@ -195,14 +195,14 @@ def train_step(
         loss_feats = 0
         # Use the last feats loss only when adversarial training is enabled
         if adv_weight > 0:
-            for idx, pred_out_feats_ in enumerate(pred_out_feats):
+            for idx, pred_out_feats_ in enumerate(pred_out_feats[:-1]):
                 loss_feats_ = criterion(
                     pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
                 ).mean()
                 log_metrics[f"Loss_Feats_scale{idx}"] = loss_feats_.item()
                 loss_feats += loss_feats_
         else:
-            for idx, pred_out_feats_ in enumerate(pred_out_feats[:-1]):
+            for idx, pred_out_feats_ in enumerate(pred_out_feats):
                 loss_feats_ = criterion(
                     pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
                 ).mean()
