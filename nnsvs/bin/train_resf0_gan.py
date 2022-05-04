@@ -293,7 +293,6 @@ def train_step(
             "Loss_Feats": loss_feats.item(),
             "Loss_Adv": loss_adv.item(),
             "Loss_Feature_Matching": loss_fm.item(),
-            "Loss_MS": loss_ms.item(),
             "Loss_Pitch": loss_pitch.item(),
             "Loss_Real": loss_real.item(),
             "Loss_Fake": loss_fake.item(),
