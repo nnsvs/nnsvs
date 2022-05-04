@@ -11,6 +11,7 @@ import torch
 from nnsvs.model import ResnetBlock, WNConv1d
 from nnsvs.util import init_weights
 from torch import nn
+from torch.nn import functional as F
 
 
 class FFN(nn.Module):
@@ -281,3 +282,35 @@ class NUGAND(nn.Module):
         for model in self.models:
             outs.append(model(x, c, lengths))
         return outs
+
+
+class Conv2dD(nn.Module):
+    def __init__(self, in_dim=None, channels=64, last_sigmoid=False):
+        super().__init__()
+        self.last_sigmoid = last_sigmoid
+        C = channels
+        self.conv1 = nn.Conv2d(1, C, kernel_size=(5, 5), stride=(1, 1))
+        self.conv2 = nn.Conv2d(C, 2 * C, kernel_size=(5, 5), stride=(2, 2))
+        self.conv3 = nn.Conv2d(C * 2, C * 4, kernel_size=(3, 3), stride=(2, 2))
+        self.conv4 = nn.Conv2d(C * 4, C * 2, kernel_size=(3, 3), stride=(2, 2))
+        self.conv5 = nn.Conv2d(C * 2, 1, kernel_size=(3, 3), stride=(1, 1))
+
+    def forward(self, x, c=None, lengths=None):
+        outs = []
+        # (B, T, C) -> (B, 1, T, C):
+        x = x.unsqueeze(1)
+        y = F.leaky_relu(self.conv1(x))
+        outs.append(y)
+        y = F.leaky_relu(self.conv2(y))
+        outs.append(y)
+        y = F.leaky_relu(self.conv3(y))
+        outs.append(y)
+        y = F.leaky_relu(self.conv4(y))
+        outs.append(y)
+        y = self.conv5(y)
+        y = torch.sigmoid(y) if self.last_sigmoid else y
+        # (B, 1, T, C) -> (B, T, C)
+        y = y.squeeze(1)
+        outs.append(y)
+
+        return [outs]
