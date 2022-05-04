@@ -6,12 +6,10 @@ import joblib
 import numpy as np
 import torch
 from hydra.utils import to_absolute_path
-from nnmnkwii.datasets import FileSourceDataset
 from nnsvs.base import PredictionType
 from nnsvs.gen import get_windows
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features, multi_stream_mlpg
-from nnsvs.train_util import NpyFileSource
 from nnsvs.util import StandardScaler, load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
