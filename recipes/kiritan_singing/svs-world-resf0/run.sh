@@ -55,9 +55,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     kiritan_singing=downloads/kiritan_singing
     cd $kiritan_singing && git checkout .
-    if [ ! -z "${kiritan_wav_root}" ]; then
+    if [ ! -z "${wav_root}" ]; then
         echo "" >> config.py
-        echo "wav_dir = \"$kiritan_wav_root\"" >> config.py
+        echo "wav_dir = \"$wav_root\"" >> config.py
     fi
     ./run.sh
     cd -
@@ -111,8 +111,8 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
 fi
 
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
-    echo "stage 7: Generate static features"
-    . $NNSVS_COMMON_ROOT/gen_static_features.sh
+    echo "stage 7: Prepare vocoder input/output features"
+    . $NNSVS_COMMON_ROOT/prepare_voc_features.sh
 fi
 
 if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
@@ -132,8 +132,8 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
     mkdir -p $expdir/$vocoder_model
     cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
     xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
-        --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
-        --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
+        --train-dumpdir $dump_norm_dir/$train_set/in_vocoder \
+        --dev-dumpdir $dump_norm_dir/$dev_set/in_vocoder/ \
         --outdir $expdir/$vocoder_model $extra_args
 fi
 
@@ -144,7 +144,7 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
     fi
     outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
     for s in ${testsets[@]}; do
-        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/out_acoustic_static/ \
+        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/in_vocoder \
             --checkpoint $vocoder_eval_checkpoint \
             --outdir $outdir
     done

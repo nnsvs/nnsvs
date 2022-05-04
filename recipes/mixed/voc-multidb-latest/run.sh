@@ -173,8 +173,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    echo "stage 2: Generate static features"
-    . $NNSVS_COMMON_ROOT/multidb_gen_static_features.sh
+    echo "stage 2: Prepare vocoder input/output features"
+    . $NNSVS_COMMON_ROOT/multidb_prepare_voc_features.sh
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -194,8 +194,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     mkdir -p $expdir/$vocoder_model
     cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
     xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
-        --train-dumpdir $dump_norm_dir/$train_set/out_acoustic_static \
-        --dev-dumpdir $dump_norm_dir/$dev_set/out_acoustic_static/ \
+        --train-dumpdir $dump_norm_dir/$train_set/in_vocoder \
+        --dev-dumpdir $dump_norm_dir/$dev_set/in_vocoder \
         --outdir $expdir/$vocoder_model $extra_args
 fi
 
@@ -206,7 +206,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     fi
     outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
     for s in ${testsets[@]}; do
-        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/out_acoustic_static/ \
+        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/in_vocoder \
             --checkpoint $vocoder_eval_checkpoint \
             --outdir $outdir
     done

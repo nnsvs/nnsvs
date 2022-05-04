@@ -1,3 +1,5 @@
+"""Prepare input features for training neural vocoders
+"""
 import os
 from concurrent.futures import ProcessPoolExecutor
 from os.path import exists, join
@@ -12,7 +14,7 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 
-def _extract_static_features(
+def _prepare_voc_features(
     in_dir,
     out_dir,
     utt_id,
@@ -35,19 +37,23 @@ def _extract_static_features(
     # remove batch-axis
     streams = list(map(lambda x: x.squeeze(0), streams))
 
+    # NOTE: even if the number of streams are larger than 4, we only use the first 4 streams
+    # for training neural vocoders
     assert len(streams) >= 4
     mgc, lf0, vuv, bap = streams[0], streams[1], streams[2], streams[3]
+    voc_feats = np.hstack((mgc, lf0, vuv, bap)).astype(np.float32)
 
-    static_feats = np.hstack((mgc, lf0, vuv, bap)).astype(np.float32)
+    voc_feats_path = join(out_dir, utt_id + "-feats.npy")
+    np.save(voc_feats_path, voc_feats, allow_pickle=False)
 
-    static_path = join(out_dir, utt_id + "-feats.npy")
-    np.save(static_path, static_feats, allow_pickle=False)
+    # NOTE: To train vocoders with https://github.com/kan-bayashi/ParallelWaveGAN
+    # target waveform needs to be created in the same directory as the vocoder input features.
     save_wave_path = join(out_dir, utt_id + "-wave.npy")
     if not exists(save_wave_path):
         os.symlink(join(in_dir, utt_id + "-wave.npy"), save_wave_path)
 
 
-@hydra.main(config_path="conf/extract_static_features", config_name="config")
+@hydra.main(config_path="conf/prepare_static_features", config_name="config")
 def my_app(config: DictConfig) -> None:
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
@@ -72,7 +78,7 @@ def my_app(config: DictConfig) -> None:
     with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
         futures = [
             executor.submit(
-                _extract_static_features,
+                _prepare_voc_features,
                 in_dir,
                 out_dir,
                 utt_id,
