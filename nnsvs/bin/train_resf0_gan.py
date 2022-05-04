@@ -245,10 +245,11 @@ def train_step(
         loss_adv += loss_adv_
 
     # Feature matching loss
-    loss_fm = 0
-    for D_fake_, D_real_ in zip(D_fake, D_real):
-        for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
-            loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+    loss_fm = torch.tensor(0.0).to(in_feats.device)
+    if fm_weight > 0:
+        for D_fake_, D_real_ in zip(D_fake, D_real):
+            for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+                loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
