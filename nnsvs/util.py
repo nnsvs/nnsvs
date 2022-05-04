@@ -61,7 +61,7 @@ def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
         has_dynamic_features.append(True)
     elif vibrato_mode == "sine":
         # vib + vib_flags
-        stream_sizes.append(num_windows)
+        stream_sizes.append(3 * num_windows)
         has_dynamic_features.append(True)
         stream_sizes.append(1)
         has_dynamic_features.append(False)
