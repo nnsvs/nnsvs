@@ -1,9 +1,11 @@
 import torch
+from nnsvs.base import BaseModel
+from nnsvs.multistream import split_streams
 from torch import nn
 from torch.nn import functional as F
 
 
-class Conv2dPostFilter(nn.Module):
+class Conv2dPostFilter(BaseModel):
     def __init__(self, channels=128):
         super().__init__()
         C = channels
@@ -27,5 +29,25 @@ class Conv2dPostFilter(nn.Module):
 
         # (B, 1, T, C) -> (B, T, C)
         out = out.squeeze(1)
+
+        return out
+
+
+class MGCPostFilter(BaseModel):
+    def __init__(
+        self,
+        timbre_model: nn.Module,
+        stream_sizes: list,
+    ):
+        super().__init__()
+        self.timbre_model = timbre_model
+        self.stream_sizes = stream_sizes
+
+    def forward(self, x, lengths=None):
+        mgc, lf0, vuv, bap, vib, vib_flags = split_streams(x, self.stream_sizes)
+
+        mgc_pf = self.timbre_model(mgc, lengths)
+
+        out = torch.cat([mgc_pf, lf0, vuv, bap, vib, vib_flags], dim=-1)
 
         return out
