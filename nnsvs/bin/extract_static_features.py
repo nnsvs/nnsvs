@@ -12,7 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 
-def _gen_static_features(
+def _extract_static_features(
     in_dir,
     out_dir,
     utt_id,
@@ -72,7 +72,7 @@ def my_app(config: DictConfig) -> None:
     with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
         futures = [
             executor.submit(
-                _gen_static_features,
+                _extract_static_features,
                 in_dir,
                 out_dir,
                 utt_id,
