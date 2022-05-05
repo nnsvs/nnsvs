@@ -146,7 +146,7 @@ def train_step(
         elif gan_type == "vanilla-gan":
             loss_adv_ = -torch.log(D_fake_[-1] + eps)
         elif gan_type == "hinge":
-            loss_adv_ = -D_fake[-1]
+            loss_adv_ = -D_fake_[-1]
         else:
             raise ValueError(f"Unknown gan type: {gan_type}")
 
