@@ -317,3 +317,55 @@ class Conv2dD(nn.Module):
         outs.append(y)
 
         return [outs]
+
+
+class Conv2dBND(nn.Module):
+    def __init__(
+        self, in_dim=None, channels=64, last_sigmoid=False, init_type="kaiming_normal"
+    ):
+        super().__init__()
+        self.last_sigmoid = last_sigmoid
+        C = channels
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(1, C, kernel_size=(5, 5), stride=(1, 1), bias=False),
+            nn.BatchNorm2d(C),
+            nn.LeakyReLU(0.2),
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(C, 2 * C, kernel_size=(5, 5), stride=(2, 2), bias=False),
+            nn.BatchNorm2d(2 * C),
+            nn.LeakyReLU(0.2),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(C * 2, C * 4, kernel_size=(3, 3), stride=(2, 2), bias=False),
+            nn.BatchNorm2d(4 * C),
+            nn.LeakyReLU(0.2),
+        )
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(C * 4, C * 2, kernel_size=(3, 3), stride=(2, 2), bias=False),
+            nn.BatchNorm2d(2 * C),
+            nn.LeakyReLU(0.2),
+        )
+
+        self.conv5 = nn.Conv2d(C * 2, 1, kernel_size=(3, 3), stride=(1, 1))
+        init_weights(self, init_type)
+
+    def forward(self, x, c=None, lengths=None):
+        outs = []
+        # (B, T, C) -> (B, 1, T, C):
+        x = x.unsqueeze(1)
+        y = self.conv1(x)
+        outs.append(y)
+        y = self.conv2(y)
+        outs.append(y)
+        y = self.conv3(y)
+        outs.append(y)
+        y = self.conv4(y)
+        outs.append(y)
+        y = self.conv5(y)
+        y = torch.sigmoid(y) if self.last_sigmoid else y
+        # (B, 1, T, C) -> (B, T, C)
+        y = y.squeeze(1)
+        outs.append(y)
+
+        return [outs]
