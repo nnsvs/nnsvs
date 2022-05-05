@@ -645,27 +645,6 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
     return dist
 
 
-def plot_input_output(step, writer, utt_idx, in_feats, out_feats):
-    fig, ax = plt.subplots(2, 1, figsize=(8, 6))
-    ax[0].set_title("Input features")
-    ax[1].set_title("Output features")
-    mesh = librosa.display.specshow(
-        in_feats.T, x_axis="frames", ax=ax[0], cmap="viridis"
-    )
-    # NOTE: assuming normalized to N(0, 1)
-    mesh.set_clim(-4, 4)
-    fig.colorbar(mesh, ax=ax[0])
-    mesh = librosa.display.specshow(
-        out_feats.T, x_axis="frames", ax=ax[1], cmap="viridis"
-    )
-    mesh.set_clim(-4, 4)
-    fig.colorbar(mesh, ax=ax[1])
-    plt.tight_layout()
-    group = f"utt{np.abs(utt_idx)}_input_output"
-    writer.add_figure(f"{group}/Input-Output", fig, step)
-    plt.close()
-
-
 @torch.no_grad()
 def eval_spss_model(
     step, netG, in_feats, out_feats, lengths, model_config, out_scaler, writer, sr
@@ -688,16 +667,11 @@ def eval_spss_model(
         static_stream_sizes = model_config.stream_sizes
 
     for utt_idx in utt_indices:
-        # Plot input/ouptut features (normalized)
-        in_feats_ = in_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
-        out_feats_ = out_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
-        plot_input_output(step, writer, utt_idx, in_feats_, out_feats_)
-
-        out_feats_ = out_scaler.inverse_transform(
+        out_feats_denorm_ = out_scaler.inverse_transform(
             out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0)
         )
         mgc, lf0, vuv, bap = get_static_features(
-            out_feats_,
+            out_feats_denorm_,
             model_config.num_windows,
             model_config.stream_sizes,
             model_config.has_dynamic_features,
@@ -735,6 +709,40 @@ def eval_spss_model(
             in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
         )
         pred_out_feats.append(inference_out_feats)
+
+        # Plot normalized input/output
+        in_feats_ = in_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
+        out_feats_ = out_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
+        fig, ax = plt.subplots(3, 1, figsize=(8, 8))
+        ax[0].set_title("Reference features")
+        ax[1].set_title("Input features")
+        ax[2].set_title("Predicted features")
+        mesh = librosa.display.specshow(
+            out_feats_.T, x_axis="frames", y_axis="frames", ax=ax[0], cmap="viridis"
+        )
+        # NOTE: assuming normalized to N(0, 1)
+        mesh.set_clim(-4, 4)
+        fig.colorbar(mesh, ax=ax[0])
+        mesh = librosa.display.specshow(
+            in_feats_.T, x_axis="frames", y_axis="frames", ax=ax[1], cmap="viridis"
+        )
+        mesh.set_clim(-4, 4)
+        fig.colorbar(mesh, ax=ax[1])
+        mesh = librosa.display.specshow(
+            inference_out_feats.squeeze(0).cpu().numpy().T,
+            x_axis="frames",
+            y_axis="frames",
+            ax=ax[2],
+            cmap="viridis",
+        )
+        mesh.set_clim(-4, 4)
+        fig.colorbar(mesh, ax=ax[2])
+        for ax_ in ax:
+            ax_.set_ylabel("Feature")
+        plt.tight_layout()
+        group = f"utt{np.abs(utt_idx)}_inference"
+        writer.add_figure(f"{group}/Input-Output", fig, step)
+        plt.close()
 
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
             pred_out_feats_ = pred_out_feats_.squeeze(0).cpu().numpy()
