@@ -33,6 +33,34 @@ class Conv2dPostFilter(BaseModel):
         return out
 
 
+class Conv2dPostFilter2(BaseModel):
+    def __init__(self, channels=128):
+        super().__init__()
+        C = channels
+        self.conv1 = nn.Conv2d(2, C, kernel_size=(5, 5), padding=(2, 2))
+        self.conv2 = nn.Conv2d(C + 1, C * 2, kernel_size=(5, 5), padding=(2, 2))
+        self.conv3 = nn.Conv2d(C * 2 + 1, C, kernel_size=(5, 5), padding=(2, 2))
+        self.conv4 = nn.Conv2d(C + 1, 1, kernel_size=(5, 5), padding=(2, 2))
+
+    def forward(self, x, lengths=None):
+        # (B, T, C) -> (B, 1, T, C):
+        x = x.unsqueeze(1)
+        z = torch.randn_like(x)
+        x_syn = x
+
+        y = F.relu(self.conv1(torch.cat([x_syn, z], dim=1)))
+        y = F.relu(self.conv2(torch.cat([x_syn, y], dim=1)))
+        y = F.relu(self.conv3(torch.cat([x_syn, y], dim=1)))
+        residual = F.relu(self.conv4(torch.cat([x_syn, y], dim=1)))
+
+        out = x_syn + residual
+
+        # (B, 1, T, C) -> (B, T, C)
+        out = out.squeeze(1)
+
+        return out
+
+
 class MGCPostFilter(BaseModel):
     def __init__(
         self,
