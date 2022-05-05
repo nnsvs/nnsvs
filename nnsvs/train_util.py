@@ -645,6 +645,27 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
     return dist
 
 
+def plot_input_output(step, writer, utt_idx, in_feats, out_feats):
+    fig, ax = plt.subplots(2, 1, figsize=(8, 6))
+    ax[0].set_title("Input features")
+    ax[1].set_title("Output features")
+    mesh = librosa.display.specshow(
+        in_feats.T, x_axis="frames", ax=ax[0], cmap="viridis"
+    )
+    # NOTE: assuming normalized to N(0, 1)
+    mesh.set_clim(-4, 4)
+    fig.colorbar(mesh, ax=ax[0])
+    mesh = librosa.display.specshow(
+        out_feats.T, x_axis="frames", ax=ax[1], cmap="viridis"
+    )
+    mesh.set_clim(-4, 4)
+    fig.colorbar(mesh, ax=ax[1])
+    plt.tight_layout()
+    group = f"utt{np.abs(utt_idx)}_input_output"
+    writer.add_figure(f"{group}/Input-Output", fig, step)
+    plt.close()
+
+
 @torch.no_grad()
 def eval_spss_model(
     step, netG, in_feats, out_feats, lengths, model_config, out_scaler, writer, sr
@@ -667,6 +688,11 @@ def eval_spss_model(
         static_stream_sizes = model_config.stream_sizes
 
     for utt_idx in utt_indices:
+        # Plot input/ouptut features (normalized)
+        in_feats_ = in_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
+        out_feats_ = out_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
+        plot_input_output(step, writer, utt_idx, in_feats_, out_feats_)
+
         out_feats_ = out_scaler.inverse_transform(
             out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0)
         )
@@ -791,6 +817,8 @@ def plot_spss_params(
 
     # Spectrogram
     fig, ax = plt.subplots(2, 1, figsize=(8, 6))
+    ax[0].set_title("Reference spectrogram")
+    ax[1].set_title("Predicted spectrogram")
     spectrogram = pysptk.mc2sp(mgc, fftlen=fftlen, alpha=alpha).T
     mesh = librosa.display.specshow(
         librosa.power_to_db(np.abs(spectrogram), ref=np.max),
@@ -821,6 +849,8 @@ def plot_spss_params(
 
     # Aperiodicity
     fig, ax = plt.subplots(2, 1, figsize=(8, 6))
+    ax[0].set_title("Reference aperiodicity")
+    ax[1].set_title("Predicted aperiodicity")
     aperiodicity = pyworld.decode_aperiodicity(bap.astype(np.float64), sr, fftlen).T
     mesh = librosa.display.specshow(
         20 * np.log10(aperiodicity),
