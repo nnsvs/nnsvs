@@ -17,7 +17,7 @@ class Conv2dPostFilter(BaseModel):
     def forward(self, x, lengths=None):
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
-        z = torch.rand_like(x)
+        z = torch.randn_like(x)
         x_syn = x
 
         y = F.relu(self.conv1(x_syn + z))
