@@ -285,7 +285,9 @@ class NUGAND(nn.Module):
 
 
 class Conv2dD(nn.Module):
-    def __init__(self, in_dim=None, channels=64, last_sigmoid=False):
+    def __init__(
+        self, in_dim=None, channels=64, last_sigmoid=False, init_type="kaiming_normal"
+    ):
         super().__init__()
         self.last_sigmoid = last_sigmoid
         C = channels
@@ -294,18 +296,19 @@ class Conv2dD(nn.Module):
         self.conv3 = nn.Conv2d(C * 2, C * 4, kernel_size=(3, 3), stride=(2, 2))
         self.conv4 = nn.Conv2d(C * 4, C * 2, kernel_size=(3, 3), stride=(2, 2))
         self.conv5 = nn.Conv2d(C * 2, 1, kernel_size=(3, 3), stride=(1, 1))
+        init_weights(self, init_type)
 
     def forward(self, x, c=None, lengths=None):
         outs = []
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
-        y = F.leaky_relu(self.conv1(x))
+        y = F.leaky_relu(self.conv1(x), 0.2)
         outs.append(y)
-        y = F.leaky_relu(self.conv2(y))
+        y = F.leaky_relu(self.conv2(y), 0.2)
         outs.append(y)
-        y = F.leaky_relu(self.conv3(y))
+        y = F.leaky_relu(self.conv3(y), 0.2)
         outs.append(y)
-        y = F.leaky_relu(self.conv4(y))
+        y = F.leaky_relu(self.conv4(y), 0.2)
         outs.append(y)
         y = self.conv5(y)
         y = torch.sigmoid(y) if self.last_sigmoid else y
