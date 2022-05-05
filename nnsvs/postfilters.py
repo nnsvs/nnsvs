@@ -25,7 +25,7 @@ class Conv2dPostFilter(BaseModel):
         y = F.relu(self.conv1(x_syn + z))
         y = F.relu(self.conv2(x_syn + y))
         y = F.relu(self.conv3(x_syn + y))
-        residual = F.relu(self.conv4(x_syn + y))
+        residual = self.conv4(x_syn + y)
 
         out = x_syn + residual
 
@@ -54,7 +54,7 @@ class Conv2dPostFilter2(BaseModel):
         y = F.relu(self.conv1(torch.cat([x_syn, z], dim=1)))
         y = F.relu(self.conv2(torch.cat([x_syn, y], dim=1)))
         y = F.relu(self.conv3(torch.cat([x_syn, y], dim=1)))
-        residual = F.relu(self.conv4(torch.cat([x_syn, y], dim=1)))
+        residual = self.conv4(torch.cat([x_syn, y], dim=1))
 
         out = x_syn + residual
 
