@@ -82,3 +82,25 @@ class MGCPostFilter(BaseModel):
         out = torch.cat([mgc_pf, lf0, vuv, bap, vib, vib_flags], dim=-1)
 
         return out
+
+
+class MGCPostFilter2(BaseModel):
+    def __init__(
+        self,
+        timbre_model: nn.Module,
+        stream_sizes: list,
+    ):
+        super().__init__()
+        self.timbre_model = timbre_model
+        self.stream_sizes = stream_sizes
+
+    def forward(self, x, lengths=None):
+        mgc, lf0, vuv, bap, vib, vib_flags = split_streams(x, self.stream_sizes)
+
+        mgc0 = mgc[:, :, 0:1]
+        mgc1 = mgc[:, :, 1:]
+        mgc1_pf = self.timbre_model(mgc1, lengths)
+
+        out = torch.cat([mgc0, mgc1_pf, lf0, vuv, bap, vib, vib_flags], dim=-1)
+
+        return out
