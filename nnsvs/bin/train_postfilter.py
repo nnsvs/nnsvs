@@ -39,8 +39,6 @@ def train_step(
     gan_type="lsgan",
     adv_segment_length=-1,
 ):
-    optG.zero_grad()
-    optD.zero_grad()
     log_metrics = {}
 
     # Run forward
@@ -130,6 +128,7 @@ def train_step(
     loss_d = loss_real + loss_fake
 
     if train:
+        optD.zero_grad()
         loss_d.backward()
         grad_norm_d = torch.nn.utils.clip_grad_norm_(
             netD.parameters(), optim_config.netD.clip_norm
@@ -180,6 +179,7 @@ def train_step(
     loss = adv_weight * loss_adv + fm_weight * loss_fm
 
     if train:
+        optG.zero_grad()
         loss.backward()
         grad_norm_g = torch.nn.utils.clip_grad_norm_(
             netG.parameters(), optim_config.netG.clip_norm
