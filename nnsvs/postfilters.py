@@ -8,7 +8,7 @@ from torch.nn import functional as F
 
 
 class SimplifiedTADN(nn.Module):
-    """Simplified temporal adaptive normalization for Gaussian noise
+    """Simplified temporal adaptive de-normalization for Gaussian noise
 
     Args:
         channels (int): number of channels
@@ -49,6 +49,8 @@ class Conv2dPostFilter(BaseModel):
     Args:
         channels (int): number of channels
         kernel_size (tuple): kernel sizes for Conv2d
+        use_noise (bool): whether to use noise
+        use_tadn (bool): whether to use temporal adaptive de-normalization
         init_type (str): type of initialization
     """
 
@@ -57,16 +59,18 @@ class Conv2dPostFilter(BaseModel):
         in_dim=None,
         channels=128,
         kernel_size=(5, 5),
+        use_noise=True,
         use_tadn=False,
         init_type="kaiming_normal",
     ):
         super().__init__()
+        self.use_noise = use_noise
         C = channels
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
         padding = (ks - 1) // 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(2, C, kernel_size=ks, padding=padding),
+            nn.Conv2d(2 if use_noise else 1, C, kernel_size=ks, padding=padding),
             nn.ReLU(),
         )
         self.conv2 = nn.Sequential(
@@ -78,6 +82,7 @@ class Conv2dPostFilter(BaseModel):
             nn.ReLU(),
         )
         self.conv4 = nn.Conv2d(C + 1, 1, kernel_size=ks, padding=padding)
+
         if use_tadn:
             assert in_dim is not None, "in_dim must be provided"
             self.tadn = SimplifiedTADN(in_dim)
@@ -98,19 +103,26 @@ class Conv2dPostFilter(BaseModel):
         """
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
-        z = torch.randn_like(x)
 
-        # adaptively scale z
-        if self.tadn is not None:
-            z = (
-                self.tadn(z.squeeze(1).transpose(1, 2), x.squeeze(1).transpose(1, 2))
-                .transpose(1, 2)
-                .unsqueeze(1)
-            )
+        if self.use_noise:
+            z = torch.randn_like(x)
+            # adaptively scale z
+            if self.tadn is not None:
+                z = (
+                    self.tadn(
+                        z.squeeze(1).transpose(1, 2), x.squeeze(1).transpose(1, 2)
+                    )
+                    .transpose(1, 2)
+                    .unsqueeze(1)
+                )
 
         x_syn = x
 
-        y = self.conv1(torch.cat([x_syn, z], dim=1))
+        if self.use_noise:
+            y = self.conv1(torch.cat([x_syn, z], dim=1))
+        else:
+            y = self.conv1(x_syn)
+
         y = self.conv2(torch.cat([x_syn, y], dim=1))
         y = self.conv3(torch.cat([x_syn, y], dim=1))
         residual = self.conv4(torch.cat([x_syn, y], dim=1))
