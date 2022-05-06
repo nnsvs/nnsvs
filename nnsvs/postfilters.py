@@ -24,9 +24,18 @@ class Conv2dPostFilter(BaseModel):
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
         padding = (ks - 1) // 2
-        self.conv1 = nn.Conv2d(2, C, kernel_size=ks, padding=padding)
-        self.conv2 = nn.Conv2d(C + 1, C * 2, kernel_size=ks, padding=padding)
-        self.conv3 = nn.Conv2d(C * 2 + 1, C, kernel_size=ks, padding=padding)
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(2, C, kernel_size=ks, padding=padding),
+            nn.ReLU(),
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(C + 1, C * 2, kernel_size=ks, padding=padding),
+            nn.ReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(C * 2 + 1, C, kernel_size=ks, padding=padding),
+            nn.ReLU(),
+        )
         self.conv4 = nn.Conv2d(C + 1, 1, kernel_size=ks, padding=padding)
         init_weights(self, init_type)
 
@@ -45,9 +54,9 @@ class Conv2dPostFilter(BaseModel):
         z = torch.randn_like(x)
         x_syn = x
 
-        y = F.relu(self.conv1(torch.cat([x_syn, z], dim=1)))
-        y = F.relu(self.conv2(torch.cat([x_syn, y], dim=1)))
-        y = F.relu(self.conv3(torch.cat([x_syn, y], dim=1)))
+        y = self.conv1(torch.cat([x_syn, z], dim=1))
+        y = self.conv2(torch.cat([x_syn, y], dim=1))
+        y = self.conv3(torch.cat([x_syn, y], dim=1))
         residual = self.conv4(torch.cat([x_syn, y], dim=1))
 
         out = x_syn + residual
