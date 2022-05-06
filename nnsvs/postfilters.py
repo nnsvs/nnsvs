@@ -7,6 +7,40 @@ from torch import nn
 from torch.nn import functional as F
 
 
+class SimplifiedTADN(nn.Module):
+    """Simplified temporal adaptive normalization for Gaussian noise
+
+    Args:
+        channels (int): number of channels
+        kernel_size (int): kernel size. Default is 7.
+    """
+
+    def __init__(self, channels, kernel_size=7):
+        super().__init__()
+        C = channels
+        padding = (kernel_size - 1) // 2
+        # NOTE: process each channel independently by setting groups=C
+        self.conv_gamma = nn.Conv1d(
+            C, C, kernel_size=kernel_size, padding=padding, groups=C
+        )
+
+    def forward(self, z, c):
+        """Forward pass
+
+        Args:
+            z (torch.Tensor): input Gaussian noise of shape (B, C, T)
+            c (torch.Tensor): input 2d feature of shape (B, C, T)
+
+        Returns:
+            torch.Tensor: output 2d feature of shape (B, C, T)
+        """
+        # NOTE: assuming z ~ N(0, I)
+        # (B, C, T)
+        gamma = torch.sigmoid(self.conv_gamma(c))
+        # N(0, I) -> N(0, I*gamma) where gamma is a learned parameter in [0, 1]
+        return z * gamma
+
+
 class Conv2dPostFilter(BaseModel):
     """A post-filter based on Conv2d
 
@@ -18,7 +52,14 @@ class Conv2dPostFilter(BaseModel):
         init_type (str): type of initialization
     """
 
-    def __init__(self, channels=128, kernel_size=(5, 5), init_type="kaiming_normal"):
+    def __init__(
+        self,
+        in_dim=None,
+        channels=128,
+        kernel_size=(5, 5),
+        use_tadn=False,
+        init_type="kaiming_normal",
+    ):
         super().__init__()
         C = channels
         assert len(kernel_size) == 2
@@ -37,6 +78,12 @@ class Conv2dPostFilter(BaseModel):
             nn.ReLU(),
         )
         self.conv4 = nn.Conv2d(C + 1, 1, kernel_size=ks, padding=padding)
+        if use_tadn:
+            assert in_dim is not None, "in_dim must be provided"
+            self.tadn = SimplifiedTADN(in_dim)
+        else:
+            self.tadn = None
+
         init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
@@ -52,6 +99,15 @@ class Conv2dPostFilter(BaseModel):
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
         z = torch.randn_like(x)
+
+        # adaptively scale z
+        if self.tadn is not None:
+            z = (
+                self.tadn(z.squeeze(1).transpose(1, 2), x.squeeze(1).transpose(1, 2))
+                .transpose(1, 2)
+                .unsqueeze(1)
+            )
+
         x_syn = x
 
         y = self.conv1(torch.cat([x_syn, z], dim=1))
