@@ -60,6 +60,7 @@ If you don't need to train your models by yourself (I guess it's unlikely though
    pretrained
    mdn
    pitch
+   postfilters
 
 .. toctree::
    :maxdepth: 1
