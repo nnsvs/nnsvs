@@ -143,7 +143,8 @@ def set_epochs_based_on_max_steps_(train_config, steps_per_epoch, logger):
     """
     if "max_train_steps" not in train_config:
         logger.warn(
-            "max_train_steps is not found in the train config. Please update the config to the new style."
+            """max_train_steps is not found in the train config.
+Please update the config to the new style."""
         )
         return
 
