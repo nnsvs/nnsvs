@@ -1,6 +1,8 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# steps can either be specified by steps or epochs
+max_train_steps: -1
 nepochs: 50
 checkpoint_epoch_interval: 20
 

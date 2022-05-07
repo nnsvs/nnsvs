@@ -133,6 +133,44 @@ def get_data_loaders(data_config, collate_fn):
     return data_loaders
 
 
+def set_epochs_based_on_max_steps_(train_config, steps_per_epoch, logger):
+    """Set epochs based on max steps.
+
+    Args:
+        train_config (TrainConfig): Train config.
+        steps_per_epoch (int): Number of steps per epoch.
+        logger (logging.Logger): Logger.
+    """
+    if "max_train_steps" not in train_config:
+        logger.warn(
+            "max_train_steps is not found in the train config. Please update the config to the new style."
+        )
+        return
+
+    logger.info(f"Number of iterations per epoch: {steps_per_epoch}")
+
+    if train_config.max_train_steps < 0:
+        # Set max_train_steps based on nepochs
+        max_train_steps = train_config.nepochs * steps_per_epoch
+        train_config.max_train_steps = max_train_steps
+        logger.info(
+            "Number of max_train_steps is set based on nepochs: {}".format(
+                max_train_steps
+            )
+        )
+    else:
+        # Set nepochs based on max_train_steps
+        max_train_steps = train_config.max_train_steps
+        epochs = int(np.ceil(max_train_steps / steps_per_epoch))
+        train_config.nepochs = epochs
+        logger.info(
+            "Number of epochs is set based on max_train_steps: {}".format(epochs)
+        )
+
+    logger.info(f"Number of epochs: {train_config.nepochs}")
+    logger.info(f"Number of iterations: {train_config.max_train_steps}")
+
+
 def save_checkpoint(
     logger,
     out_dir,
@@ -257,6 +295,10 @@ def setup(config, device):
     # DataLoader
     data_loaders = get_data_loaders(config.data, collate_fn)
 
+    set_epochs_based_on_max_steps_(
+        config.train, len(data_loaders["train_no_dev"]), logger
+    )
+
     # Resume
     if (
         config.train.resume.checkpoint is not None
@@ -369,6 +411,10 @@ def setup_gan(config, device):
 
     # DataLoader
     data_loaders = get_data_loaders(config.data, collate_fn)
+
+    set_epochs_based_on_max_steps_(
+        config.train, len(data_loaders["train_no_dev"]), logger
+    )
 
     # Resume
     _resume(logger, config.train.resume.netG, netG, optG, schedulerG)
