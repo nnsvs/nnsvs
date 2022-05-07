@@ -7,6 +7,7 @@ The others are used as intermedieate feature maps.
 Multi-scale architecture is not supported yet.
 """
 
+import numpy as np
 import torch
 from nnsvs.model import ResnetBlock, WNConv1d
 from nnsvs.util import init_weights
@@ -286,31 +287,59 @@ class NUGAND(nn.Module):
 
 class Conv2dD(nn.Module):
     def __init__(
-        self, in_dim=None, channels=64, last_sigmoid=False, init_type="kaiming_normal"
+        self,
+        in_dim=None,
+        channels=64,
+        kernel_size=(5, 3),
+        padding=(0, 0),
+        last_sigmoid=False,
+        init_type="kaiming_normal",
     ):
         super().__init__()
         self.last_sigmoid = last_sigmoid
         C = channels
-        self.conv1 = nn.Conv2d(1, C, kernel_size=(5, 5), stride=(1, 1))
-        self.conv2 = nn.Conv2d(C, 2 * C, kernel_size=(5, 5), stride=(2, 2))
-        self.conv3 = nn.Conv2d(C * 2, C * 4, kernel_size=(3, 3), stride=(2, 2))
-        self.conv4 = nn.Conv2d(C * 4, C * 2, kernel_size=(3, 3), stride=(2, 2))
-        self.conv5 = nn.Conv2d(C * 2, 1, kernel_size=(3, 3), stride=(1, 1))
+        ks = np.asarray(list(kernel_size))
+        if padding is None:
+            padding = (ks - 1) // 2
+
+        self.convs = nn.ModuleList()
+        self.convs.append(
+            nn.Sequential(
+                nn.Conv2d(1, C, kernel_size=ks, padding=padding, stride=(1, 1)),
+                nn.LeakyReLU(0.2),
+            )
+        )
+        self.convs.append(
+            nn.Sequential(
+                nn.Conv2d(C, 2 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.LeakyReLU(0.2),
+            )
+        )
+        self.convs.append(
+            nn.Sequential(
+                nn.Conv2d(2 * C, 4 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.LeakyReLU(0.2),
+            )
+        )
+        self.convs.append(
+            nn.Sequential(
+                nn.Conv2d(4 * C, 2 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.LeakyReLU(0.2),
+            )
+        )
+        self.last_conv = nn.Conv2d(
+            2 * C, 1, kernel_size=ks, padding=padding, stride=(1, 1)
+        )
         init_weights(self, init_type)
 
     def forward(self, x, c=None, lengths=None):
         outs = []
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
-        y = F.leaky_relu(self.conv1(x), 0.2)
-        outs.append(y)
-        y = F.leaky_relu(self.conv2(y), 0.2)
-        outs.append(y)
-        y = F.leaky_relu(self.conv3(y), 0.2)
-        outs.append(y)
-        y = F.leaky_relu(self.conv4(y), 0.2)
-        outs.append(y)
-        y = self.conv5(y)
+        for conv in self.convs:
+            x = conv(x)
+            outs.append(x)
+        y = self.last_conv(x)
         y = torch.sigmoid(y) if self.last_sigmoid else y
         # (B, 1, T, C) -> (B, T, C)
         y = y.squeeze(1)
