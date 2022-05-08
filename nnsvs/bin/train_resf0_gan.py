@@ -1,10 +1,10 @@
+from functools import partial
 from pathlib import Path
 
 import hydra
 import mlflow
 import numpy as np
 import torch
-from fucntools import partial
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.multistream import (
