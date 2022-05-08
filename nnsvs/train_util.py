@@ -184,10 +184,7 @@ def set_epochs_based_on_max_steps_(train_config, steps_per_epoch, logger):
         logger (logging.Logger): Logger.
     """
     if "max_train_steps" not in train_config:
-        logger.warn(
-            """max_train_steps is not found in the train config.
-Please update the config to the new style."""
-        )
+        logger.warn("max_train_steps is not found in the train config.")
         return
 
     logger.info(f"Number of iterations per epoch: {steps_per_epoch}")
