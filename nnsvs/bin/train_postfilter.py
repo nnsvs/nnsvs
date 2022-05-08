@@ -19,6 +19,7 @@ from nnsvs.train_util import (
 )
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
+from torch import nn
 from torch.nn import functional as F
 from tqdm import tqdm
 
@@ -35,6 +36,7 @@ def train_step(
     out_feats,
     lengths,
     out_scaler,
+    mse_weight=1.0,
     adv_weight=1.0,
     adv_streams=None,
     fm_weight=0.0,
@@ -125,6 +127,11 @@ def train_step(
         log_metrics["GradNorm_D"] = grad_norm_d
         optD.step()
 
+    # MSE loss
+    loss_feats = nn.MSELoss(reduction="none")(
+        pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+    ).mean()
+
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
     loss_adv = 0
@@ -165,7 +172,7 @@ def train_step(
             for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
                 loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
 
-    loss = adv_weight * loss_adv + fm_weight * loss_fm
+    loss = mse_weight * loss_feats + adv_weight * loss_adv + fm_weight * loss_fm
 
     if train:
         optG.zero_grad()
@@ -184,6 +191,7 @@ def train_step(
     log_metrics.update(
         {
             "Loss": loss.item(),
+            "Loss_Feats": loss_feats.item(),
             "Loss_Adv": loss_adv.item(),
             "Loss_Feature_Matching": loss_fm.item(),
             "Loss_Real": loss_real.item(),
@@ -259,6 +267,7 @@ def train_loop(
                     out_feats=out_feats,
                     lengths=lengths,
                     out_scaler=out_scaler,
+                    mse_weight=config.train.mse_weight,
                     adv_weight=config.train.adv_weight,
                     adv_streams=adv_streams,
                     fm_weight=config.train.fm_weight,
