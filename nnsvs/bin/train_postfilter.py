@@ -42,8 +42,19 @@ def train_step(
     fm_weight=0.0,
     mask_nth_mgc_for_adv_loss=0,
     gan_type="lsgan",
+    vuv_mask=False,
 ):
     log_metrics = {}
+
+    if vuv_mask:
+        # NOTE: Assuming 3rd stream is the V/UV
+        vuv_idx = np.sum(model_config.stream_sizes[:2])
+        vuv = torch.logical_and(
+            out_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
+            in_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
+        )
+    else:
+        vuv = 1.0
 
     # Run forward
     pred_out_feats = netG(in_feats, lengths)
@@ -65,11 +76,11 @@ def train_step(
         fake_netD_in_feats = fake_netD_in_feats[:, :, mask_nth_mgc_for_adv_loss:]
 
     # Real
-    D_real = netD(real_netD_in_feats, in_feats, lengths)
+    D_real = netD(real_netD_in_feats * vuv, in_feats, lengths)
     # NOTE: must be list of list to support multi-scale discriminators
     assert isinstance(D_real, list) and isinstance(D_real[-1], list)
     # Fake
-    D_fake_det = netD(fake_netD_in_feats.detach(), in_feats, lengths)
+    D_fake_det = netD(fake_netD_in_feats.detach() * vuv, in_feats, lengths)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
@@ -133,7 +144,7 @@ def train_step(
     ).mean()
 
     # adversarial loss
-    D_fake = netD(fake_netD_in_feats, in_feats, lengths)
+    D_fake = netD(fake_netD_in_feats * vuv, in_feats, lengths)
     loss_adv = 0
     for idx, D_fake_ in enumerate(D_fake):
         if gan_type == "lsgan":
@@ -273,6 +284,7 @@ def train_loop(
                     fm_weight=config.train.fm_weight,
                     mask_nth_mgc_for_adv_loss=config.train.mask_nth_mgc_for_adv_loss,
                     gan_type=config.train.gan_type,
+                    vuv_mask=config.train.vuv_mask,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():

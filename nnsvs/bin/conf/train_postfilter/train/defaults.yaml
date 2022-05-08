@@ -20,6 +20,8 @@ fm_weight: 10.0
 # mask 0 to n-th mgc for adversarial loss
 # e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
 mask_nth_mgc_for_adv_loss: 0
+# Mask out unvoiced frames in the adversarial loss
+vuv_mask: false
 
 stream_wise_loss: false
 use_detect_anomaly: true
