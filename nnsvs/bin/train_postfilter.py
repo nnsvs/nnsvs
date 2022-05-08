@@ -40,7 +40,6 @@ def train_step(
     fm_weight=0.0,
     mask_nth_mgc_for_adv_loss=0,
     gan_type="lsgan",
-    adv_segment_length=-1,
 ):
     log_metrics = {}
 
@@ -55,19 +54,6 @@ def train_step(
         model_config.stream_sizes,
         adv_streams,
     )
-    # Rather than classifying whole features as real or fake, use smaller segments
-    # that should ease the training of GANs I guess
-    # The idea is similar to the trick used for training neural vocoders. i.e.,
-    # use small segments like 8000 or 24000 samples for training vocoders.
-    if adv_segment_length > 0:
-        if lengths.min() < adv_segment_length:
-            real_netD_in_feats = real_netD_in_feats[:, : lengths.min(), :]
-            fake_netD_in_feats = fake_netD_in_feats[:, : lengths.min(), :]
-        else:
-            si = np.random.randint(0, lengths.min() - adv_segment_length)
-            real_netD_in_feats = real_netD_in_feats[:, si : si + adv_segment_length, :]
-            fake_netD_in_feats = fake_netD_in_feats[:, si : si + adv_segment_length, :]
-            in_feats = in_feats[:, si : si + adv_segment_length, :]
 
     # Ref: http://sython.org/papers/ASJ/saito2017asja.pdf
     # 0-th mgc with adversarial trainging affects speech quality
@@ -276,7 +262,6 @@ def train_loop(
                     adv_weight=config.train.adv_weight,
                     adv_streams=adv_streams,
                     fm_weight=config.train.fm_weight,
-                    adv_segment_length=config.train.adv_segment_length,
                     mask_nth_mgc_for_adv_loss=config.train.mask_nth_mgc_for_adv_loss,
                     gan_type=config.train.gan_type,
                 )
