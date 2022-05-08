@@ -14,11 +14,6 @@ checkpoint_epoch_interval: 20
 # https://arxiv.org/abs/2108.02776
 pitch_reg_weight: 1.0
 
-# MS loss
-ms_streams: [true, false, false, true, false, false]
-ms_use_static_feats_only: true
-ms_weight: 0.1
-
 stream_wise_loss: false
 use_detect_anomaly: true
 

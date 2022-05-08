@@ -35,11 +35,6 @@ mask_nth_mgc_for_adv_loss: 2
 # and used for computing the loss functions
 adv_segment_length: -1
 
-# MS loss
-ms_streams: [true, false, false, true, false, false]
-ms_use_static_feats_only: true
-ms_weight: 0.1
-
 stream_wise_loss: false
 use_detect_anomaly: true
 

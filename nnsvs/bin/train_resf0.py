@@ -7,7 +7,6 @@ import torch
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
-from nnsvs.multistream import get_static_features, select_streams
 from nnsvs.train_util import (
     check_resf0_config,
     collate_fn_default,
@@ -38,11 +37,6 @@ def train_step(
     out_scaler,
     pitch_reg_dyn_ws,
     pitch_reg_weight=1.0,
-    ms_streams=None,
-    ms_use_static_feats_only=True,
-    ms_weight=1.0,
-    ms_means=None,
-    ms_vars=None,
 ):
     optimizer.zero_grad()
     log_metrics = {}
@@ -94,58 +88,7 @@ def train_step(
     # we could use l2 loss as suggested in the sinsy's paper
     loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
-    # MS loss
-    loss_ms = torch.tensor(0.0).to(in_feats.device)
-    if ms_weight > 0:
-        ms_means = ms_means.expand(
-            in_feats.shape[0], ms_means.shape[1], ms_means.shape[2]
-        )
-        ms_vars = ms_vars.expand(in_feats.shape[0], ms_vars.shape[1], ms_vars.shape[2])
-        if ms_use_static_feats_only:
-            ms_pred_out_feats = get_static_features(
-                pred_out_feats,
-                model_config.num_windows,
-                model_config.stream_sizes,
-                model_config.has_dynamic_features,
-                ms_streams,
-            )
-            ms_means_streams = get_static_features(
-                ms_means,
-                model_config.num_windows,
-                model_config.stream_sizes,
-                model_config.has_dynamic_features,
-                ms_streams,
-            )
-            ms_vars_streams = get_static_features(
-                ms_vars,
-                model_config.num_windows,
-                model_config.stream_sizes,
-                model_config.has_dynamic_features,
-                ms_streams,
-            )
-        else:
-            ms_pred_out_feats = select_streams(
-                pred_out_feats, model_config.stream_sizes, ms_streams, concat=False
-            )
-            ms_means_streams = select_streams(
-                ms_means, model_config.stream_sizes, ms_streams, concat=False
-            )
-            ms_vars_streams = select_streams(
-                ms_vars, model_config.stream_sizes, ms_streams, concat=False
-            )
-
-        # Stream-wise MS loss
-        T = (ms_means.shape[1] - 1) * 2
-        for ms_pred_out_feats_, mean, var in zip(
-            ms_pred_out_feats, ms_means_streams, ms_vars_streams
-        ):
-            # loss_ms += compute_ms_loss(ms_pred_out_feats_, ms_out_feats_)
-            ms = torch.fft.rfft(ms_pred_out_feats_, n=T, dim=1).abs() ** 2
-            # (B, T, D)
-            ms = torch.log(ms + 1e-7)
-            loss_ms += nn.GaussianNLLLoss(reduction="none")(ms, mean, var).mean()
-
-    loss = loss_feats + pitch_reg_weight * loss_pitch + ms_weight * loss_ms
+    loss = loss_feats + pitch_reg_weight * loss_pitch
 
     if prediction_type == PredictionType.PROBABILISTIC:
         with torch.no_grad():
@@ -165,40 +108,11 @@ def train_step(
         {
             "Loss": loss.item(),
             "Loss_Feats": loss_feats.item(),
-            "Loss_MS": loss_ms.item(),
             "Loss_Pitch": loss_pitch.item(),
         }
     )
 
     return loss, log_metrics
-
-
-def compute_ms_params(data_loader, device):
-    maxT = 0
-    D = 0
-    for _, out_feats, lengths in data_loader:
-        maxT = int(max(maxT, lengths.max()))
-        D = out_feats.shape[-1]
-    ms_means = torch.zeros(maxT // 2 + 1, D).to(device)
-    ms_vars = torch.zeros(maxT // 2 + 1, D).to(device)
-    ms_scalers = [StandardScaler() for _ in range(D)]
-    for _, out_feats, lengths in tqdm(data_loader):
-        for idx in range(len(lengths)):
-            ms = (
-                torch.fft.rfft(out_feats[idx, : lengths[idx]], n=maxT, dim=0).abs() ** 2
-            )
-            # (T, D)
-            ms = torch.log(ms + 1e-7)
-            for d in range(D):
-                ms_scalers[d].partial_fit(ms[:, d].view(1, -1).numpy())
-
-    for d in range(D):
-        ms_means[:, d] = torch.tensor(ms_scalers[d].mean_).to(device)
-        ms_vars[:, d] = torch.tensor(ms_scalers[d].var_).to(device)
-    assert torch.isfinite(ms_means).all()
-    assert torch.isfinite(ms_vars).all()
-
-    return ms_means.unsqueeze(0), ms_vars.unsqueeze(0)
 
 
 def train_loop(
@@ -223,8 +137,6 @@ def train_loop(
     if in_lf0_idx is None or in_rest_idx is None:
         raise ValueError("in_lf0_idx and in_rest_idx must be specified")
     pitch_reg_weight = config.train.pitch_reg_weight
-
-    ms_means, ms_vars = compute_ms_params(data_loaders["train_no_dev"], device)
 
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
@@ -279,11 +191,6 @@ def train_loop(
                     out_scaler=out_scaler,
                     pitch_reg_dyn_ws=pitch_reg_dyn_ws,
                     pitch_reg_weight=pitch_reg_weight,
-                    ms_streams=config.train.ms_streams,
-                    ms_use_static_feats_only=config.train.ms_use_static_feats_only,
-                    ms_weight=config.train.ms_weight,
-                    ms_means=ms_means,
-                    ms_vars=ms_vars,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
