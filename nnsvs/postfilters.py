@@ -103,8 +103,8 @@ class Conv2dPostFilter(BaseModel):
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
 
+        z = torch.randn_like(x)
         if self.use_noise:
-            z = torch.randn_like(x)
             # adaptively scale z
             if self.tadn is not None:
                 z = (
