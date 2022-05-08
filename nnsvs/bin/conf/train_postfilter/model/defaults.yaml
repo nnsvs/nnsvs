@@ -6,15 +6,28 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs.postfilters.MGCPostFilter
+  _target_: nnsvs.postfilters.MultistreamPostFilter
   stream_sizes: [60, 1, 1, 5, 2, 1]
-  timbre_model:
+  mgc_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
-    channels: 1
+    in_dim: 60
+    channels: 64
+    kernel_size: [5, 5]
+    use_tadn: true
+    init_type: "kaiming_normal"
+  mgc_offset: 0
+  bap_postfilter:
+    _target_: nnsvs.postfilters.Conv2dPostFilter
+    in_dim: 5
+    channels: 16
+    kernel_size: [5, 3]
+    use_tadn: true
+    init_type: "kaiming_normal"
+  lf0_postfilter: null
 
 netD:
   _target_: nnsvs.discriminators.Conv2dD
   # If in_dim is not specified, it will be automatically set based on adv_streams
   in_dim: null
-  channels: 1
+  channels: 32
   last_sigmoid: false
