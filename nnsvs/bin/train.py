@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 
 import hydra
@@ -10,6 +11,8 @@ from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
 from nnsvs.multistream import split_streams
 from nnsvs.train_util import (
+    collate_fn_default,
+    collate_fn_random_segments,
     get_stream_weight,
     log_params_from_omegaconf_dict,
     save_checkpoint,
@@ -204,6 +207,13 @@ def train_loop(
 
 @hydra.main(config_path="conf/train", config_name="config")
 def my_app(config: DictConfig) -> None:
+    if "max_time_frames" in config.data and config.data.max_time_frames > 0:
+        collate_fn = partial(
+            collate_fn_random_segments, max_time_frames=config.data.max_time_frames
+        )
+    else:
+        collate_fn = collate_fn_default
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
         model,
@@ -214,7 +224,7 @@ def my_app(config: DictConfig) -> None:
         logger,
         _,
         out_scaler,
-    ) = setup(config, device)
+    ) = setup(config, device, collate_fn)
 
     out_scaler = PyTorchStandardScaler(
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)

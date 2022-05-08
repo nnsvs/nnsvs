@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 
 import hydra
@@ -7,6 +8,8 @@ import torch
 from hydra.utils import to_absolute_path
 from nnsvs.multistream import select_streams
 from nnsvs.train_util import (
+    collate_fn_default,
+    collate_fn_random_segments,
     compute_distortions,
     eval_spss_model,
     log_params_from_omegaconf_dict,
@@ -363,6 +366,13 @@ def my_app(config: DictConfig) -> None:
             D_in_dim -= config.train.mask_nth_mgc_for_adv_loss
         config.model.netD.in_dim = D_in_dim
 
+    if "max_time_frames" in config.data and config.data.max_time_frames > 0:
+        collate_fn = partial(
+            collate_fn_random_segments, max_time_frames=config.data.max_time_frames
+        )
+    else:
+        collate_fn = collate_fn_default
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
         (netG, optG, schedulerG),
@@ -372,7 +382,7 @@ def my_app(config: DictConfig) -> None:
         logger,
         _,
         out_scaler,
-    ) = setup_gan(config, device)
+    ) = setup_gan(config, device, collate_fn)
 
     out_scaler = PyTorchStandardScaler(
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)

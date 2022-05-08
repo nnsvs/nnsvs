@@ -4,6 +4,7 @@ import hydra
 import mlflow
 import numpy as np
 import torch
+from fucntools import partial
 from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.multistream import (
@@ -13,6 +14,8 @@ from nnsvs.multistream import (
 )
 from nnsvs.train_util import (
     check_resf0_config,
+    collate_fn_default,
+    collate_fn_random_segments,
     compute_batch_pitch_regularization_weight,
     compute_distortions,
     eval_spss_model,
@@ -534,6 +537,13 @@ def my_app(config: DictConfig) -> None:
             D_in_dim -= config.train.mask_nth_mgc_for_adv_loss
         config.model.netD.in_dim = D_in_dim
 
+    if "max_time_frames" in config.data and config.data.max_time_frames > 0:
+        collate_fn = partial(
+            collate_fn_random_segments, max_time_frames=config.data.max_time_frames
+        )
+    else:
+        collate_fn = collate_fn_default
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
         (netG, optG, schedulerG),
@@ -543,7 +553,7 @@ def my_app(config: DictConfig) -> None:
         logger,
         in_scaler,
         out_scaler,
-    ) = setup_gan(config, device)
+    ) = setup_gan(config, device, collate_fn)
 
     check_resf0_config(logger, netG, config, in_scaler, out_scaler)
 

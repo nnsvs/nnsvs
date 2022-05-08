@@ -87,13 +87,14 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.X)
 
 
-def collate_fn(batch):
+def collate_fn_default(batch):
     """Create batch
 
     Args:
         batch(tuple): List of tuples
             - x[0] (ndarray,int) : list of (T, D_in)
             - x[1] (ndarray,int) : list of (T, D_out)
+
     Returns:
         tuple: Tuple of batch
             - x (FloatTensor) : Network inputs (B, max(T), D_in)
@@ -105,6 +106,47 @@ def collate_fn(batch):
     x_batch = torch.stack([torch.from_numpy(pad_2d(x[0], max_len)) for x in batch])
     y_batch = torch.stack([torch.from_numpy(pad_2d(x[1], max_len)) for x in batch])
     l_batch = torch.tensor(lengths, dtype=torch.long)
+    return x_batch, y_batch, l_batch
+
+
+def collate_fn_random_segments(batch, max_time_frames=256):
+    """Collate function with random segments
+
+    Use segmented frames instead of padded entire frames. No padding is performed.
+
+    .. warn::
+
+        max_time_frames must be larger than the shortest sequence in the training data.
+
+    Args:
+        batch (tuple): tupls of lit
+            - x[0] (ndarray,int) : list of (T, D_in)
+            - x[1] (ndarray,int) : list of (T, D_out)
+        max_time_frames (int, optional): Number of time frames. Defaults to 256.
+
+    Returns:
+        tuple: Tuple of batch
+            - x (FloatTensor) : Network inputs (B, max(T), D_in)
+            - y (FloatTensor)  : Network targets (B, max(T), D_out)
+            - lengths (LongTensor): Input lengths
+    """
+    xs, ys = [b[0] for b in batch], [b[1] for b in batch]
+    lengths = [len(x[0]) for x in batch]
+
+    start_frames = np.array(
+        [np.random.randint(0, xl - max_time_frames) for xl in lengths]
+    )
+    starts = start_frames
+    ends = starts + max_time_frames
+    x_cut = [torch.from_numpy(x[s:e]) for x, s, e in zip(xs, starts, ends)]
+    y_cut = [torch.from_numpy(y[s:e]) for y, s, e in zip(ys, starts, ends)]
+
+    x_batch = torch.stack(x_cut).float()
+    y_batch = torch.stack(y_cut).float()
+    # NOTE: we don't actually need lengths since we don't perform padding
+    # but just for consistency with collate_fn_default
+    l_batch = torch.tensor([max_time_frames] * len(lengths), dtype=torch.long)
+
     return x_batch, y_batch, l_batch
 
 
@@ -237,7 +279,7 @@ def _resume(logger, resume_config, model, optimizer, lr_scheduler):
             lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
 
 
-def setup(config, device):
+def setup(config, device, collate_fn=collate_fn_default):
     """Setup for training
 
     Args:
@@ -355,7 +397,7 @@ def setup(config, device):
     )
 
 
-def setup_gan(config, device):
+def setup_gan(config, device, collate_fn=collate_fn_default):
     """Setup for training GAN
 
     Args:
