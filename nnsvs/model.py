@@ -1054,26 +1054,27 @@ class MultistreamParametricModel(BaseModel):
         return out, lf0_residual
 
     def inference(self, x, lengths=None):
-        out, _ = self(x, lengths, is_inference=True)
+        out, _ = self(x, lengths)
         return out
 
 
-class MultistreamParametricModelWithPostnet(BaseModel):
+class NPSSMultistreamParametricModel(BaseModel):
     def __init__(
         self,
-        energy_model: nn.Module,
-        energy_stream_sizes: list,
-        energy_has_dynamic_features: list,
-        energy_num_windows: int,
+        stream_sizes: list,
         pitch_model: nn.Module,
         pitch_stream_sizes: list,
         pitch_has_dynamic_features: list,
         pitch_num_windows: int,
-        timbre_model: nn.Module,
-        timbre_stream_sizes: list,
-        timbre_has_dynamic_features: list,
-        timbre_num_windows: int,
-        timbre_postnet: nn.Module,
+        harmonic_model: nn.Module,
+        harmonic_stream_sizes: list,
+        harmonic_has_dynamic_features: list,
+        harmonic_num_windows: int,
+        aperiodicity_model: nn.Module,
+        aperiodicity_stream_sizes: list,
+        aperiodicity_has_dynamic_features: list,
+        aperiodicity_num_windows: int,
+        vuv_model: nn.Module,
         # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
         in_lf0_min=5.3936276,
@@ -1083,33 +1084,24 @@ class MultistreamParametricModelWithPostnet(BaseModel):
         out_lf0_scale=0.23435173188961034,
     ):
         super().__init__()
-        self.energy_stream_sizes = energy_stream_sizes
-        self.energy_has_dynamic_features = energy_has_dynamic_features
-        self.energy_num_windows = energy_num_windows
-        self.energy_model = energy_model
-        if hasattr(self.energy_model, "out_dim"):
-            assert self.energy_model.out_dim == sum(
-                self.energy_stream_sizes
-            ), "Energy model output dimension is not consistent with the stream sizes"
+        self.stream_sizes = stream_sizes
 
         self.pitch_stream_sizes = pitch_stream_sizes
         self.pitch_has_dynamic_features = pitch_has_dynamic_features
         self.pitch_num_windows = pitch_num_windows
         self.pitch_model = pitch_model
-        if hasattr(self.pitch_model, "out_dim"):
-            assert self.pitch_model.out_dim == sum(
-                self.pitch_stream_sizes
-            ), "Pitch model output dimension is not consistent with the stream sizes"
 
-        self.timbre_stream_sizes = timbre_stream_sizes
-        self.timbre_has_dynamic_features = timbre_has_dynamic_features
-        self.timbre_num_windows = timbre_num_windows
-        self.timbre_model = timbre_model
-        if hasattr(self.timbre_model, "out_dim"):
-            assert self.timbre_model.out_dim == sum(
-                self.timbre_stream_sizes
-            ), "Timbre model output dimension is not consistent with the stream sizes"
-        self.timbre_postnet = timbre_postnet
+        self.harmonic_stream_sizes = harmonic_stream_sizes
+        self.harmonic_has_dynamic_features = harmonic_has_dynamic_features
+        self.harmonic_num_windows = harmonic_num_windows
+        self.harmonic_model = harmonic_model
+
+        self.aperiodicity_stream_sizes = aperiodicity_stream_sizes
+        self.aperiodicity_has_dynamic_features = aperiodicity_has_dynamic_features
+        self.aperiodicity_num_windows = aperiodicity_num_windows
+        self.aperiodicity_model = aperiodicity_model
+
+        self.vuv_model = vuv_model
 
         self.in_lf0_idx = in_lf0_idx
         self.in_lf0_min = in_lf0_min
@@ -1128,48 +1120,68 @@ class MultistreamParametricModelWithPostnet(BaseModel):
             self.pitch_model.out_lf0_mean = self.out_lf0_mean
             self.pitch_model.out_lf0_scale = self.out_lf0_scale
 
-    def forward(self, x, lengths=None, y=None, is_inference=False):
+    def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
 
-        if is_inference:
-            out = self.energy_model.inference(x, lengths)
-        else:
-            out = self.energy_model(x, lengths)
-        erg = split_streams(out, self.energy_stream_sizes)[0]
+        # Parse ground truth
+        if y is not None:
+            streams = split_streams(y, self.stream_sizes)
+            if len(streams) == 4:
+                gt_mgc, gt_lf0, _, gt_bap = streams
+                gt_pitch = gt_lf0
+            elif len(streams) == 5:
+                gt_mgc, gt_lf0, _, gt_bap, gt_vib = streams
+                gt_pitch = torch.cat([gt_lf0, gt_vib], dim=-1)
+            else:
+                gt_mgc, gt_lf0, _, gt_bap, gt_vib, gt_vib_flags = streams
+                gt_pitch = torch.cat([gt_lf0, gt_vib, gt_vib_flags], dim=-1)
 
+        # Pitch model
         # NOTE: so far assuming residual F0 prediction models
-        out, lf0_residual = self.pitch_model(x, lengths)
+        pred_pitch, lf0_residual = self.pitch_model(x, lengths)
         if len(self.pitch_stream_sizes) == 2:
-            lf0, vuv = split_streams(out, self.pitch_stream_sizes)
+            pred_lf0, pred_vib = split_streams(pred_pitch, self.pitch_stream_sizes)
         elif len(self.pitch_stream_sizes) == 3:
-            lf0, vuv, vib = split_streams(out, self.pitch_stream_sizes)
+            pred_lf0, pred_vib, pred_vib_flags = split_streams(
+                pred_pitch, self.pitch_stream_sizes
+            )
         else:
-            lf0, vuv, vib, vib_flags = split_streams(out, self.pitch_stream_sizes)
+            raise RuntimeError("Unknown pitch stream sizes")
 
-        if is_inference:
-            out = self.timbre_model.inference(x, lengths)
+        # Harmonic model
+        if y is not None:
+            har_inp = torch.cat([x, gt_pitch], dim=-1)
         else:
-            out = self.timbre_model(x, lengths)
-        mgc, bap = split_streams(out, self.timbre_stream_sizes)
+            har_inp = torch.cat([x, pred_pitch], dim=-1)
+        pred_mgc = self.harmonic_model(har_inp, lengths)
 
-        mgc_post = self.timbre_postnet(mgc.detach())
+        # Aperiodicity model
+        if y is not None:
+            apr_inp = torch.cat([x, gt_pitch, gt_mgc], dim=-1)
+        else:
+            apr_inp = torch.cat([x, pred_pitch, pred_mgc], dim=-1)
+        pred_bap = self.aperiodicity_model(apr_inp, lengths)
 
-        # concat mgcs' 0-th and rest dims
-        mgc = torch.cat([erg, mgc], dim=-1)
-        mgc_post = torch.cat([erg, mgc_post], dim=-1)
+        # V/UV model
+        if y is not None:
+            vuv_inp = torch.cat([x, gt_pitch, gt_mgc, gt_bap], dim=-1)
+        else:
+            vuv_inp = torch.cat([x, pred_pitch, pred_mgc, pred_bap], dim=-1)
+        pred_vuv = self.vuv_model(vuv_inp, lengths)
 
         # make a concatenated stream
-        if len(self.pitch_stream_sizes) == 2:
-            out = torch.cat([mgc, lf0, vuv, bap], dim=-1)
-        elif len(self.pitch_stream_sizes) == 3:
-            out = torch.cat([mgc, lf0, vuv, bap, vib], dim=-1)
+        if len(self.stream_sizes) == 4:
+            out = torch.cat([pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1)
+        elif len(self.stream_sizes) == 5:
+            out = torch.cat([pred_mgc, pred_lf0, pred_vuv, pred_bap, pred_vib], dim=-1)
         else:
-            out = torch.cat([mgc, lf0, vuv, bap, vib, vib_flags], dim=-1)
+            out = torch.cat(
+                [pred_mgc, pred_lf0, pred_vuv, pred_bap, pred_vib, pred_vib_flags],
+                dim=-1,
+            )
 
-        out_post = torch.cat([mgc_post, lf0, vuv, bap, vib, vib_flags], dim=-1)
-
-        return [out, out_post], lf0_residual
+        return out, lf0_residual
 
     def inference(self, x, lengths=None):
-        out, _ = self(x, lengths, is_inference=True)
-        return out[-1]
+        out, _ = self(x, lengths, y=None)
+        return out
