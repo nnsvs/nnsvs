@@ -46,6 +46,10 @@ acoustic_model: acoustic_resf0convlstm
 acoustic_train: myconfig
 acoustic_data: myconfig
 
+postfilter_model: defaults
+postfilter_train: defaults
+postfilter_data: defaults
+
 # Pretrained model dir (leave empty to disable)
 pretrained_expdir:
 
