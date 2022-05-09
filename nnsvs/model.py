@@ -133,7 +133,7 @@ class Conv1dResnetSAR(Conv1dResnet):
             ys[idx] = self.analysis_filts[idx](yi.transpose(1, 2)).transpose(1, 2)
         return torch.cat(ys, -1)
 
-    def inference(self, x, lengths=None):
+    def inference(self, x, lengths=None, y=None):
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
         return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)
 
@@ -152,7 +152,7 @@ class FFN(BaseModel):
         self.dropout = nn.Dropout(dropout)
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         h = self.relu(self.first_linear(x))
         for hl in self.hidden_layers:
             h = self.dropout(self.relu(hl(h)))
@@ -189,7 +189,7 @@ class LSTMRNN(BaseModel):
         self.hidden2out = nn.Linear(self.num_direction * self.hidden_dim, out_dim)
         init_weights(self, init_type)
 
-    def forward(self, sequence, lengths):
+    def forward(self, sequence, lengths, y=None):
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
         sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
@@ -239,7 +239,7 @@ class LSTMRNNSAR(LSTMRNN):
             ys[idx] = self.analysis_filts[idx](yi.transpose(1, 2)).transpose(1, 2)
         return torch.cat(ys, -1)
 
-    def inference(self, x, lengths=None):
+    def inference(self, x, lengths=None, y=None):
         out = self.forward(x, lengths)
         return _shallow_ar_inference(out, self.stream_sizes, self.analysis_filts)
 
@@ -277,7 +277,7 @@ class RMDN(BaseModel):
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
 
-    def forward(self, x, lengths):
+    def forward(self, x, lengths, y=None):
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
         out = self.linear(x)
@@ -322,7 +322,7 @@ class MDN(BaseModel):
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         return self.model(x)
 
     def inference(self, x, lengths=None):
@@ -355,7 +355,7 @@ class Conv1dResnetMDN(BaseModel):
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         return self.model(x)
 
     def inference(self, x, lengths=None):
@@ -522,7 +522,7 @@ class ResF0Conv1dResnetMDN(BaseModel):
     def prediction_type(self):
         return PredictionType.PROBABILISTIC
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
         log_pi, log_sigma, mu = self.mdn_layer(out)
 
@@ -620,7 +620,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.fc = nn.Linear(last_in_dim, out_dim)
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
 
@@ -709,7 +709,7 @@ class FFConvLSTM(BaseModel):
         self.fc = nn.Linear(last_in_dim, out_dim)
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
 
@@ -765,7 +765,7 @@ class ResF0Conv1dResnetWithPostnet(ResF0Conv1dResnet):
         )
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         out, lf0_residual = super().forward(x, lengths)
         # NOTE: use detach here so that gradients from the postnet outputs only propagate to
         # the parameters of the postnet
@@ -844,7 +844,7 @@ class ResSkipF0FFConvLSTMWithPostnet(ResSkipF0FFConvLSTM):
         )
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         out, lf0_residual = super().forward(x, lengths)
         # NOTE: use detach here so that gradients from the postnet outputs only propagate to
         # the parameters of the postnet
@@ -896,7 +896,7 @@ class VariancePredictor(BaseModel):
         self.conv = nn.Sequential(*conv)
         self.fc = nn.Linear(hidden_dim, out_dim)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         x = self.conv(x.transpose(1, 2))
         return self.fc(x.transpose(1, 2))
 
@@ -933,7 +933,7 @@ class ResF0VariancePredictor(VariancePredictor):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
         out = self.conv(x.transpose(1, 2))
         out = self.fc(out.transpose(1, 2))
 
@@ -1022,13 +1022,10 @@ class MultistreamParametricModel(BaseModel):
             self.pitch_model.out_lf0_mean = self.out_lf0_mean
             self.pitch_model.out_lf0_scale = self.out_lf0_scale
 
-    def forward(self, x, lengths=None, y=None, is_inference=False):
+    def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
 
-        if is_inference:
-            out = self.energy_model.inference(x, lengths)
-        else:
-            out = self.energy_model(x, lengths)
+        out = self.energy_model(x, lengths)
         erg = split_streams(out, self.energy_stream_sizes)[0]
 
         # NOTE: so far assuming residual F0 prediction models
@@ -1040,10 +1037,7 @@ class MultistreamParametricModel(BaseModel):
         else:
             lf0, vuv, vib, vib_flags = split_streams(out, self.pitch_stream_sizes)
 
-        if is_inference:
-            out = self.timbre_model.inference(x, lengths)
-        else:
-            out = self.timbre_model(x, lengths)
+        out = self.timbre_model(x, lengths)
         mgc, bap = split_streams(out, self.timbre_stream_sizes)
 
         # concat mgcs' 0-th and rest dims
