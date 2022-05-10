@@ -47,11 +47,6 @@ def train_step(
         if isinstance(model, nn.DataParallel)
         else model.prediction_type()
     )
-    is_autoregressive = (
-        model.module.is_autoregressive()
-        if isinstance(model, nn.DataParallel)
-        else model.is_autoregressive()
-    )
 
     # Apply preprocess if required (e.g., FIR filter for shallow AR)
     # defaults to no-op
@@ -61,10 +56,7 @@ def train_step(
         out_feats = model.preprocess_target(out_feats)
 
     # Run forward
-    if is_autoregressive:
-        pred_out_feats, lf0_residual = model(in_feats, lengths, out_feats)
-    else:
-        pred_out_feats, lf0_residual = model(in_feats, lengths)
+    pred_out_feats, lf0_residual = model(in_feats, lengths, out_feats)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
