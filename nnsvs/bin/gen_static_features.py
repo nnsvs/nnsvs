@@ -85,6 +85,7 @@ def my_app(config: DictConfig) -> None:
         map_location=lambda storage, loc: storage,
     )
     model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
 
     out_scaler = joblib.load(to_absolute_path(config.out_scaler_path))
 
