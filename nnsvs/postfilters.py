@@ -60,10 +60,12 @@ class Conv2dPostFilter(BaseModel):
         kernel_size=(5, 5),
         use_noise=True,
         use_tadn=False,
+        residual=True,
         init_type="kaiming_normal",
     ):
         super().__init__()
         self.use_noise = use_noise
+        self.residual = residual
         C = channels
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
@@ -125,8 +127,10 @@ class Conv2dPostFilter(BaseModel):
         y = self.conv2(torch.cat([x_syn, y], dim=1))
         y = self.conv3(torch.cat([x_syn, y], dim=1))
         residual = self.conv4(torch.cat([x_syn, y], dim=1))
-
-        out = x_syn + residual
+        if self.residual:
+            out = x_syn + residual
+        else:
+            out = residual
 
         # (B, 1, T, C) -> (B, T, C)
         out = out.squeeze(1)
