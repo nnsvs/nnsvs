@@ -4,6 +4,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    if isinstance(scaler, StandardScaler):
+    if isinstance(scaler, StandardScaler) or isinstance(scaler, NNSVSStandardScaler):
         print(f"Converting {input_file} mean/scale npy files")
         mean_path = out_dir / (input_file.stem + "_mean.npy")
         scale_path = out_dir / (input_file.stem + "_scale.npy")
