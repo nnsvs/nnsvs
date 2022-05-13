@@ -16,8 +16,10 @@ import torch
 from hydra.utils import get_original_cwd, to_absolute_path
 from nnmnkwii import metrics
 from nnmnkwii.datasets import FileDataSource, FileSourceDataset, MemoryCacheDataset
+from nnsvs.base import PredictionType
 from nnsvs.gen import gen_world_params, get_windows
 from nnsvs.logger import getLogger
+from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import (
     get_static_features,
     get_static_stream_sizes,
@@ -740,6 +742,11 @@ def eval_spss_model(
         if isinstance(netG, nn.DataParallel)
         else netG.is_autoregressive()
     )
+    prediction_type = (
+        netG.module.prediction_type()
+        if isinstance(netG, nn.DataParallel)
+        else netG.prediction_type()
+    )
     utt_indices = [-1, -2, -3]
     utt_indices = utt_indices[: min(3, len(in_feats))]
 
@@ -780,6 +787,11 @@ def eval_spss_model(
                 [lengths[utt_idx]],
                 out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
             )
+        elif prediction_type == PredictionType.PROBABILISTIC:
+            pi, sigma, mu = netG(
+                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
+            )
+            pred_out_feats = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
         else:
             pred_out_feats = netG(
                 in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
@@ -791,9 +803,14 @@ def eval_spss_model(
             pred_out_feats = [pred_out_feats]
 
         # Run inference
-        inference_out_feats = netG.inference(
-            in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-        )
+        if prediction_type == PredictionType.PROBABILISTIC:
+            _, inference_out_feats = netG.inference(
+                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
+            )
+        else:
+            inference_out_feats = netG.inference(
+                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
+            )
         pred_out_feats.append(inference_out_feats)
 
         # Plot normalized input/output
