@@ -536,6 +536,9 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out_lf0_scale=0.23435173188961034,
         skip_inputs=False,
         init_type="none",
+        use_mdn=False,
+        num_gaussians=8,
+        dim_wise=False,
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -545,6 +548,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
         self.skip_inputs = skip_inputs
+        self.use_mdn = use_mdn
 
         self.ff = nn.Sequential(
             nn.Linear(in_dim, ff_hidden_dim),
@@ -585,8 +589,21 @@ class ResSkipF0FFConvLSTM(BaseModel):
         else:
             last_in_dim = num_direction * lstm_hidden_dim
 
-        self.fc = nn.Linear(last_in_dim, out_dim)
+        if self.use_mdn:
+            self.mdn_layer = MDNLayer(
+                last_in_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+            )
+        else:
+            self.fc = nn.Linear(last_in_dim, out_dim)
+
         init_weights(self, init_type)
+
+    def prediction_type(self):
+        return (
+            PredictionType.PROBABILISTIC
+            if self.use_mdn
+            else PredictionType.DETERMINISTIC
+        )
 
     def forward(self, x, lengths=None, y=None):
         if isinstance(lengths, torch.Tensor):
@@ -602,11 +619,15 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = torch.cat([out, x], dim=-1) if self.skip_inputs else out
-        out = self.fc(out)
+
+        if self.use_mdn is not None:
+            log_pi, log_sigma, mu = self.mdn_layer(out)
+        else:
+            mu = self.fc(out)
 
         lf0_pred, lf0_residual = predict_lf0_with_residual(
             x,
-            out,
+            mu,
             self.in_lf0_idx,
             self.in_lf0_min,
             self.in_lf0_max,
@@ -616,12 +637,20 @@ class ResSkipF0FFConvLSTM(BaseModel):
         )
 
         # Inject the predicted lf0 into the output features
-        out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
-        return out, lf0_residual
+        if self.use_mdn:
+            return (log_pi, log_sigma, mu), lf0_residual
+        else:
+            return mu, lf0_residual
 
     def inference(self, x, lengths=None):
-        return self(x, lengths)[0]
+        if self.use_mdn:
+            (log_pi, log_sigma, mu), _ = self(x, lengths)
+            sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            return mu, sigma
+        else:
+            return self(x, lengths)[0]
 
 
 class FFConvLSTM(BaseModel):
