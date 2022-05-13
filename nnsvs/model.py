@@ -479,7 +479,7 @@ class ResF0Conv1dResnet(BaseModel):
     def forward(self, x, lengths=None):
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
 
-        if self.use_mdn is not None:
+        if self.use_mdn:
             log_pi, log_sigma, mu = self.mdn_layer(out)
         else:
             mu = out
@@ -496,7 +496,10 @@ class ResF0Conv1dResnet(BaseModel):
         )
 
         # Inject the predicted lf0 into the output features
-        mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        if self.use_mdn:
+            mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        else:
+            mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
         if self.use_mdn:
             return (log_pi, log_sigma, mu), lf0_residual
@@ -620,7 +623,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = torch.cat([out, x], dim=-1) if self.skip_inputs else out
 
-        if self.use_mdn is not None:
+        if self.use_mdn:
             log_pi, log_sigma, mu = self.mdn_layer(out)
         else:
             mu = self.fc(out)
@@ -637,7 +640,10 @@ class ResSkipF0FFConvLSTM(BaseModel):
         )
 
         # Inject the predicted lf0 into the output features
-        mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        if self.use_mdn:
+            mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        else:
+            mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
         if self.use_mdn:
             return (log_pi, log_sigma, mu), lf0_residual
