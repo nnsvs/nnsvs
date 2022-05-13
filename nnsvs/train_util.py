@@ -809,7 +809,7 @@ def eval_spss_model(
 
         # Run inference
         if prediction_type == PredictionType.PROBABILISTIC:
-            _, inference_out_feats = netG.inference(
+            inference_out_feats, _ = netG.inference(
                 in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
             )
         else:
