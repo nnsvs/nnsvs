@@ -1,3 +1,4 @@
+from functools import partial
 from warnings import warn
 
 import numpy as np
@@ -431,6 +432,9 @@ class ResF0Conv1dResnet(BaseModel):
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
         init_type="none",
+        use_mdn=False,
+        num_gaussians=8,
+        dim_wise=False,
     ):
         super().__init__()
         self.in_lf0_idx = in_lf0_idx
@@ -439,6 +443,7 @@ class ResF0Conv1dResnet(BaseModel):
         self.out_lf0_idx = out_lf0_idx
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
+        self.use_mdn = use_mdn
 
         model = [
             nn.ReflectionPad1d(3),
@@ -446,85 +451,38 @@ class ResF0Conv1dResnet(BaseModel):
         ]
         for n in range(num_layers):
             model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
+
+        last_conv_out_dim = hidden_dim if use_mdn else out_dim
         model += [
             nn.LeakyReLU(0.2),
             nn.ReflectionPad1d(3),
-            WNConv1d(hidden_dim, out_dim, kernel_size=7, padding=0),
+            WNConv1d(hidden_dim, last_conv_out_dim, kernel_size=7, padding=0),
         ]
         self.model = nn.Sequential(*model)
+
+        if self.use_mdn:
+            self.mdn_layer = MDNLayer(
+                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+            )
+        else:
+            self.mdn_layer = None
+
         init_weights(self, init_type)
+
+    def prediction_type(self):
+        return (
+            PredictionType.PROBABILISTIC
+            if self.use_mdn
+            else PredictionType.DETERMINISTIC
+        )
 
     def forward(self, x, lengths=None):
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
 
-        lf0_pred, lf0_residual = predict_lf0_with_residual(
-            x,
-            out,
-            self.in_lf0_idx,
-            self.in_lf0_min,
-            self.in_lf0_max,
-            self.out_lf0_idx,
-            self.out_lf0_mean,
-            self.out_lf0_scale,
-        )
-
-        # Inject the predicted lf0 into the output features
-        out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
-
-        return out, lf0_residual
-
-    def inference(self, x, lengths=None):
-        return self(x, lengths)[0]
-
-
-class ResF0Conv1dResnetMDN(BaseModel):
-    def __init__(
-        self,
-        in_dim,
-        hidden_dim,
-        out_dim,
-        num_layers=4,
-        num_gaussians=2,
-        dim_wise=False,
-        # NOTE: you must carefully set the following parameters
-        in_lf0_idx=300,
-        in_lf0_min=5.3936276,
-        in_lf0_max=6.491111,
-        out_lf0_idx=180,
-        out_lf0_mean=5.953093881972361,
-        out_lf0_scale=0.23435173188961034,
-        init_type="none",
-    ):
-        super().__init__()
-        self.in_lf0_idx = in_lf0_idx
-        self.in_lf0_min = in_lf0_min
-        self.in_lf0_max = in_lf0_max
-        self.out_lf0_idx = out_lf0_idx
-        self.out_lf0_mean = out_lf0_mean
-        self.out_lf0_scale = out_lf0_scale
-
-        model = [
-            nn.ReflectionPad1d(3),
-            WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
-        ]
-        for n in range(num_layers):
-            model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
-        model += [
-            nn.LeakyReLU(0.2),
-            nn.ReflectionPad1d(3),
-            WNConv1d(hidden_dim, hidden_dim, kernel_size=7, padding=0),
-            nn.ReLU(),
-        ]
-        self.model = nn.Sequential(*model)
-        self.mdn_layer = MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)
-        init_weights(self, init_type)
-
-    def prediction_type(self):
-        return PredictionType.PROBABILISTIC
-
-    def forward(self, x, lengths=None, y=None):
-        out = self.model(x.transpose(1, 2)).transpose(1, 2)
-        log_pi, log_sigma, mu = self.mdn_layer(out)
+        if self.use_mdn is not None:
+            log_pi, log_sigma, mu = self.mdn_layer(out)
+        else:
+            mu = out
 
         lf0_pred, lf0_residual = predict_lf0_with_residual(
             x,
@@ -538,14 +496,24 @@ class ResF0Conv1dResnetMDN(BaseModel):
         )
 
         # Inject the predicted lf0 into the output features
-        mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+        mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
-        return (log_pi, log_sigma, mu), lf0_residual
+        if self.use_mdn:
+            return (log_pi, log_sigma, mu), lf0_residual
+        else:
+            return mu, lf0_residual
 
     def inference(self, x, lengths=None):
-        (log_pi, log_sigma, mu), _ = self.forward(x, lengths)
-        sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
-        return mu, sigma
+        if self.use_mdn:
+            (log_pi, log_sigma, mu), _ = self(x, lengths)
+            sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            return mu, sigma
+        else:
+            return self(x, lengths)[0]
+
+
+# For backward compatibility
+ResF0Conv1dResnetMDN = partial(ResF0Conv1dResnet, use_mdn=True)
 
 
 class ResSkipF0FFConvLSTM(BaseModel):
