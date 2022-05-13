@@ -788,9 +788,14 @@ def eval_spss_model(
                 out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
             )
         elif prediction_type == PredictionType.PROBABILISTIC:
-            pi, sigma, mu = netG(
+            pred_out_feats = netG(
                 in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
             )
+            # NOTE: ResF0 case
+            if len(pred_out_feats) == 2:
+                pi, sigma, mu = pred_out_feats[0]
+            else:
+                pi, sigma, mu = pred_out_feats
             pred_out_feats = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
         else:
             pred_out_feats = netG(
