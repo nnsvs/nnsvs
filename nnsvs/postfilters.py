@@ -62,10 +62,12 @@ class Conv2dPostFilter(BaseModel):
         use_tadn=False,
         residual=True,
         init_type="kaiming_normal",
+        scale=1.0,
     ):
         super().__init__()
         self.use_noise = use_noise
         self.residual = residual
+        self.scale = scale
         C = channels
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
@@ -105,7 +107,7 @@ class Conv2dPostFilter(BaseModel):
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
 
-        z = torch.randn_like(x)
+        z = torch.randn_like(x) * self.scale
         if self.use_noise:
             # adaptively scale z
             if self.tadn is not None:
@@ -157,9 +159,11 @@ class Conv1dPostFilter(nn.Module):
         use_noise=False,
         use_tadn=False,
         init_type="kaiming_normal",
+        scale=1.0,
     ):
         super().__init__()
         self.use_noise = use_noise
+        self.scale = scale
         C = channels
         padding = (kernel_size - 1) // 2
         self.conv1 = nn.Sequential(
@@ -193,7 +197,7 @@ class Conv1dPostFilter(nn.Module):
         x_syn = x
 
         if self.use_noise:
-            z = torch.randn_like(x)
+            z = torch.randn_like(x) * self.scale
             if self.tadn is not None:
                 z = self.tadn(z, x)
             y = self.conv1(torch.cat([x_syn, z], dim=1))
