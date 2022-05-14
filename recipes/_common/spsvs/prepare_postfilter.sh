@@ -40,7 +40,7 @@ done
 # apply normalization for input features
 # NOTE: output features are already normalized
 find $expdir/$acoustic_model/org/$train_set/in_postfilter -name "*feats.npy" > train_list.txt
-scaler_path=$dump_norm_dir/in_postfilter_scaler.joblib
+scaler_path=$expdir/$acoustic_model/in_postfilter_scaler.joblib
 scaler_class="sklearn.preprocessing.StandardScaler"
 xrun nnsvs-fit-scaler list_path=train_list.txt scaler._target_=$scaler_class \
     out_path=$scaler_path
