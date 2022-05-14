@@ -36,7 +36,7 @@ xrun nnsvs-train-postfilter $ext $hydra_opt \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_postfilter \
     data.dev.in_dir=$expdir/$acoustic_model/norm/$dev_set/in_postfilter \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_postfilter \
-    data.in_scaler_path=$dump_norm_dir/out_postfilter_scaler.joblib \
+    data.in_scaler_path=$dump_norm_dir/in_postfilter_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_postfilter_scaler.joblib \
     train.out_dir=$expdir/${postfilter_model} \
     train.log_dir=tensorboard/${expname}_${postfilter_model} \
