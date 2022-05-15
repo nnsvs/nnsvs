@@ -39,7 +39,7 @@ done
 
 
 # for convenience
-cp -v $dump_norm_dir/out_postfilter_scaler.joblib expdir/$acoustic_model/norm/in_postfilter_scaler.joblib
+cp -v $dump_norm_dir/out_postfilter_scaler.joblib $expdir/$acoustic_model/norm/in_postfilter_scaler.joblib
 
 # apply normalization for input features
 # NOTE: output features are already normalized
