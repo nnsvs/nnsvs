@@ -21,8 +21,8 @@ do
         model.model_yaml=$expdir/$acoustic_model/model.yaml \
         out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
         in_dir=$dump_norm_dir/$s/in_acoustic/ \
-        out_dir=$expdir/$acoustic_model/org/$s/in_postfilter \
-        utt_list=data/list/$s.list normalize=false
+        out_dir=$expdir/$acoustic_model/norm/$s/in_postfilter \
+        utt_list=data/list/$s.list normalize=true
 
     if [ -d conf/prepare_static_features ]; then
         ext="--config-dir conf/prepare_static_features"
@@ -37,17 +37,21 @@ do
         utt_list=data/list/$s.list
 done
 
+
+# for convenience
+cp -v $dump_norm_dir/out_postfilter_scaler.joblib expdir/$acoustic_model/norm/in_postfilter_scaler.joblib
+
 # apply normalization for input features
 # NOTE: output features are already normalized
-find $expdir/$acoustic_model/org/$train_set/in_postfilter -name "*feats.npy" > train_list.txt
-scaler_path=$expdir/$acoustic_model/norm/in_postfilter_scaler.joblib
-scaler_class="sklearn.preprocessing.StandardScaler"
-xrun nnsvs-fit-scaler list_path=train_list.txt scaler._target_=$scaler_class \
-    out_path=$scaler_path
-rm -f train_list.txt
+# find $expdir/$acoustic_model/org/$train_set/in_postfilter -name "*feats.npy" > train_list.txt
+# scaler_path=$expdir/$acoustic_model/norm/in_postfilter_scaler.joblib
+# scaler_class="sklearn.preprocessing.StandardScaler"
+# xrun nnsvs-fit-scaler list_path=train_list.txt scaler._target_=$scaler_class \
+#     out_path=$scaler_path
+# rm -f train_list.txt
 
-for s in ${datasets[@]}; do
-    xrun nnsvs-preprocess-normalize in_dir=$expdir/$acoustic_model/org/$s/in_postfilter \
-        scaler_path=$scaler_path \
-        out_dir=$expdir/$acoustic_model/norm/$s/in_postfilter
-done
+# for s in ${datasets[@]}; do
+#     xrun nnsvs-preprocess-normalize in_dir=$expdir/$acoustic_model/org/$s/in_postfilter \
+#         scaler_path=$scaler_path \
+#         out_dir=$expdir/$acoustic_model/norm/$s/in_postfilter
+# done
