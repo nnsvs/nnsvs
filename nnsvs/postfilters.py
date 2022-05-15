@@ -6,6 +6,17 @@ from nnsvs.util import init_weights
 from torch import nn
 
 
+def variance_scaling(gv, feats, offset=2):
+    utt_gv = feats.var(0)
+    utt_mu = feats.mean(0)
+    out = feats.copy()
+    out[:, offset:] = (
+        np.sqrt(gv[offset:] / utt_gv[offset:]) * (feats[:, offset:] - utt_mu[offset:])
+        + utt_mu[offset:]
+    )
+    return out
+
+
 class SimplifiedTADN(nn.Module):
     """Simplified temporal adaptive de-normalization for Gaussian noise
 
