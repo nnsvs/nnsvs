@@ -9,6 +9,9 @@ utt_list:
 in_dir:
 out_dir:
 
+# GV post-filter
+gv_postfilter: true
+
 # Normalize the output static features or not
 normalize: false
 

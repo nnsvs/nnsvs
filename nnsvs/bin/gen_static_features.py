@@ -9,7 +9,12 @@ from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.gen import get_windows
 from nnsvs.logger import getLogger
-from nnsvs.multistream import get_static_features, multi_stream_mlpg
+from nnsvs.multistream import (
+    get_static_features,
+    get_static_stream_sizes,
+    multi_stream_mlpg,
+)
+from nnsvs.postfilters import variance_scaling
 from nnsvs.util import StandardScaler, load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
@@ -89,29 +94,34 @@ def my_app(config: DictConfig) -> None:
 
     out_scaler = joblib.load(to_absolute_path(config.out_scaler_path))
 
-    if config.normalize:
-        mean_ = get_static_features(
-            out_scaler.mean_.reshape(1, 1, out_scaler.mean_.shape[-1]),
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-        )
-        mean_ = np.concatenate(mean_, -1).reshape(1, -1)
-        var_ = get_static_features(
-            out_scaler.var_.reshape(1, 1, out_scaler.var_.shape[-1]),
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-        )
-        var_ = np.concatenate(var_, -1).reshape(1, -1)
-        scale_ = get_static_features(
-            out_scaler.scale_.reshape(1, 1, out_scaler.scale_.shape[-1]),
-            model_config.num_windows,
-            model_config.stream_sizes,
-            model_config.has_dynamic_features,
-        )
-        scale_ = np.concatenate(scale_, -1).reshape(1, -1)
-        static_scaler = StandardScaler(mean_, var_, scale_)
+    mean_ = get_static_features(
+        out_scaler.mean_.reshape(1, 1, out_scaler.mean_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    mean_ = np.concatenate(mean_, -1).reshape(1, -1)
+    var_ = get_static_features(
+        out_scaler.var_.reshape(1, 1, out_scaler.var_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    var_ = np.concatenate(var_, -1).reshape(1, -1)
+    scale_ = get_static_features(
+        out_scaler.scale_.reshape(1, 1, out_scaler.scale_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    scale_ = np.concatenate(scale_, -1).reshape(1, -1)
+    static_scaler = StandardScaler(mean_, var_, scale_)
+
+    static_stream_sizes = get_static_stream_sizes(
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+        model_config.num_windows,
+    )
 
     for utt_id in tqdm(utt_ids):
         in_feats = (
@@ -120,6 +130,24 @@ def my_app(config: DictConfig) -> None:
             .to(device)
         )
         static_feats = _gen_static_features(model, model_config, in_feats, out_scaler)
+
+        if config.gv_postfilter:
+            # mgc
+            # NOTE: we may use offset=2 for mgc
+            mgc_end_dim = static_stream_sizes[0]
+            static_feats[:, :mgc_end_dim] = variance_scaling(
+                static_scaler.var_.reshape(-1)[:mgc_end_dim],
+                static_feats[:, :mgc_end_dim],
+                offset=0,
+            )
+            # bap
+            bap_start_dim = sum(static_stream_sizes[:3])
+            bap_end_dim = sum(static_stream_sizes[:4])
+            static_feats[:, bap_start_dim:bap_end_dim] = variance_scaling(
+                static_scaler.var_.reshape(-1)[bap_start_dim:bap_end_dim],
+                static_feats[:, bap_start_dim:bap_end_dim],
+                offset=0,
+            )
         if config.normalize:
             static_feats = static_scaler.transform(static_feats)
         out_path = join(out_dir, f"{utt_id}-feats.npy")
