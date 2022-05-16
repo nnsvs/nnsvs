@@ -14,6 +14,10 @@ checkpoint_epoch_interval: 20
 # https://arxiv.org/abs/2108.02776
 pitch_reg_weight: 1.0
 
+# Weight for the V/UV binary cross entropy loss
+# set to 0 for the old behavior that computes MSE loss for V/UV
+vuv_loss_weight: 0.0
+
 stream_wise_loss: false
 use_detect_anomaly: true
 
