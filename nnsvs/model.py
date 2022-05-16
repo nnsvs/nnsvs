@@ -1112,6 +1112,7 @@ class NPSSMultistreamParametricModel(BaseModel):
         aperiodicity_has_dynamic_features: list,
         aperiodicity_num_windows: int,
         vuv_model: nn.Module,
+        last_vuv_sigmoid=False,
         # NOTE: you must carefully set the following parameters
         in_lf0_idx=300,
         in_lf0_min=5.3936276,
@@ -1153,6 +1154,7 @@ class NPSSMultistreamParametricModel(BaseModel):
         self.vuv_model = vuv_model
         if hasattr(self.vuv_model, "out_dim"):
             assert self.vuv_model.out_dim == 1, "VUV model output dimension must be 1"
+        self.last_vuv_sigmoid = last_vuv_sigmoid
 
         self.in_lf0_idx = in_lf0_idx
         self.in_lf0_min = in_lf0_min
@@ -1196,7 +1198,8 @@ class NPSSMultistreamParametricModel(BaseModel):
 
         # V/UV model
         vuv_inp = torch.cat([x, pred_pitch, pred_mgc, pred_bap], dim=-1)
-        pred_vuv = torch.sigmoid(self.vuv_model(vuv_inp, lengths))
+        pred_vuv = self.vuv_model(vuv_inp, lengths)
+        pred_vuv = torch.sigmoid(pred_vuv) if self.last_vuv_sigmoid else pred_vuv
 
         # make a concatenated stream
         if len(self.stream_sizes) == 4:
