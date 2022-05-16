@@ -21,7 +21,6 @@ from nnsvs.train_util import (
 )
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
-from sklearn.preprocessing import StandardScaler
 from torch import nn
 from tqdm import tqdm
 
