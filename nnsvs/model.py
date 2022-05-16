@@ -141,7 +141,14 @@ class Conv1dResnetSAR(Conv1dResnet):
 
 class FFN(BaseModel):
     def __init__(
-        self, in_dim, hidden_dim, out_dim, num_layers=2, dropout=0.0, init_type="none"
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=2,
+        dropout=0.0,
+        init_type="none",
+        last_sigmoid=False,
     ):
         super(FFN, self).__init__()
         self.first_linear = nn.Linear(in_dim, hidden_dim)
@@ -151,13 +158,16 @@ class FFN(BaseModel):
         self.last_linear = nn.Linear(hidden_dim, out_dim)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
+        self.last_sigmoid = last_sigmoid
         init_weights(self, init_type)
 
     def forward(self, x, lengths=None, y=None):
         h = self.relu(self.first_linear(x))
         for hl in self.hidden_layers:
             h = self.dropout(self.relu(hl(h)))
-        return self.last_linear(h)
+        out = self.last_linear(h)
+        out = torch.sigmoid(out) if self.last_sigmoid else out
+        return out
 
 
 # For compatibility
