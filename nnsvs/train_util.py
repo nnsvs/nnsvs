@@ -688,9 +688,19 @@ def compute_batch_pitch_regularization_weight(lf0_score_denorm):
 
 
 @torch.no_grad()
-def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_config):
+def compute_distortions(
+    pred_out_feats, out_feats, lengths, out_scaler, model_config, binary_vuv=False
+):
+    vuv_idx = sum(model_config.stream_sizes[:2])
+
     out_feats = out_scaler.inverse_transform(out_feats)
-    pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
+    if binary_vuv:
+        # Keep the binary V/UV and set it back after denormalization
+        pred_vuv = pred_out_feats[:, :, vuv_idx]
+        pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
+        pred_out_feats[:, :, vuv_idx] = pred_vuv
+    else:
+        pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
     out_streams = get_static_features(
         out_feats,
         model_config.num_windows,
@@ -747,6 +757,13 @@ def eval_spss_model(
         if isinstance(netG, nn.DataParallel)
         else netG.prediction_type()
     )
+    vuv_idx = sum(model_config.stream_sizes[:2])
+    binary_vuv = (
+        netG.module.binary_vuv()
+        if isinstance(netG, nn.DataParallel)
+        else netG.binary_vuv()
+    )
+
     utt_indices = [-1, -2, -3]
     utt_indices = utt_indices[: min(3, len(in_feats))]
 
@@ -861,6 +878,10 @@ def eval_spss_model(
                 .cpu()
                 .numpy()
             )
+            if binary_vuv:
+                # NOTE: use the raw binary V/UV prediction
+                pred_out_feats_denorm[:, vuv_idx] = pred_out_feats_[:, vuv_idx]
+
             if np.any(model_config.has_dynamic_features):
                 # (T, D_out) -> (T, static_dim)
                 pred_out_feats_denorm = multi_stream_mlpg(

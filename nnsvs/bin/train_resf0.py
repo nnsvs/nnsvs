@@ -47,6 +47,11 @@ def train_step(
         if isinstance(model, nn.DataParallel)
         else model.prediction_type()
     )
+    binary_vuv = (
+        model.module.binary_vuv()
+        if isinstance(model, nn.DataParallel)
+        else model.binary_vuv()
+    )
 
     # Apply preprocess if required (e.g., FIR filter for shallow AR)
     # defaults to no-op
@@ -110,7 +115,12 @@ def train_step(
     else:
         pred_out_feats_ = pred_out_feats
     distortions = compute_distortions(
-        pred_out_feats_, out_feats, lengths, out_scaler, model_config
+        pred_out_feats_,
+        out_feats,
+        lengths,
+        out_scaler,
+        model_config,
+        binary_vuv=binary_vuv,
     )
 
     if train:

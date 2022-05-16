@@ -47,3 +47,6 @@ class BaseModel(nn.Module):
 
     def is_autoregressive(self):
         return False
+
+    def binary_vuv(self):
+        return False
