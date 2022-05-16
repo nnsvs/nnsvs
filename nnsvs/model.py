@@ -1103,18 +1103,32 @@ class NPSSMultistreamParametricModel(BaseModel):
         self.pitch_has_dynamic_features = pitch_has_dynamic_features
         self.pitch_num_windows = pitch_num_windows
         self.pitch_model = pitch_model
+        if hasattr(self.pitch_model, "out_dim"):
+            assert self.pitch_model.out_dim == sum(
+                self.pitch_stream_sizes
+            ), "Pitch model output dimension is not consistent with the stream sizes"
 
         self.harmonic_stream_sizes = harmonic_stream_sizes
         self.harmonic_has_dynamic_features = harmonic_has_dynamic_features
         self.harmonic_num_windows = harmonic_num_windows
         self.harmonic_model = harmonic_model
+        if hasattr(self.harmonic_model, "out_dim"):
+            assert self.harmonic_model.out_dim == sum(
+                self.harmonic_stream_sizes
+            ), "Harmonic model output dimension is not consistent with the stream sizes"
 
         self.aperiodicity_stream_sizes = aperiodicity_stream_sizes
         self.aperiodicity_has_dynamic_features = aperiodicity_has_dynamic_features
         self.aperiodicity_num_windows = aperiodicity_num_windows
         self.aperiodicity_model = aperiodicity_model
+        if hasattr(self.aperiodicity_model, "out_dim"):
+            assert self.aperiodicity_model.out_dim == sum(
+                self.aperiodicity_stream_sizes
+            ), "Aperiodicity model output dimension is not consistent with the stream sizes"
 
         self.vuv_model = vuv_model
+        if hasattr(self.vuv_model, "out_dim"):
+            assert self.vuv_model.out_dim == 1, "VUV model output dimension must be 1"
 
         self.in_lf0_idx = in_lf0_idx
         self.in_lf0_min = in_lf0_min
@@ -1136,19 +1150,6 @@ class NPSSMultistreamParametricModel(BaseModel):
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
 
-        # Parse ground truth
-        if y is not None:
-            streams = split_streams(y, self.stream_sizes)
-            if len(streams) == 4:
-                gt_mgc, gt_lf0, _, gt_bap = streams
-                gt_pitch = gt_lf0
-            elif len(streams) == 5:
-                gt_mgc, gt_lf0, _, gt_bap, gt_vib = streams
-                gt_pitch = torch.cat([gt_lf0, gt_vib], dim=-1)
-            else:
-                gt_mgc, gt_lf0, _, gt_bap, gt_vib, gt_vib_flags = streams
-                gt_pitch = torch.cat([gt_lf0, gt_vib, gt_vib_flags], dim=-1)
-
         # Pitch model
         # NOTE: so far assuming residual F0 prediction models
         pred_pitch, lf0_residual = self.pitch_model(x, lengths)
@@ -1162,25 +1163,16 @@ class NPSSMultistreamParametricModel(BaseModel):
             raise RuntimeError("Unknown pitch stream sizes")
 
         # Harmonic model
-        if y is not None:
-            har_inp = torch.cat([x, gt_pitch], dim=-1)
-        else:
-            har_inp = torch.cat([x, pred_pitch], dim=-1)
+        har_inp = torch.cat([x, pred_pitch], dim=-1)
         pred_mgc = self.harmonic_model(har_inp, lengths)
 
         # Aperiodicity model
-        if y is not None:
-            apr_inp = torch.cat([x, gt_pitch, gt_mgc], dim=-1)
-        else:
-            apr_inp = torch.cat([x, pred_pitch, pred_mgc], dim=-1)
+        apr_inp = torch.cat([x, pred_pitch, pred_mgc], dim=-1)
         pred_bap = self.aperiodicity_model(apr_inp, lengths)
 
         # V/UV model
-        if y is not None:
-            vuv_inp = torch.cat([x, gt_pitch, gt_mgc, gt_bap], dim=-1)
-        else:
-            vuv_inp = torch.cat([x, pred_pitch, pred_mgc, pred_bap], dim=-1)
-        pred_vuv = self.vuv_model(vuv_inp, lengths)
+        vuv_inp = torch.cat([x, pred_pitch, pred_mgc, pred_bap], dim=-1)
+        pred_vuv = torch.sigmoid(self.vuv_model(vuv_inp, lengths))
 
         # make a concatenated stream
         if len(self.stream_sizes) == 4:
