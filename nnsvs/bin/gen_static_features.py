@@ -14,6 +14,7 @@ from nnsvs.multistream import (
     get_static_stream_sizes,
     multi_stream_mlpg,
 )
+from nnsvs.pitch import lowpass_filter
 from nnsvs.postfilters import variance_scaling
 from nnsvs.util import StandardScaler, load_utt_list
 from omegaconf import DictConfig, OmegaConf
@@ -131,23 +132,35 @@ def my_app(config: DictConfig) -> None:
         )
         static_feats = _gen_static_features(model, model_config, in_feats, out_scaler)
 
+        mgc_end_dim = static_stream_sizes[0]
+        bap_start_dim = sum(static_stream_sizes[:3])
+        bap_end_dim = sum(static_stream_sizes[:4])
+
         if config.gv_postfilter:
             # mgc
-            # NOTE: we may use offset=2 for mgc
-            mgc_end_dim = static_stream_sizes[0]
             static_feats[:, :mgc_end_dim] = variance_scaling(
                 static_scaler.var_.reshape(-1)[:mgc_end_dim],
                 static_feats[:, :mgc_end_dim],
                 offset=config.mgc_offset,
             )
             # bap
-            bap_start_dim = sum(static_stream_sizes[:3])
-            bap_end_dim = sum(static_stream_sizes[:4])
             static_feats[:, bap_start_dim:bap_end_dim] = variance_scaling(
                 static_scaler.var_.reshape(-1)[bap_start_dim:bap_end_dim],
                 static_feats[:, bap_start_dim:bap_end_dim],
                 offset=config.bap_offset,
             )
+
+        if config.trajectory_smoothing:
+            modfs = int(1 / 0.005)
+            for d in range(mgc_end_dim):
+                static_feats[:, d] = lowpass_filter(
+                    static_feats[:, d], modfs, cutoff=config.trajectory_smoothing_cutoff
+                )
+            for d in range(bap_start_dim, bap_end_dim):
+                static_feats[:, d] = lowpass_filter(
+                    static_feats[:, d], modfs, cutoff=config.trajectory_smoothing_cutoff
+                )
+
         if config.normalize:
             static_feats = static_scaler.transform(static_feats)
         out_path = join(out_dir, f"{utt_id}-feats.npy")
