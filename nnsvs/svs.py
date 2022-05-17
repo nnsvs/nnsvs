@@ -132,7 +132,7 @@ class SPSVS(object):
                 np.load(model_dir / "out_postfilter_scaler_scale.npy"),
             )
         else:
-            self.postfilter = None
+            self.postfilter_model = None
 
         # Vocoder model
         if (model_dir / "vocoder_model.yaml").exists():
@@ -172,7 +172,7 @@ Time-lag model: {timelag_str}
 Duration model: {duration_str}
 Acoustic model: {acoustic_str}
 """
-        if self.postfilter is not None:
+        if self.postfilter_model is not None:
             postfilter_str = json.dumps(
                 OmegaConf.to_container(self.postfilter_config.netG),
                 sort_keys=False,
