@@ -138,7 +138,7 @@ def my_app(config: DictConfig) -> None:
             static_feats[:, :mgc_end_dim] = variance_scaling(
                 static_scaler.var_.reshape(-1)[:mgc_end_dim],
                 static_feats[:, :mgc_end_dim],
-                offset=0,
+                offset=config.mgc_offset,
             )
             # bap
             bap_start_dim = sum(static_stream_sizes[:3])
@@ -146,7 +146,7 @@ def my_app(config: DictConfig) -> None:
             static_feats[:, bap_start_dim:bap_end_dim] = variance_scaling(
                 static_scaler.var_.reshape(-1)[bap_start_dim:bap_end_dim],
                 static_feats[:, bap_start_dim:bap_end_dim],
-                offset=0,
+                offset=config.bap_offset,
             )
         if config.normalize:
             static_feats = static_scaler.transform(static_feats)
