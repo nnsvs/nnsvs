@@ -30,10 +30,6 @@ fm_weight: 0.1
 # mask 0 to n-th mgc for adversarial loss
 # e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
 mask_nth_mgc_for_adv_loss: 2
-# Segment length for computing the adversarial/discriminator losses
-# If positive, segments with the length of `adv_segment_length` are sampled for each iteration
-# and used for computing the loss functions
-adv_segment_length: -1
 
 stream_wise_loss: false
 use_detect_anomaly: true
