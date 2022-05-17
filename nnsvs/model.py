@@ -486,9 +486,6 @@ class ResF0Conv1dResnet(BaseModel):
 
         init_weights(self, init_type)
 
-    def binary_vuv(self):
-        return self.last_vuv_sigmoid
-
     def prediction_type(self):
         return (
             PredictionType.PROBABILISTIC
@@ -632,9 +629,6 @@ class ResSkipF0FFConvLSTM(BaseModel):
             self.fc = nn.Linear(last_in_dim, out_dim)
 
         init_weights(self, init_type)
-
-    def binary_vuv(self):
-        return self.last_vuv_sigmoid
 
     def prediction_type(self):
         return (
@@ -1176,10 +1170,6 @@ class NPSSMultistreamParametricModel(BaseModel):
             self.pitch_model.in_lf0_max = self.in_lf0_max
             self.pitch_model.out_lf0_mean = self.out_lf0_mean
             self.pitch_model.out_lf0_scale = self.out_lf0_scale
-
-    def binary_vuv(self):
-        # NOTE: assumes vuv_model has the last_sigmoid attribute
-        return self.vuv_model.last_sigmoid
 
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
