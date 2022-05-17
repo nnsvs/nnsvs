@@ -36,7 +36,6 @@ def train_step(
     out_scaler,
     pitch_reg_dyn_ws,
     pitch_reg_weight=1.0,
-    vuv_loss_weight=0.0,
 ):
     optimizer.zero_grad()
     log_metrics = {}
@@ -61,22 +60,6 @@ def train_step(
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
-    # V/UV loss
-    # NOTE: assuming V/UV is in the 3rd stream
-    vuv_idx = sum(model_config.stream_sizes[:2])
-    if vuv_loss_weight > 0:
-        if prediction_type == PredictionType.PROBABILISTIC:
-            raise RuntimeError("V/UV loss is not supported for MDN models")
-        pred_vuv = pred_out_feats[:, :, vuv_idx]
-        vuv = (out_feats[:, :, vuv_idx] > 0).float()
-        loss_vuv = (
-            nn.BCELoss(reduction="none")(pred_vuv, vuv)
-            .masked_select(mask.squeeze(-1))
-            .mean()
-        )
-    else:
-        loss_vuv = torch.tensor(0.0).to(in_feats.device)
-
     # Compute loss
     if prediction_type == PredictionType.PROBABILISTIC:
         pi, sigma, mu = pred_out_feats
@@ -87,14 +70,8 @@ def train_step(
         loss_feats = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
         loss_feats = loss_feats.masked_select(mask_).mean()
     else:
-        if vuv_loss_weight > 0:
-            mask_ = mask.expand(*pred_out_feats.shape).clone()
-            # Exclude V/UV for MSE loss
-            mask_[:, :, vuv_idx] = False
-        else:
-            mask_ = mask
         loss_feats = criterion(
-            pred_out_feats.masked_select(mask_), out_feats.masked_select(mask_)
+            pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
         ).mean()
 
     # Pitch regularization
@@ -123,7 +100,6 @@ def train_step(
             "Loss": loss.item(),
             "Loss_Feats": loss_feats.item(),
             "Loss_Pitch": loss_pitch.item(),
-            "Loss_VUV": loss_vuv.item(),
         }
     )
 
@@ -206,7 +182,6 @@ def train_loop(
                     out_scaler=out_scaler,
                     pitch_reg_dyn_ws=pitch_reg_dyn_ws,
                     pitch_reg_weight=pitch_reg_weight,
-                    vuv_loss_weight=config.train.vuv_loss_weight,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
