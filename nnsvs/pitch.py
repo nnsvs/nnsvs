@@ -62,7 +62,7 @@ def cent_to_hz_based_c4(cent):
     return out
 
 
-def lowpass_filter(x, fs, cutoff=5):
+def lowpass_filter(x, fs, cutoff=5, N=5):
     """Lowpass filter
 
     Args:
@@ -77,8 +77,8 @@ def lowpass_filter(x, fs, cutoff=5):
     norm_cutoff = cutoff / nyquist
     Wn = [norm_cutoff]
 
-    b, a = signal.butter(5, Wn, "lowpass")
-    if len(x) <= len(b) * 3:
+    b, a = signal.butter(N, Wn, "lowpass")
+    if len(x) <= len(b) * (N // 2 + 1):
         # NOTE: input signal is too short
         return x
 
