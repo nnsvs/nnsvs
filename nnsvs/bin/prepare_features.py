@@ -158,6 +158,8 @@ def my_app(config: DictConfig) -> None:
         vibrato_mode=config.acoustic.vibrato_mode,
         sample_rate=config.acoustic.sample_rate,
         d4c_threshold=config.acoustic.d4c_threshold,
+        trajectory_smoothing=config.acoustic.trajectory_smoothing,
+        trajectory_smoothing_cutoff=config.acoustic.trajectory_smoothing_cutoff,
     )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)

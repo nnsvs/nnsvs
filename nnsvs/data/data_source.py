@@ -15,6 +15,7 @@ from nnsvs.pitch import (
     extract_vibrato_likelihood,
     extract_vibrato_parameters,
     hz_to_cent_based_c4,
+    lowpass_filter,
 )
 from scipy.io import wavfile
 
@@ -131,6 +132,8 @@ class WORLDAcousticSource(FileDataSource):
         vibrato_mode="none",  # diff, sine
         sample_rate=48000,
         d4c_threshold=0.85,
+        trajectory_smoothing=False,
+        trajectory_smoothing_cutoff=50,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -150,6 +153,8 @@ class WORLDAcousticSource(FileDataSource):
         self.windows = get_windows(num_windows)
         self.sample_rate = sample_rate
         self.d4c_threshold = d4c_threshold
+        self.trajectory_smoothing = trajectory_smoothing
+        self.trajectory_smoothing_cutoff = trajectory_smoothing_cutoff
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -277,6 +282,18 @@ class WORLDAcousticSource(FileDataSource):
                         aperiodicity[is_voiced, k],
                     )
         bap = pyworld.code_aperiodicity(aperiodicity, fs)
+
+        # Parameter trajectory smoothing
+        if self.trajectory_smoothing:
+            modfs = int(1 / 0.005)
+            for d in range(mgc.shape[1]):
+                mgc[:, d] = lowpass_filter(
+                    mgc[:, d], modfs, cutoff=self.trajectory_smoothing_cutoff
+                )
+            for d in range(bap.shape[1]):
+                bap[:, d] = lowpass_filter(
+                    bap[:, d], modfs, cutoff=self.trajectory_smoothing_cutoff
+                )
 
         # Adjust lengths
         mgc = mgc[: labels.num_frames()]

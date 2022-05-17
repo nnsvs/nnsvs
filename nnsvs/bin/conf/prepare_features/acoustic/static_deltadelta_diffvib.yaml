@@ -41,3 +41,8 @@ interp_unvoiced_aperiodicity: true
 # For example, if you use sine-based vibrato modeling (w/ dynamic features),
 # you'd need to increase 2*num_windows + 1 for the `out_dim` of the acoustic model.
 vibrato_mode: diff
+
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
