@@ -441,8 +441,6 @@ class ResF0Conv1dResnet(BaseModel):
         out_lf0_idx=180,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
-        out_vuv_idx=183,
-        last_vuv_sigmoid=False,
         init_type="none",
         use_mdn=False,
         num_gaussians=8,
@@ -455,12 +453,7 @@ class ResF0Conv1dResnet(BaseModel):
         self.out_lf0_idx = out_lf0_idx
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
-        self.out_vuv_idx = out_vuv_idx
-        self.last_vuv_sigmoid = last_vuv_sigmoid
         self.use_mdn = use_mdn
-
-        if self.use_mdn and self.last_vuv_sigmoid:
-            raise ValueError("Cannot enable last_vuv_sigmoid for MDN models")
 
         model = [
             nn.ReflectionPad1d(3),
@@ -518,11 +511,6 @@ class ResF0Conv1dResnet(BaseModel):
         else:
             mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
-        # V/UV
-        if self.last_vuv_sigmoid:
-            assert not self.use_mdn
-            mu[:, :, self.out_vuv_idx] = torch.sigmoid(mu[:, :, self.out_vuv_idx])
-
         if self.use_mdn:
             return (log_pi, log_sigma, mu), lf0_residual
         else:
@@ -559,8 +547,6 @@ class ResSkipF0FFConvLSTM(BaseModel):
         out_lf0_idx=180,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
-        out_vuv_idx=183,
-        last_vuv_sigmoid=False,
         skip_inputs=False,
         init_type="none",
         use_mdn=False,
@@ -575,12 +561,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
         self.skip_inputs = skip_inputs
-        self.out_vuv_idx = out_vuv_idx
-        self.last_vuv_sigmoid = last_vuv_sigmoid
         self.use_mdn = use_mdn
-
-        if self.use_mdn and self.last_vuv_sigmoid:
-            raise ValueError("Cannot enable last_vuv_sigmoid for MDN models")
 
         self.ff = nn.Sequential(
             nn.Linear(in_dim, ff_hidden_dim),
@@ -673,11 +654,6 @@ class ResSkipF0FFConvLSTM(BaseModel):
             mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
         else:
             mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
-
-        # V/UV
-        if self.last_vuv_sigmoid:
-            assert not self.use_mdn
-            mu[:, :, self.out_vuv_idx] = torch.sigmoid(mu[:, :, self.out_vuv_idx])
 
         if self.use_mdn:
             return (log_pi, log_sigma, mu), lf0_residual
