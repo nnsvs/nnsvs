@@ -9,6 +9,8 @@ Statistical parametric SVS
 - :cite:t:`hono2018recent`
 - :cite:t:`blaauw2017neural`
 - :cite:t:`oura2010recent`
+- :cite:t:`lu2020xiaoicesing`
+- :cite:t:`zhuang2021litesing`
 
 F0 modeling
 -----------
