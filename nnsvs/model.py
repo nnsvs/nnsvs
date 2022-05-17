@@ -1196,7 +1196,7 @@ class NPSSMultistreamParametricModel(BaseModel):
 
         # V/UV model
         vuv_inp = torch.cat([x, pred_pitch, pred_mgc, pred_bap], dim=-1)
-        pred_vuv = self.vuv_model(vuv_inp, lengths)
+        pred_vuv = torch.sigmoid(self.vuv_model(vuv_inp, lengths))
 
         # make a concatenated stream
         if len(self.stream_sizes) == 4:
