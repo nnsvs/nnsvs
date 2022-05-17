@@ -26,6 +26,18 @@ python $NNSVS_COMMON_ROOT/clean_checkpoint_state.py $expdir/${acoustic_model}/$a
     $dst_dir/acoustic_model.pth
 cp $expdir/${acoustic_model}/model.yaml $dst_dir/acoustic_model.yaml
 
+# Post-filter model
+if [[ ${postfilter_model+x} ]]; then
+    if [ -e $expdir/${postfilter_model}/${postfilter_eval_checkpoint} ]; then
+        python $NNSVS_COMMON_ROOT/clean_checkpoint_state.py $expdir/${postfilter_model}/$postfilter_eval_checkpoint \
+            $dst_dir/postfilter_model.pth
+        cp $expdir/${postfilter_model}/model.yaml $dst_dir/postfilter_model.yaml
+        python $NNSVS_COMMON_ROOT/scaler_joblib2npy.py $dump_norm_dir/out_postfilter_scaler.joblib $dst_dir
+    else
+        echo "WARN: Post-filter model checkpoint is not found. Skipping."
+    fi
+fi
+
 # Vocoder model
 if [[ ${vocoder_model+x} || ${vocoder_eval_checkpoint+x} ]]; then
     if [[ -z "${vocoder_eval_checkpoint}" && ! -z ${vocoder_model} && -d ${expdir}/${vocoder_model} ]]; then
