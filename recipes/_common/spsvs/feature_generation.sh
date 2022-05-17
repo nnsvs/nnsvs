@@ -7,6 +7,11 @@ if [ -z ${sample_rate+x} ]; then
     exit -1
 fi
 
+if [[ -z ${trajectory_smoothing+x} ]]; then
+    trajectory_smoothing=false
+    trajectory_smoothing_cutoff=50
+fi
+
 for s in ${datasets[@]};
 do
     if [ -d conf/prepare_features ]; then
@@ -18,7 +23,9 @@ do
         utt_list=data/list/$s.list out_dir=$dump_org_dir/$s/ \
         question_path=$question_path \
         timelag=$timelag_features duration=$duration_features acoustic=$acoustic_features \
-        acoustic.sample_rate=$sample_rate
+        acoustic.sample_rate=$sample_rate \
+        acoustic.trajectory_smoothing=${trajectory_smoothing} \
+        acoustic.trajectory_smoothing_cutoff=${trajectory_smoothing_cutoff}
 done
 
 # Compute normalization stats for each input/output

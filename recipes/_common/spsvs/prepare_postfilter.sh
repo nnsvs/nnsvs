@@ -1,6 +1,11 @@
 # NOTE: the script is supposed to be used called from nnsvs recipes.
 # Please don't try to run the shell script directory.
 
+if [[ -z ${trajectory_smoothing+x} ]]; then
+    trajectory_smoothing=false
+    trajectory_smoothing_cutoff=50
+fi
+
 mkdir -p $expdir/$acoustic_model/norm/
 python $NNSVS_COMMON_ROOT/extract_static_scaler.py \
     $dump_norm_dir/out_acoustic_scaler.joblib \
@@ -22,7 +27,9 @@ do
         out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
         in_dir=$dump_norm_dir/$s/in_acoustic/ \
         out_dir=$expdir/$acoustic_model/norm/$s/in_postfilter \
-        utt_list=data/list/$s.list normalize=true
+        utt_list=data/list/$s.list normalize=true \
+        trajectory_smoothing=${trajectory_smoothing} \
+        trajectory_smoothing_cutoff=${trajectory_smoothing_cutoff}
 
     if [ -d conf/prepare_static_features ]; then
         ext="--config-dir conf/prepare_static_features"

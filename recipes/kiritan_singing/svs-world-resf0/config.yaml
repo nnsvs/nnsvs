@@ -23,6 +23,11 @@ timelag_features: defaults
 duration_features: defaults
 acoustic_features: static_deltadelta_sinevib
 
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
+
 ###########################################################
 #                TRAINING SETTING                         #
 ###########################################################
@@ -78,6 +83,7 @@ acoustic_synthesis: defaults
 timelag_eval_checkpoint: latest.pth
 duration_eval_checkpoint: latest.pth
 acoustic_eval_checkpoint: latest.pth
+postfilter_eval_checkpoint: latest.pth
 
 ###########################################################
 #                VOCODER SETTING                          #
