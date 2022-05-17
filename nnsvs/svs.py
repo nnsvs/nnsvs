@@ -1,11 +1,14 @@
 import json
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
+import pysptk
 import pyworld
 import torch
 from hydra.utils import instantiate
 from nnmnkwii.io import hts
+from nnmnkwii.postfilters import merlin_post_filter
 from nnsvs.dsp import bandpass_filter
 from nnsvs.gen import (
     gen_spsvs_static_features,
@@ -15,6 +18,9 @@ from nnsvs.gen import (
     predict_duration,
     predict_timelag,
 )
+from nnsvs.multistream import get_static_stream_sizes
+from nnsvs.pitch import lowpass_filter
+from nnsvs.postfilters import variance_scaling
 from nnsvs.util import MinMaxScaler, StandardScaler
 from omegaconf import OmegaConf
 from parallel_wavegan.utils import load_model
@@ -110,6 +116,24 @@ class SPSVS(object):
         )
         self.acoustic_model.eval()
 
+        # Post-filter
+        if (model_dir / "postfilter_model.yaml").exists():
+            self.postfilter_config = OmegaConf.load(model_dir / "postfilter_model.yaml")
+            self.postfilter_model = instantiate(self.postfilter_config.netG).to(device)
+            checkpoint = torch.load(
+                model_dir / "postfilter_model.pth",
+                map_location=device,
+            )
+            self.postfilter_model.load_state_dict(checkpoint["state_dict"])
+            self.postfilter_model.eval()
+            self.postfilter_out_scaler = StandardScaler(
+                np.load(model_dir / "out_postfilter_scaler_mean.npy"),
+                np.load(model_dir / "out_postfilter_scaler_var.npy"),
+                np.load(model_dir / "out_postfilter_scaler_scale.npy"),
+            )
+        else:
+            self.postfilter = None
+
         # Vocoder model
         if (model_dir / "vocoder_model.yaml").exists():
             self.vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
@@ -148,6 +172,16 @@ Time-lag model: {timelag_str}
 Duration model: {duration_str}
 Acoustic model: {acoustic_str}
 """
+        if self.postfilter is not None:
+            postfilter_str = json.dumps(
+                OmegaConf.to_container(self.postfilter_config.netG),
+                sort_keys=False,
+                indent=4,
+            )
+            repr += f"Post-filter model: {postfilter_str}\n"
+        else:
+            repr += "Post-filter model: None\n"
+
         if self.vocoder is not None:
             vocoder_params = {
                 "generator_type": self.vocoder_config.get(
@@ -182,16 +216,20 @@ Acoustic model: {acoustic_str}
         self,
         labels,
         vocoder_type="world",
-        post_filter=True,
+        post_filter_type="merlin",
+        trajectory_smoothing=True,
+        trajectory_smoothing_cutoff=50,
         vuv_threshold=0.1,
         vibrato_scale=1.0,
         return_states=False,
+        post_filter=None,
     ):
         """Synthesize waveform given HTS-style labels
 
         Args:
             labels (nnmnkwii.io.HTSLabelFile): HTS-style labels
             vocoder_type (str): Vocoder type. world or pwg
+            post_filter_type (str): Post-filter type. merlin or nnsvs.
 
         Returns:
             tuple: (synthesized waveform, sampling rate)
@@ -199,12 +237,17 @@ Acoustic model: {acoustic_str}
         vocoder_type = vocoder_type.lower()
         if vocoder_type not in ["world", "pwg"]:
             raise ValueError(f"Unknown vocoder type: {vocoder_type}")
+        if post_filter_type not in ["merlin", "nnsvs", "none"]:
+            raise ValueError(f"Unknown post-filter type: {post_filter_type}")
 
         if vocoder_type == "pwg" and self.vocoder is None:
             raise ValueError(
                 """Pre-trained vocodr model is not found.
 WORLD is only supported for waveform generation"""
             )
+        if post_filter is not None:
+            warn("post_filter is deprecated. Use post_filter_type instead.")
+            post_filter_type = "merlin" if post_filter else "none"
 
         # Time-lag
         lag = predict_timelag(
@@ -256,6 +299,42 @@ WORLD is only supported for waveform generation"""
             self.config.acoustic.force_clip_input_features,
         )
 
+        # Learned post-filter using nnsvs
+        if post_filter_type == "nnsvs" and self.postfilter_model is not None:
+            # Apply GV post-filtering as the pre-processing step
+            static_stream_sizes = get_static_stream_sizes(
+                self.acoustic_config.stream_sizes,
+                self.acoustic_config.has_dynamic_features,
+                self.acoustic_config.num_windows,
+            )
+            mgc_end_dim = static_stream_sizes[0]
+            acoustic_features[:, :mgc_end_dim] = variance_scaling(
+                self.postfilter_out_scaler.var_.reshape(-1)[:mgc_end_dim],
+                acoustic_features[:, :mgc_end_dim],
+                offset=2,
+            )
+            # bap
+            bap_start_dim = sum(static_stream_sizes[:3])
+            bap_end_dim = sum(static_stream_sizes[:4])
+            acoustic_features[:, bap_start_dim:bap_end_dim] = variance_scaling(
+                self.postfilter_out_scaler.var_.reshape(-1)[bap_start_dim:bap_end_dim],
+                acoustic_features[:, bap_start_dim:bap_end_dim],
+                offset=0,
+            )
+
+            # Apply learned post-filter
+            in_feats = (
+                torch.from_numpy(acoustic_features).float().to(self.device).unsqueeze(0)
+            )
+            in_feats = self.postfilter_out_scaler.transform(in_feats).float()
+            out_feats = self.postfilter_model.inference(in_feats, [in_feats.shape[1]])
+            acoustic_features = (
+                self.postfilter_out_scaler.inverse_transform(out_feats)
+                .squeeze(0)
+                .cpu()
+                .numpy()
+            )
+
         # Generate WORLD parameters
         mgc, lf0, vuv, bap = gen_spsvs_static_features(
             duration_modified_labels,
@@ -267,13 +346,29 @@ WORLD is only supported for waveform generation"""
             self.config.acoustic.subphone_features,
             self.pitch_idx,
             self.acoustic_config.num_windows,
-            post_filter,
-            self.config.sample_rate,
             self.config.frame_period,
             self.config.acoustic.relative_f0,
             vibrato_scale=vibrato_scale,
             vuv_threshold=vuv_threshold,
         )
+
+        # NOTE: spectral enhancement based on the Merlin's post-filter implementation
+        if post_filter_type == "merlin":
+            alpha = pysptk.util.mcepalpha(self.config.sample_rate)
+            mgc = merlin_post_filter(mgc, alpha)
+
+        # Remove high-frequency components of mgc/bap
+        # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
+        if trajectory_smoothing:
+            modfs = int(1 / 0.005)
+            for d in range(mgc.shape[1]):
+                mgc[:, d] = lowpass_filter(
+                    mgc[:, d], modfs, cutoff=trajectory_smoothing_cutoff
+                )
+            for d in range(bap.shape[1]):
+                bap[:, d] = lowpass_filter(
+                    bap[:, d], modfs, cutoff=trajectory_smoothing_cutoff
+                )
 
         # Waveform generation by (1) WORLD or (2) neural vocoder
         if vocoder_type == "world":
