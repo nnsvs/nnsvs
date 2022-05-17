@@ -5,7 +5,6 @@ import pyworld
 import torch
 from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
-from nnmnkwii.postfilters import merlin_post_filter
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnsvs.base import PredictionType
 from nnsvs.io.hts import get_note_indices
@@ -460,8 +459,6 @@ def gen_spsvs_static_features(
     subphone_features="coarse_coding",
     pitch_idx=None,
     num_windows=3,
-    post_filter=True,
-    sample_rate=48000,
     frame_period=5,
     relative_f0=True,
     vibrato_scale=1.0,
@@ -476,6 +473,7 @@ def gen_spsvs_static_features(
 
     # Split multi-stream features
     streams = split_streams(acoustic_features, static_stream_sizes)
+
     if len(streams) == 4:
         mgc, target_f0, vuv, bap = streams
         vib, vib_flags = None, None
@@ -488,10 +486,6 @@ def gen_spsvs_static_features(
         mgc, target_f0, vuv, bap, vib, vib_flags = streams
     else:
         raise RuntimeError("Not supported streams")
-
-    if post_filter:
-        alpha = pysptk.util.mcepalpha(sample_rate)
-        mgc = merlin_post_filter(mgc, alpha)
 
     # F0
     if relative_f0:
