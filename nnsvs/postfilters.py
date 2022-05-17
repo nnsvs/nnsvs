@@ -247,6 +247,7 @@ class MultistreamPostFilter(BaseModel):
         lf0_postfilter: nn.Module,
         stream_sizes: list,
         mgc_offset: int = 2,
+        bap_offset: int = 0,
     ):
         super().__init__()
         self.mgc_postfilter = mgc_postfilter
@@ -254,6 +255,7 @@ class MultistreamPostFilter(BaseModel):
         self.lf0_postfilter = lf0_postfilter
         self.stream_sizes = stream_sizes
         self.mgc_offset = mgc_offset
+        self.bap_offset = bap_offset
 
     def forward(self, x, lengths=None):
         """Forward step
@@ -288,7 +290,14 @@ class MultistreamPostFilter(BaseModel):
             mgc = mgc_pf
 
         if self.bap_postfilter is not None:
-            bap = self.bap_postfilter(bap, lengths)
+            if self.bap_offset > 0:
+                # keep unchanged for the 0-to-${bap_offset}-th dim of bap
+                bap0 = bap[:, :, : self.bap_offset]
+                bap_pf = self.bap_postfilter(bap[:, :, self.bap_offset :], lengths)
+                bap_pf = torch.cat([bap0, bap_pf], dim=-1)
+            else:
+                bap_pf = self.bap_postfilter(bap, lengths)
+            bap = bap_pf
 
         if self.lf0_postfilter is not None:
             lf0 = self.lf0_postfilter(lf0, lengths)
