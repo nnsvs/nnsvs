@@ -14,7 +14,6 @@ from nnsvs.multistream import (
     get_static_stream_sizes,
     multi_stream_mlpg,
 )
-from nnsvs.pitch import lowpass_filter
 from nnsvs.postfilters import variance_scaling
 from nnsvs.util import StandardScaler, load_utt_list
 from omegaconf import DictConfig, OmegaConf
