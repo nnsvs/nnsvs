@@ -245,11 +245,11 @@ def train_step(
         {
             "Loss": loss.item(),
             "Loss_Feats": loss_feats.item(),
-            "Loss_Adv": loss_adv.item(),
+            "Loss_Adv_Total": loss_adv.item(),
             "Loss_Feature_Matching": loss_fm.item(),
             "Loss_Pitch": loss_pitch.item(),
-            "Loss_Real": loss_real.item(),
-            "Loss_Fake": loss_fake.item(),
+            "Loss_Real_Total": loss_real.item(),
+            "Loss_Fake_Total": loss_fake.item(),
             "Loss_D": loss_d.item(),
         }
     )
@@ -331,14 +331,6 @@ def train_loop(
                     lf0_score_denorm
                 )
 
-                # Adv weight
-                if config.train.adv_weight > 0 and config.train.dynamic_adv_weight:
-                    adv_weight = config.train.adv_weight * np.clip(
-                        E_loss_feats / E_loss_adv, 0, 1e3
-                    )
-                else:
-                    adv_weight = config.train.adv_weight
-
                 loss, log_metrics = train_step(
                     model_config=config.model,
                     optim_config=config.train.optim,
@@ -353,7 +345,7 @@ def train_loop(
                     out_scaler=out_scaler,
                     pitch_reg_dyn_ws=pitch_reg_dyn_ws,
                     pitch_reg_weight=pitch_reg_weight,
-                    adv_weight=adv_weight,
+                    adv_weight=config.train.adv_weight,
                     adv_streams=adv_streams,
                     fm_weight=fm_weight,
                     adv_use_static_feats_only=config.train.adv_use_static_feats_only,
@@ -394,30 +386,6 @@ def train_loop(
                         epoch,
                         is_best=True,
                         postfix=postfix,
-                    )
-            # Update dynamic adv_weight parameters
-            if train:
-                N = len(data_loaders[phase])
-                keys = sorted(
-                    [k for k in running_metrics.keys() if "Loss_Feats_scale" in k]
-                )
-                # Multi-scale case: use the last scale's feats loss
-                if len(keys) > 0:
-                    E_loss_feats = running_metrics[keys[-1]] / N
-                else:
-                    E_loss_feats = running_metrics["Loss_Feats"] / N
-                E_loss_adv = running_metrics["Loss_Adv"] / N
-                logger.info(
-                    "[%s] [Epoch %s]: dynamic adv weight %s",
-                    phase,
-                    epoch,
-                    E_loss_feats / E_loss_adv,
-                )
-                if writer is not None:
-                    writer.add_scalar(
-                        f"Dynamic_Adv_Weight/{phase}",
-                        np.clip(E_loss_feats / E_loss_adv, 0, 1e3),
-                        epoch,
                     )
 
         schedulerG.step()

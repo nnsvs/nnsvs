@@ -203,10 +203,10 @@ def train_step(
         {
             "Loss": loss.item(),
             "Loss_Feats": loss_feats.item(),
-            "Loss_Adv": loss_adv.item(),
+            "Loss_Adv_Total": loss_adv.item(),
             "Loss_Feature_Matching": loss_fm.item(),
-            "Loss_Real": loss_real.item(),
-            "Loss_Fake": loss_fake.item(),
+            "Loss_Real_Total": loss_real.item(),
+            "Loss_Fake_Total": loss_fake.item(),
             "Loss_D": loss_d.item(),
         }
     )

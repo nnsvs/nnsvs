@@ -18,8 +18,6 @@ pitch_reg_weight: 1.0
 gan_type: vanilla-gan
 # Adverdarial loss weight
 adv_weight: 0.25
-# NOTE: If true, `adv_weight` above will be ignored
-dynamic_adv_weight: false
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [True, False, False, False, False, False]
 # Use static features as the input of the discriminator or not

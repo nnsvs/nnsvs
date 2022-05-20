@@ -717,16 +717,18 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
     vuv, pred_vuv = (vuv > 0.5).float(), (pred_vuv > 0.5).float()
 
     dist = {
-        "MGC_MCD": metrics.melcd(mgc[:, :, 1:], pred_mgc[:, :, 1:], lengths=lengths),
-        "BAP_MCD": metrics.melcd(bap, pred_bap, lengths=lengths) / 10.0,
-        "VUV_ERR": metrics.vuv_error(vuv, pred_vuv, lengths=lengths),
+        "ObjEval_MGC_MCD": metrics.melcd(
+            mgc[:, :, 1:], pred_mgc[:, :, 1:], lengths=lengths
+        ),
+        "ObjEval_BAP_MCD": metrics.melcd(bap, pred_bap, lengths=lengths) / 10.0,
+        "ObjEval_VUV_ERR": metrics.vuv_error(vuv, pred_vuv, lengths=lengths),
     }
 
     try:
         f0_mse = metrics.lf0_mean_squared_error(
             lf0, vuv, pred_lf0, pred_vuv, lengths=lengths, linear_domain=True
         )
-        dist["F0_RMSE"] = np.sqrt(f0_mse)
+        dist["ObjEval_F0_RMSE"] = np.sqrt(f0_mse)
     except ZeroDivisionError:
         pass
 
