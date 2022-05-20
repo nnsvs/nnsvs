@@ -33,7 +33,7 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler):
 
     dist = {}
     try:
-        dist["rmse"] = np.sqrt(
+        dist["ObjEval_RMSE"] = np.sqrt(
             metrics.mean_squared_error(out_feats, pred_out_feats, lengths=lengths)
         )
     except ZeroDivisionError:
