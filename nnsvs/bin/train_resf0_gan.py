@@ -75,11 +75,6 @@ def train_step(
     # Run forward
     pred_out_feats, lf0_residual = netG(in_feats, lengths)
 
-    # Multi-scale: multiple outputs or not.
-    # Only the last output is used for computing adversarial loss
-    # and discriminator loss.
-    is_multiscale = isinstance(pred_out_feats, list)
-
     # Select streams for computing adversarial loss
     if adv_use_static_feats_only:
         real_netD_in_feats = torch.cat(
@@ -94,7 +89,7 @@ def train_step(
         )
         fake_netD_in_feats = torch.cat(
             get_static_features(
-                pred_out_feats[-1] if is_multiscale else pred_out_feats,
+                pred_out_feats,
                 model_config.num_windows,
                 model_config.stream_sizes,
                 model_config.has_dynamic_features,
@@ -107,7 +102,7 @@ def train_step(
             out_feats, model_config.stream_sizes, adv_streams
         )
         fake_netD_in_feats = select_streams(
-            pred_out_feats[-1] if is_multiscale else pred_out_feats,
+            pred_out_feats,
             model_config.stream_sizes,
             adv_streams,
         )
@@ -162,8 +157,8 @@ def train_step(
             loss_real_ = loss_real_.mean()
             loss_fake_ = loss_fake_.mean()
 
-        log_metrics[f"Loss_Real_scale{idx}"] = loss_real_.item()
-        log_metrics[f"Loss_Fake_scale{idx}"] = loss_fake_.item()
+        log_metrics[f"Loss_Real_Scale{idx}"] = loss_real_.item()
+        log_metrics[f"Loss_Fake_Scale{idx}"] = loss_fake_.item()
 
         loss_real += loss_real_
         loss_fake += loss_fake_
@@ -179,27 +174,9 @@ def train_step(
         optD.step()
 
     # Update generator
-    if is_multiscale:
-        loss_feats = 0
-        # Use the last feats loss only when adversarial training is enabled
-        if adv_weight > 0:
-            for idx, pred_out_feats_ in enumerate(pred_out_feats[:-1]):
-                loss_feats_ = criterion(
-                    pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
-                ).mean()
-                log_metrics[f"Loss_Feats_scale{idx}"] = loss_feats_.item()
-                loss_feats += loss_feats_
-        else:
-            for idx, pred_out_feats_ in enumerate(pred_out_feats):
-                loss_feats_ = criterion(
-                    pred_out_feats_.masked_select(mask), out_feats.masked_select(mask)
-                ).mean()
-                log_metrics[f"Loss_Feats_scale{idx}"] = loss_feats_.item()
-                loss_feats += loss_feats_
-    else:
-        loss_feats = criterion(
-            pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-        ).mean()
+    loss_feats = criterion(
+        pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+    ).mean()
 
     # adversarial loss
     D_fake = netD(fake_netD_in_feats, in_feats, lengths)
@@ -228,7 +205,7 @@ def train_step(
         else:
             loss_adv_ = loss_adv_.mean()
 
-        log_metrics[f"Loss_Adv_scale{idx}"] = loss_adv_.item()
+        log_metrics[f"Loss_Adv_Scale{idx}"] = loss_adv_.item()
 
         loss_adv += loss_adv_
 
@@ -242,16 +219,7 @@ def train_step(
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    if isinstance(lf0_residual, list):
-        loss_pitch = 0
-        for idx, lf0_residual_ in enumerate(lf0_residual):
-            loss_pitch_ = (
-                (pitch_reg_dyn_ws * lf0_residual_.abs()).masked_select(mask).mean()
-            )
-            log_metrics[f"Loss_Pitch_scale{idx}"] = loss_pitch_.item()
-            loss_pitch += loss_pitch_
-    else:
-        loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+    loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
     loss = (
         loss_feats
@@ -269,20 +237,9 @@ def train_step(
         optG.step()
 
     # Metrics
-    if is_multiscale:
-        distortions = {}
-        for idx, pred_out_feats_ in enumerate(pred_out_feats):
-            distortions_ = compute_distortions(
-                pred_out_feats_, out_feats, lengths, out_scaler, model_config
-            )
-            for k, v in distortions_.items():
-                log_metrics[f"{k}_scale{idx}"] = v
-            # Keep the last-scale distortion
-            distortions = distortions_
-    else:
-        distortions = compute_distortions(
-            pred_out_feats, out_feats, lengths, out_scaler, model_config
-        )
+    distortions = compute_distortions(
+        pred_out_feats, out_feats, lengths, out_scaler, model_config
+    )
     log_metrics.update(distortions)
     log_metrics.update(
         {
@@ -362,7 +319,6 @@ def train_loop(
                     evaluated = True
 
                 # Compute denormalized log-F0 in the musical scores
-                # test - s.min_[in_lf0_idx]) / s.scale_[in_lf0_idx]
                 lf0_score_denorm = (
                     in_feats[:, :, in_lf0_idx] - in_scaler.min_[in_lf0_idx]
                 ) / in_scaler.scale_[in_lf0_idx]

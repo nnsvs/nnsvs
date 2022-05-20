@@ -121,8 +121,8 @@ def train_step(
             loss_real_ = loss_real_.mean()
             loss_fake_ = loss_fake_.mean()
 
-        log_metrics[f"Loss_Real_scale{idx}"] = loss_real_.item()
-        log_metrics[f"Loss_Fake_scale{idx}"] = loss_fake_.item()
+        log_metrics[f"Loss_Real_Scale{idx}"] = loss_real_.item()
+        log_metrics[f"Loss_Fake_Scale{idx}"] = loss_fake_.item()
 
         loss_real += loss_real_
         loss_fake += loss_fake_
@@ -172,7 +172,7 @@ def train_step(
         else:
             loss_adv_ = loss_adv_.mean()
 
-        log_metrics[f"Loss_Adv_scale{idx}"] = loss_adv_.item()
+        log_metrics[f"Loss_Adv_Scale{idx}"] = loss_adv_.item()
 
         loss_adv += loss_adv_
 

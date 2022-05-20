@@ -158,7 +158,6 @@ def train_loop(
                     evaluated = True
 
                 # Compute denormalized log-F0 in the musical scores
-                # test - s.min_[in_lf0_idx]) / s.scale_[in_lf0_idx]
                 lf0_score_denorm = (
                     in_feats[:, :, in_lf0_idx] - in_scaler.min_[in_lf0_idx]
                 ) / in_scaler.scale_[in_lf0_idx]

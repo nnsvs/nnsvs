@@ -852,6 +852,7 @@ def eval_spss_model(
         writer.add_figure(f"{group}/Input-Output", fig, step)
         plt.close()
 
+        assert len(pred_out_feats) == 2
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
             pred_out_feats_ = pred_out_feats_.squeeze(0).cpu().numpy()
             pred_out_feats_denorm = (
@@ -880,16 +881,11 @@ def eval_spss_model(
             )
             wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
             wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
-            if idx == len(pred_out_feats) - 1:
+            if idx == 1:
                 group = f"utt{np.abs(utt_idx)}_inference"
             else:
-                group = f"utt{np.abs(utt_idx)}_scale{idx}_generated"
+                group = f"utt{np.abs(utt_idx)}_forward"
             writer.add_audio(group, wav, step, sr)
-
-            if idx == len(pred_out_feats) - 1:
-                group = f"utt{np.abs(utt_idx)}_inference"
-            else:
-                group = f"utt{np.abs(utt_idx)}_scale{idx}"
             plot_spss_params(
                 step,
                 writer,
