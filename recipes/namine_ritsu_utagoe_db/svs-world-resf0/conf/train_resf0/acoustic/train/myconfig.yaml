@@ -1,16 +1,14 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# steps can either be specified by steps or epochs
+max_train_steps: -1
 nepochs: 100
 checkpoint_epoch_interval: 50
 
-# Weight for pitch regularization loss
-# If > 0.0, add a pitch regularization loss that biases the model to
-# predict closer F0 to the F0 derived from the musical score.
-# This is conceptually same as imposing a prior distribution of the residual F0
-# to be N(0, sigma) (if we use L2 loss)
-# https://arxiv.org/abs/2108.02776
-pitch_reg_weight: 1.0
+# mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
+# NOTE: no effect for MDN models
+feats_criterion: l1
 
 stream_wise_loss: false
 use_detect_anomaly: true

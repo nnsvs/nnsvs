@@ -13,13 +13,8 @@ num_workers: 2
 batch_size: 8
 pin_memory: true
 
-# NOTE: the following parameters must be carefully set
-# log-F0 and rest parameter indices in the input features
-# it depends on the hed file
-in_lf0_idx: 292
-in_rest_idx: 1
-# The log-F0 index in the output features
-out_lf0_idx: 180
+in_scaler_path: null
+out_scaler_path: null
 
 # mini-batch sampling
 # If max_time_frames is specified, (max_time_frames) frames are randomly sampled
@@ -28,6 +23,3 @@ out_lf0_idx: 180
 max_time_frames: -1
 
 sample_rate: 48000
-
-in_scaler_path: null
-out_scaler_path: null
