@@ -8,7 +8,6 @@ from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.layer_norm import LayerNorm
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
-from nnsvs.tacotron.postnet import Postnet
 from nnsvs.util import init_weights
 from torch import nn
 from torch.nn.utils import weight_norm
