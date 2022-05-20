@@ -59,7 +59,7 @@ def train_step(
 
     if feats_criterion in ["l2", "mse"]:
         criterion = nn.MSELoss(reduction="none")
-    elif feats_criterion == ["l1", "mae"]:
+    elif feats_criterion in ["l1", "mae"]:
         criterion = nn.L1Loss(reduction="none")
     else:
         raise RuntimeError("not supported criterion")
