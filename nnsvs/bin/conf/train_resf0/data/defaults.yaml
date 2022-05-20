@@ -27,5 +27,7 @@ out_lf0_idx: null
 # consider setting the value (e.g., 256 or 512) to avoid GPU OOM.
 max_time_frames: -1
 
+sample_rate: 48000
+
 in_scaler_path: null
 out_scaler_path: null

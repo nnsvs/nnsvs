@@ -43,7 +43,8 @@ def train_step(
     out_feats,
     lengths,
     out_scaler,
-    pitch_reg_dyn_ws,
+    feats_criterion="mse",
+    pitch_reg_dyn_ws=1.0,
     pitch_reg_weight=1.0,
     adv_weight=1.0,
     adv_streams=None,
@@ -56,7 +57,13 @@ def train_step(
     optD.zero_grad()
     log_metrics = {}
 
-    criterion = nn.MSELoss(reduction="none")
+    if feats_criterion in ["l2", "mse"]:
+        criterion = nn.MSELoss(reduction="none")
+    elif feats_criterion == ["l1", "mae"]:
+        criterion = nn.L1Loss(reduction="none")
+    else:
+        raise RuntimeError("not supported criterion")
+
     prediction_type = (
         netG.module.prediction_type()
         if isinstance(netG, nn.DataParallel)
@@ -287,8 +294,18 @@ def train_loop(
     if len(adv_streams) != len(config.model.stream_sizes):
         raise ValueError("adv_streams must be specified for all streams")
 
-    E_loss_feats = 1.0
-    E_loss_adv = 1.0
+    if "sample_rate" not in config.data:
+        logger.warn("sample_rate is not found in the data config. Fallback to 48000.")
+        sr = 48000
+    else:
+        sr = config.data.sample_rate
+
+    if "feats_criterion" not in config.train:
+        logger.warn("feats_criterion is not found in the data config. Fallback to MSE.")
+        feats_criterion = "mse"
+    else:
+        feats_criterion = config.train.feats_criterion
+
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
@@ -314,7 +331,7 @@ def train_loop(
                         config.model,
                         out_scaler,
                         writer,
-                        sr=48000,
+                        sr=sr,
                     )
                     evaluated = True
 
@@ -343,6 +360,7 @@ def train_loop(
                     out_feats=out_feats,
                     lengths=lengths,
                     out_scaler=out_scaler,
+                    feats_criterion=feats_criterion,
                     pitch_reg_dyn_ws=pitch_reg_dyn_ws,
                     pitch_reg_weight=pitch_reg_weight,
                     adv_weight=config.train.adv_weight,
