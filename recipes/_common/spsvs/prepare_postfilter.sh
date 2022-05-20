@@ -27,9 +27,7 @@ do
         out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
         in_dir=$dump_norm_dir/$s/in_acoustic/ \
         out_dir=$expdir/$acoustic_model/norm/$s/in_postfilter \
-        utt_list=data/list/$s.list normalize=true \
-        trajectory_smoothing=${trajectory_smoothing} \
-        trajectory_smoothing_cutoff=${trajectory_smoothing_cutoff}
+        utt_list=data/list/$s.list normalize=true
 
     if [ -d conf/prepare_static_features ]; then
         ext="--config-dir conf/prepare_static_features"

@@ -16,10 +16,6 @@ gv_postfilter: true
 mgc_offset: 2
 bap_offset: 0
 
-# https://www.slideshare.net/ShinnosukeTakamichi/apsipa2017-trajectory-smoothing-for-vocoderfree-speech-synthesis
-trajectory_smoothing: false
-trajectory_smoothing_cutoff: 50
-
 # Normalize the output static features or not
 normalize: false
 

@@ -150,17 +150,6 @@ def my_app(config: DictConfig) -> None:
                 offset=config.bap_offset,
             )
 
-        if config.trajectory_smoothing:
-            modfs = int(1 / 0.005)
-            for d in range(mgc_end_dim):
-                static_feats[:, d] = lowpass_filter(
-                    static_feats[:, d], modfs, cutoff=config.trajectory_smoothing_cutoff
-                )
-            for d in range(bap_start_dim, bap_end_dim):
-                static_feats[:, d] = lowpass_filter(
-                    static_feats[:, d], modfs, cutoff=config.trajectory_smoothing_cutoff
-                )
-
         if config.normalize:
             static_feats = static_scaler.transform(static_feats)
         out_path = join(out_dir, f"{utt_id}-feats.npy")
