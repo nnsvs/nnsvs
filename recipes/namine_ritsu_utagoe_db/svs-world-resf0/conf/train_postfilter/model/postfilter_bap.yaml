@@ -24,7 +24,7 @@ netD:
   # If in_dim is not specified, it will be automatically set based on adv_streams
   in_dim: null
   channels: 16
-  kernel_size: [11, 3]
+  kernel_size: [7, 3]
   padding: null
   last_sigmoid: false
   init_type: "kaiming_normal"
