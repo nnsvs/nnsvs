@@ -23,6 +23,11 @@ if __name__ == "__main__":
     mgc_checkpoint = torch.load(args.mgc_checkpoint, map_location="cpu")
     bap_checkpoint = torch.load(args.bap_checkpoint, map_location="cpu")
 
+    for path in [args.mgc_checkpoint, args.bap_checkpoint]:
+        size = os.path.getsize(path)
+        print("Processisng:", path)
+        print(f"File size: {size / 1024/1024:.3f} MB")
+
     mgc_model = OmegaConf.load(Path(args.mgc_checkpoint).parent / "model.yaml")
     bap_model = OmegaConf.load(Path(args.bap_checkpoint).parent / "model.yaml")
 
