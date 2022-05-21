@@ -54,6 +54,7 @@ def train_step(
     stream_weights=None,
     stream_sizes=None,
 ):
+    model.train() if train else model.eval()
     optimizer.zero_grad()
 
     criterion = nn.MSELoss(reduction="none")
@@ -135,7 +136,6 @@ def train_loop(
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
-            model.train() if train else model.eval()
             running_loss = 0
             running_metrics = {}
             for in_feats, out_feats, lengths in data_loaders[phase]:

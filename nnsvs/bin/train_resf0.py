@@ -38,6 +38,7 @@ def train_step(
     pitch_reg_dyn_ws=1.0,
     pitch_reg_weight=1.0,
 ):
+    model.train() if train else model.eval()
     optimizer.zero_grad()
     log_metrics = {}
 
@@ -155,7 +156,6 @@ def train_loop(
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
-            model.train() if train else model.eval()
             running_loss = 0
             running_metrics = {}
             evaluated = False

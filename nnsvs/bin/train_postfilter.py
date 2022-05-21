@@ -44,6 +44,9 @@ def train_step(
     gan_type="lsgan",
     vuv_mask=False,
 ):
+    netG.train() if train else netG.eval()
+    netD.train() if train else netD.eval()
+
     log_metrics = {}
 
     if vuv_mask:
@@ -240,8 +243,6 @@ def train_loop(
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
-            netG.train() if train else netG.eval()
-            netD.train() if train else netD.eval()
             running_loss = 0
             running_metrics = {}
             evaluated = False

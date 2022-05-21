@@ -53,6 +53,8 @@ def train_step(
     mask_nth_mgc_for_adv_loss=0,
     gan_type="lsgan",
 ):
+    netG.train() if train else netG.eval()
+    netD.train() if train else netD.eval()
     optG.zero_grad()
     optD.zero_grad()
     log_metrics = {}
@@ -313,8 +315,6 @@ def train_loop(
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
-            netG.train() if train else netG.eval()
-            netD.train() if train else netD.eval()
             running_loss = 0
             running_metrics = {}
             evaluated = False

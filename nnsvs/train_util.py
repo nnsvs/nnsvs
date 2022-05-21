@@ -749,6 +749,8 @@ def eval_spss_model(
     trajectory_smoothing=True,
     trajectory_smoothing_cutoff=50,
 ):
+    # make sure to be in eval mode
+    netG.eval()
     is_autoregressive = (
         netG.module.is_autoregressive()
         if isinstance(netG, nn.DataParallel)
