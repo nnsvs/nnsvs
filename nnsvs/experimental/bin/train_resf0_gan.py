@@ -295,13 +295,17 @@ def train_loop(
         raise ValueError("adv_streams must be specified for all streams")
 
     if "sample_rate" not in config.data:
-        logger.warn("sample_rate is not found in the data config. Fallback to 48000.")
+        logger.warning(
+            "sample_rate is not found in the data config. Fallback to 48000."
+        )
         sr = 48000
     else:
         sr = config.data.sample_rate
 
     if "feats_criterion" not in config.train:
-        logger.warn("feats_criterion is not found in the data config. Fallback to MSE.")
+        logger.warning(
+            "feats_criterion is not found in the data config. Fallback to MSE."
+        )
         feats_criterion = "mse"
     else:
         feats_criterion = config.train.feats_criterion

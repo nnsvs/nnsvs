@@ -186,7 +186,7 @@ def set_epochs_based_on_max_steps_(train_config, steps_per_epoch, logger):
         logger (logging.Logger): Logger.
     """
     if "max_train_steps" not in train_config:
-        logger.warn("max_train_steps is not found in the train config.")
+        logger.warning("max_train_steps is not found in the train config.")
         return
 
     logger.info(f"Number of iterations per epoch: {steps_per_epoch}")
@@ -538,7 +538,7 @@ def check_resf0_config(logger, model, config, in_scaler, out_scaler):
     ok = True
     if hasattr(model, "in_lf0_idx"):
         if model.in_lf0_idx != in_lf0_idx:
-            logger.warn(
+            logger.warning(
                 "in_lf0_idx in model and data config must be same",
                 model.in_lf0_idx,
                 in_lf0_idx,
@@ -546,7 +546,7 @@ def check_resf0_config(logger, model, config, in_scaler, out_scaler):
             ok = False
     if hasattr(model, "out_lf0_idx"):
         if model.out_lf0_idx != out_lf0_idx:
-            logger.warn(
+            logger.warning(
                 "out_lf0_idx in model and data config must be same",
                 model.out_lf0_idx,
                 out_lf0_idx,
@@ -562,13 +562,13 @@ def check_resf0_config(logger, model, config, in_scaler, out_scaler):
         logger.info("in_lf0_min: %s", model.in_lf0_min)
         logger.info("in_lf0_max: %s", model.in_lf0_max)
         if not np.allclose(model.in_lf0_min, in_scaler.data_min_[model.in_lf0_idx]):
-            logger.warn(
+            logger.warning(
                 f"in_lf0_min is set to {model.in_lf0_min}, "
                 f"but should be {in_scaler.data_min_[model.in_lf0_idx]}"
             )
             ok = False
         if not np.allclose(model.in_lf0_max, in_scaler.data_max_[model.in_lf0_idx]):
-            logger.warn(
+            logger.warning(
                 f"in_lf0_max is set to {model.in_lf0_max}, "
                 f"but should be {in_scaler.data_max_[model.in_lf0_idx]}"
             )
@@ -583,13 +583,13 @@ def check_resf0_config(logger, model, config, in_scaler, out_scaler):
         logger.info("model.out_lf0_mean: %s", model.out_lf0_mean)
         logger.info("model.out_lf0_scale: %s", model.out_lf0_scale)
         if not np.allclose(model.out_lf0_mean, out_scaler.mean_[model.out_lf0_idx]):
-            logger.warn(
+            logger.warning(
                 f"out_lf0_mean is set to {model.out_lf0_mean}, "
                 f"but should be {out_scaler.mean_[model.out_lf0_idx]}"
             )
             ok = False
         if not np.allclose(model.out_lf0_scale, out_scaler.scale_[model.out_lf0_idx]):
-            logger.warn(
+            logger.warning(
                 f"out_lf0_scale is set to {model.out_lf0_scale}, "
                 f"but should be {out_scaler.scale_[model.out_lf0_idx]}"
             )
