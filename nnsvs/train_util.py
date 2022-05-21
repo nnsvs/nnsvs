@@ -952,6 +952,19 @@ def plot_spss_params(
     writer.add_figure(f"{group}/F0", fig, step)
     plt.close()
 
+    # V/UV
+    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+    timeaxis = np.arange(len(lf0)) * 0.005
+    ax.plot(timeaxis, vuv, linewidth=2, label="Target V/UV")
+    ax.plot(timeaxis, pred_vuv, "--", linewidth=2, label="Predicted V/UV")
+    ax.set_xlabel("Time [sec]")
+    ax.set_ylabel("V/UV")
+    ax.set_xlim(timeaxis[0], timeaxis[-1])
+    plt.legend()
+    plt.tight_layout()
+    writer.add_figure(f"{group}/VUV", fig, step)
+    plt.close()
+
     # Spectrogram
     fig, ax = plt.subplots(2, 1, figsize=(8, 6))
     ax[0].set_title("Reference spectrogram")
