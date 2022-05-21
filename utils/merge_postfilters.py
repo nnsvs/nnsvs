@@ -39,12 +39,12 @@ if __name__ == "__main__":
     Path(args.output_dir).mkdir(exist_ok=True, parents=True)
 
     # Model definition
-    yaml_path = Path(args.output_dir) / "postfilter_model.yaml"
+    yaml_path = Path(args.output_dir) / "model.yaml"
     mgc_model.netG.bap_postfilter = bap_model.netG.bap_postfilter
     OmegaConf.save(mgc_model, yaml_path)
 
     # Checkpoint
-    checkpoint_path = Path(args.output_dir) / "postfilter_model.pth"
+    checkpoint_path = Path(args.output_dir) / "latest.pth"
     torch.save(checkpoint, checkpoint_path)
     size = os.path.getsize(checkpoint_path)
     print(f"File size (after): {size / 1024/1024:.3f} MB")
