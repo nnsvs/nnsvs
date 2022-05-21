@@ -222,6 +222,7 @@ Acoustic model: {acoustic_str}
         vuv_threshold=0.1,
         vibrato_scale=1.0,
         return_states=False,
+        force_fix_vuv=True,
         post_filter=None,
     ):
         """Synthesize waveform given HTS-style labels
@@ -350,6 +351,7 @@ WORLD is only supported for waveform generation"""
             self.config.acoustic.relative_f0,
             vibrato_scale=vibrato_scale,
             vuv_threshold=vuv_threshold,
+            force_fix_vuv=force_fix_vuv,
         )
 
         # NOTE: spectral enhancement based on the Merlin's post-filter implementation

@@ -463,6 +463,7 @@ def gen_spsvs_static_features(
     relative_f0=True,
     vibrato_scale=1.0,
     vuv_threshold=0.3,
+    force_fix_vuv=True,
 ):
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
@@ -487,17 +488,53 @@ def gen_spsvs_static_features(
     else:
         raise RuntimeError("Not supported streams")
 
+    linguistic_features = fe.linguistic_features(
+        labels,
+        binary_dict,
+        numeric_dict,
+        add_frame_features=True,
+        subphone_features=subphone_features,
+    )
+
+    # Fix V/UV based on the input musical score information
+    # NOTE: only works for nnsvs's JP hed files,
+    # but it should be straightforward to tweak for other files
+    if force_fix_vuv:
+        # Set V/UV to 1 for Yuusei-boin (有声母音)
+        in_yuusei_boin_idx = -1
+        for k, v in binary_dict.items():
+            name, regex = v
+            if "C-Phone_Yuusei_Boin" in name:
+                in_yuusei_boin_idx = k
+        if in_yuusei_boin_idx > 0:
+            indices = (
+                linguistic_features[:, in_yuusei_boin_idx : in_yuusei_boin_idx + 1] > 0
+            )
+            vuv[indices] = 1.0
+
+        # Set V/UV to 0 for sil/pau
+        in_rest_idx = -1
+        for k, v in binary_dict.items():
+            name, regex = v
+            if "C-Phone_Muon" in name:
+                in_rest_idx = k
+        if in_rest_idx > 0:
+            indices = linguistic_features[:, in_rest_idx : in_rest_idx + 1] > 0
+            vuv[indices] = 0.0
+
+        # Set V/UV to 0 for br
+        in_br_idx = -1
+        for k, v in binary_dict.items():
+            name, regex = v
+            if "C-Phone_br" in name:
+                in_br_idx = k
+        if in_br_idx > 0:
+            indices = linguistic_features[:, in_br_idx : in_br_idx + 1] > 0
+            vuv[indices] = 0.0
+
     # F0
     if relative_f0:
         diff_lf0 = target_f0
-        # need to extract pitch sequence from the musical score
-        linguistic_features = fe.linguistic_features(
-            labels,
-            binary_dict,
-            numeric_dict,
-            add_frame_features=True,
-            subphone_features=subphone_features,
-        )
         f0_score = _midi_to_hz(linguistic_features, pitch_idx, False)[:, None]
         lf0_score = f0_score.copy()
         nonzero_indices = np.nonzero(lf0_score)
