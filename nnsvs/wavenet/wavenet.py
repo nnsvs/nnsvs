@@ -61,7 +61,7 @@ class WaveNet(nn.Module):
         """Forward step
 
         Args:
-            c (torch.Tensor): the conditonal features (B, T, C)
+            c (torch.Tensor): the conditional features (B, T, C)
             x (torch.Tensor): the target features (B, T, C)
 
         Returns:
