@@ -373,7 +373,7 @@ WORLD is only supported for waveform generation"""
         # Waveform generation by (1) WORLD or (2) neural vocoder
         if vocoder_type == "world":
             f0, spectrogram, aperiodicity = gen_world_params(
-                mgc, lf0, vuv, bap, self.config.sample_rate
+                mgc, lf0, vuv, bap, self.config.sample_rate, vuv_threshold=vuv_threshold
             )
 
             wav = pyworld.synthesize(
