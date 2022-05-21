@@ -26,7 +26,7 @@ from nnsvs.multistream import (
     multi_stream_mlpg,
     split_streams,
 )
-from nnsvs.pitch import nonzero_segments
+from nnsvs.pitch import lowpass_filter, nonzero_segments
 from nnsvs.util import MinMaxScaler, StandardScaler, init_seed, pad_2d
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from sklearn.preprocessing import MinMaxScaler as SKMinMaxScaler
@@ -737,7 +737,17 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
 
 @torch.no_grad()
 def eval_spss_model(
-    step, netG, in_feats, out_feats, lengths, model_config, out_scaler, writer, sr
+    step,
+    netG,
+    in_feats,
+    out_feats,
+    lengths,
+    model_config,
+    out_scaler,
+    writer,
+    sr,
+    trajectory_smoothing=True,
+    trajectory_smoothing_cutoff=50,
 ):
     is_autoregressive = (
         netG.module.is_autoregressive()
@@ -876,6 +886,19 @@ def eval_spss_model(
             pred_mgc, pred_lf0, pred_vuv, pred_bap = split_streams(
                 pred_out_feats_denorm, static_stream_sizes
             )[:4]
+
+            # Remove high-frequency components of mgc/bap
+            # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
+            if trajectory_smoothing:
+                modfs = int(1 / 0.005)
+                for d in range(pred_mgc.shape[1]):
+                    pred_mgc[:, d] = lowpass_filter(
+                        pred_mgc[:, d], modfs, cutoff=trajectory_smoothing_cutoff
+                    )
+                for d in range(pred_bap.shape[1]):
+                    pred_bap[:, d] = lowpass_filter(
+                        pred_bap[:, d], modfs, cutoff=trajectory_smoothing_cutoff
+                    )
 
             # Generated sample
             f0, spectrogram, aperiodicity = gen_world_params(
