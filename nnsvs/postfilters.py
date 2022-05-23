@@ -74,9 +74,11 @@ class Conv2dPostFilter(BaseModel):
         residual=True,
         init_type="kaiming_normal",
         scale=1.0,
+        noise_type="bin_wise",
     ):
         super().__init__()
         self.use_noise = use_noise
+        self.noise_type = noise_type
         self.residual = residual
         self.scale = scale
         C = channels
@@ -103,6 +105,15 @@ class Conv2dPostFilter(BaseModel):
         else:
             self.tadn = None
 
+        if self.noise_type == "frame_wise":
+            # noise: (B, T, 1)
+            self.fc = nn.Linear(1, in_dim)
+        elif self.noise_type == "bin_wise":
+            # noise: (B, T, C)
+            self.fc = None
+        else:
+            raise ValueError("Unknown noise type: {}".format(self.noise_type))
+
         init_weights(self, init_type)
 
     def forward(self, x, lengths=None):
@@ -118,7 +129,12 @@ class Conv2dPostFilter(BaseModel):
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
 
-        z = torch.randn_like(x) * self.scale
+        if self.noise_type == "bin_wise":
+            z = torch.randn_like(x) * self.scale
+        elif self.noise_type == "frame_wise":
+            z = torch.randn(x.shape[0], 1, x.shape[2], 1).to(x.device) * self.scale
+            z = self.fc(z)
+
         if self.use_noise:
             # adaptively scale z
             if self.tadn is not None:
