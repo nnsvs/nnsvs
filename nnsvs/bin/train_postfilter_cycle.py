@@ -38,8 +38,8 @@ def train_step(
     mask_nth_mgc_for_adv_loss=0,
     gan_type="lsgan",
     vuv_mask=False,
-    cycle_weight=1.0,
-    id_weight=1.0,
+    cycle_weight=10.0,
+    id_weight=5.0,
 ):
     netG_A2B.train() if train else netG_A2B.eval()
     netG_B2A.train() if train else netG_B2A.eval()
