@@ -7,10 +7,16 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.multistream import select_streams
-from nnsvs.train_util import (collate_fn_default, collate_fn_random_segments,
-                              compute_distortions, eval_spss_model,
-                              log_params_from_omegaconf_dict, save_checkpoint,
-                              save_configs, setup_cyclegan)
+from nnsvs.train_util import (
+    collate_fn_default,
+    collate_fn_random_segments,
+    compute_distortions,
+    eval_spss_model,
+    log_params_from_omegaconf_dict,
+    save_checkpoint,
+    save_configs,
+    setup_cyclegan,
+)
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
@@ -62,15 +68,16 @@ def train_step(
     pred_out_feats_A = netG_B2A(out_feats, lengths)
     pred_out_feats_B = netG_A2B(in_feats, lengths)
 
-
     # Cycle consistency loss
-    loss_cycle = F.l1_loss(netG_A2B(pred_out_feats_A, lengths), out_feats) + \
-                    F.l1_loss(netG_B2A(pred_out_feats_B, lengths), in_feats)
+    loss_cycle = F.l1_loss(netG_A2B(pred_out_feats_A, lengths), out_feats) + F.l1_loss(
+        netG_B2A(pred_out_feats_B, lengths), in_feats
+    )
 
     # Identity mapping loss
     # TODO: warmup
-    loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + \
-                F.l1_loss(netG_B2A(in_feats, lengths), in_feats)
+    loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + F.l1_loss(
+        netG_B2A(in_feats, lengths), in_feats
+    )
 
     # Adversarial loss
     real_netD_in_feats_A = select_streams(
@@ -275,13 +282,21 @@ def train_step(
         loss_adv += loss_adv_
 
     # Feature matching loss
-    # loss_fm = torch.tensor(0.0).to(in_feats.device)
-    # if fm_weight > 0:
-    #     for D_fake_, D_real_ in zip(D_fake, D_real):
-    #         for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
-    #             loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+    loss_fm = torch.tensor(0.0).to(in_feats.device)
+    if fm_weight > 0:
+        for D_fake_, D_real_ in zip(D_fake_A, D_real_A):
+            for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+                loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+        for D_fake_, D_real_ in zip(D_fake_B, D_real_B):
+            for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+                loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
 
-    loss = adv_weight * loss_adv + cycle_weight * loss_cycle + id_weight * loss_id
+    loss = (
+        adv_weight * loss_adv
+        + cycle_weight * loss_cycle
+        + id_weight * loss_id
+        + fm_weight * loss_fm
+    )
 
     if train:
         optG.zero_grad()
@@ -307,7 +322,7 @@ def train_step(
             "Loss_Adv_Total": loss_adv.item(),
             "Loss_Cycle": loss_cycle.item(),
             "Loss_Identity": loss_id.item(),
-#            "Loss_Feature_Matching": loss_fm.item(),
+            "Loss_Feature_Matching": loss_fm.item(),
             "Loss_Real_Total": loss_real.item(),
             "Loss_Fake_Total": loss_fake.item(),
             "Loss_D": loss_d.item(),
