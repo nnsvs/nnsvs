@@ -1,3 +1,4 @@
+import itertools
 import shutil
 from glob import glob
 from os.path import join
@@ -267,6 +268,22 @@ def _instantiate_optim(optim_config, model):
     return optimizer, lr_scheduler
 
 
+def _instantiate_optim_cyclegan(optim_config, netG_A2B, netG_B2A):
+    # Optimizer
+    optimizer_class = getattr(optim, optim_config.optimizer.name)
+
+    optimizer = optimizer_class(
+        itertools.chain(netG_A2B.parameters(), netG_B2A.parameters()),
+        **optim_config.optimizer.params,
+    )
+
+    # Scheduler
+    lr_scheduler_class = getattr(optim.lr_scheduler, optim_config.lr_scheduler.name)
+    lr_scheduler = lr_scheduler_class(optimizer, **optim_config.lr_scheduler.params)
+
+    return optimizer, lr_scheduler
+
+
 def _resume(logger, resume_config, model, optimizer, lr_scheduler):
     if resume_config.checkpoint is not None and len(resume_config.checkpoint) > 0:
         logger.info("Load weights from %s", resume_config.checkpoint)
@@ -500,6 +517,127 @@ def setup_gan(config, device, collate_fn=collate_fn_default):
     return (
         (netG, optG, schedulerG),
         (netD, optD, schedulerD),
+        data_loaders,
+        writer,
+        logger,
+        in_scaler,
+        out_scaler,
+    )
+
+
+def setup_cyclegan(config, device, collate_fn=collate_fn_default):
+    """Setup for training CycleGAN
+
+    Args:
+        config (dict): configuration for training
+        device (torch.device): device to use for training
+
+    Returns:
+        (tuple): tuple containing model, optimizer, learning rate scheduler,
+            data loaders, tensorboard writer, and logger.
+    """
+    logger = getLogger(config.verbose)
+    logger.info(OmegaConf.to_yaml(config))
+
+    logger.info(f"PyTorch version: {torch.__version__}")
+
+    if torch.cuda.is_available():
+        from torch.backends import cudnn
+
+        cudnn.benchmark = config.train.cudnn.benchmark
+        cudnn.deterministic = config.train.cudnn.deterministic
+        logger.info(f"cudnn.deterministic: {cudnn.deterministic}")
+        logger.info(f"cudnn.benchmark: {cudnn.benchmark}")
+        if torch.backends.cudnn.version() is not None:
+            logger.info(f"cuDNN version: {torch.backends.cudnn.version()}")
+
+    logger.info(f"Random seed: {config.seed}")
+    init_seed(config.seed)
+
+    if config.train.use_detect_anomaly:
+        torch.autograd.set_detect_anomaly(True)
+        logger.info("Set to use torch.autograd.detect_anomaly")
+
+    # Model G
+    netG_A2B = hydra.utils.instantiate(config.model.netG).to(device)
+    netG_B2A = hydra.utils.instantiate(config.model.netG).to(device)
+    logger.info(
+        "[Generator] Number of trainable params: {:.3f} million".format(
+            num_trainable_params(netG_A2B) / 1000000.0
+        )
+    )
+    logger.info(netG_A2B)
+    # Optimizer and LR scheduler for G
+    optG, schedulerG = _instantiate_optim_cyclegan(
+        config.train.optim.netG, netG_A2B, netG_B2A
+    )
+
+    # Model D
+    netD_A = hydra.utils.instantiate(config.model.netD).to(device)
+    netD_B = hydra.utils.instantiate(config.model.netD).to(device)
+    logger.info(
+        "[Discriminator] Number of trainable params: {:.3f} million".format(
+            num_trainable_params(netD_A) / 1000000.0
+        )
+    )
+    logger.info(netD_A)
+    # Optimizer and LR scheduler for D
+    optD, schedulerD = _instantiate_optim_cyclegan(
+        config.train.optim.netD, netD_A, netD_B
+    )
+
+    # DataLoader
+    data_loaders = get_data_loaders(config.data, collate_fn)
+
+    set_epochs_based_on_max_steps_(
+        config.train, len(data_loaders["train_no_dev"]), logger
+    )
+
+    # Resume
+    # TODO
+    # _resume(logger, config.train.resume.netG, netG, optG, schedulerG)
+    # _resume(logger, config.train.resume.netD, netD, optD, schedulerD)
+
+    if config.data_parallel:
+        netG_A2B = nn.DataParallel(netG_A2B)
+        netG_B2A = nn.DataParallel(netG_B2A)
+        netD_A = nn.DataParallel(netD_A)
+        netD_B = nn.DataParallel(netD_B)
+
+    # Mlflow
+    if config.mlflow.enabled:
+        mlflow.set_tracking_uri("file://" + get_original_cwd() + "/mlruns")
+        mlflow.set_experiment(config.mlflow.experiment)
+        # NOTE: disable tensorboard if mlflow is enabled
+        writer = None
+        logger.info("Using mlflow instead of tensorboard")
+    else:
+        # Tensorboard
+        writer = SummaryWriter(to_absolute_path(config.train.log_dir))
+
+    # Scalers
+    if "in_scaler_path" in config.data and config.data.in_scaler_path is not None:
+        in_scaler = joblib.load(to_absolute_path(config.data.in_scaler_path))
+        if isinstance(in_scaler, SKMinMaxScaler):
+            in_scaler = MinMaxScaler(
+                in_scaler.min_,
+                in_scaler.scale_,
+                in_scaler.data_min_,
+                in_scaler.data_max_,
+            )
+    else:
+        in_scaler = None
+    if "out_scaler_path" in config.data and config.data.out_scaler_path is not None:
+        out_scaler = joblib.load(to_absolute_path(config.data.out_scaler_path))
+        out_scaler = StandardScaler(
+            out_scaler.mean_, out_scaler.var_, out_scaler.scale_
+        )
+    else:
+        out_scaler = None
+
+    return (
+        (netG_A2B, netG_B2A, optG, schedulerG),
+        (netD_A, netD_B, optD, schedulerD),
         data_loaders,
         writer,
         logger,
