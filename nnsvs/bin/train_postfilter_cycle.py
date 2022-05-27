@@ -405,6 +405,8 @@ def train_loop(
                     mask_nth_mgc_for_adv_loss=config.train.mask_nth_mgc_for_adv_loss,
                     gan_type=config.train.gan_type,
                     vuv_mask=config.train.vuv_mask,
+                    cycle_weight=config.train.cycle_weight,
+                    id_weight=config.train.id_weight,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
@@ -488,7 +490,7 @@ def train_loop(
     return last_dev_loss
 
 
-@hydra.main(config_path="conf/train_postfilter", config_name="config")
+@hydra.main(config_path="conf/train_postfilter_cycle", config_name="config")
 def my_app(config: DictConfig) -> None:
     # NOTE: set discriminator's in_dim automatically
     if config.model.netD.in_dim is None:
