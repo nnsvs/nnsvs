@@ -13,7 +13,7 @@ adv_weight: 1.0
 # Cycle consistency loss weight
 cycle_weight: 10.0
 # Identity mapping loss weight
-id_weight: 1.0
+id_weight: 5.0
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [true, false, false, false, false, false]
 # Feature matching loss weight
