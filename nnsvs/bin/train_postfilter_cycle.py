@@ -46,6 +46,7 @@ def train_step(
     vuv_mask=False,
     cycle_weight=10.0,
     id_weight=5.0,
+    use_id_loss=True,
 ):
     netG_A2B.train() if train else netG_A2B.eval()
     netG_B2A.train() if train else netG_B2A.eval()
@@ -74,7 +75,7 @@ def train_step(
     )
 
     # Identity mapping loss
-    if id_weight > 0:
+    if use_id_loss and id_weight > 0:
         loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + F.l1_loss(
             netG_B2A(in_feats, lengths), in_feats
         )
@@ -387,6 +388,14 @@ def train_loop(
                     )
                     evaluated = True
 
+                if (
+                    config.train.id_loss_until > 0
+                    and epoch > config.train.id_loss_until
+                ):
+                    use_id_loss = False
+                else:
+                    use_id_loss = True
+
                 loss, log_metrics = train_step(
                     model_config=config.model,
                     optim_config=config.train.optim,
@@ -409,6 +418,7 @@ def train_loop(
                     vuv_mask=config.train.vuv_mask,
                     cycle_weight=config.train.cycle_weight,
                     id_weight=config.train.id_weight,
+                    use_id_loss=use_id_loss,
                 )
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
