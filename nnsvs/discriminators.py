@@ -291,6 +291,7 @@ class Conv2dD(nn.Module):
         padding=(0, 0),
         last_sigmoid=False,
         init_type="kaiming_normal",
+        padding_mode="zeros",
     ):
         super().__init__()
         self.last_sigmoid = last_sigmoid
@@ -302,30 +303,63 @@ class Conv2dD(nn.Module):
         self.convs = nn.ModuleList()
         self.convs.append(
             nn.Sequential(
-                nn.Conv2d(1, C, kernel_size=ks, padding=padding, stride=(1, 1)),
+                nn.Conv2d(
+                    1,
+                    C,
+                    kernel_size=ks,
+                    padding=padding,
+                    stride=(1, 1),
+                    padding_mode=padding_mode,
+                ),
                 nn.LeakyReLU(0.2),
             )
         )
         self.convs.append(
             nn.Sequential(
-                nn.Conv2d(C, 2 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.Conv2d(
+                    C,
+                    2 * C,
+                    kernel_size=ks,
+                    padding=padding,
+                    stride=(2, 2),
+                    padding_mode=padding_mode,
+                ),
                 nn.LeakyReLU(0.2),
             )
         )
         self.convs.append(
             nn.Sequential(
-                nn.Conv2d(2 * C, 4 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.Conv2d(
+                    2 * C,
+                    4 * C,
+                    kernel_size=ks,
+                    padding=padding,
+                    stride=(2, 2),
+                    padding_mode=padding_mode,
+                ),
                 nn.LeakyReLU(0.2),
             )
         )
         self.convs.append(
             nn.Sequential(
-                nn.Conv2d(4 * C, 2 * C, kernel_size=ks, padding=padding, stride=(2, 2)),
+                nn.Conv2d(
+                    4 * C,
+                    2 * C,
+                    kernel_size=ks,
+                    padding=padding,
+                    stride=(2, 2),
+                    padding_mode=padding_mode,
+                ),
                 nn.LeakyReLU(0.2),
             )
         )
         self.last_conv = nn.Conv2d(
-            2 * C, 1, kernel_size=ks, padding=padding, stride=(1, 1)
+            2 * C,
+            1,
+            kernel_size=ks,
+            padding=padding,
+            stride=(1, 1),
+            padding_mode=padding_mode,
         )
         init_weights(self, init_type)
 

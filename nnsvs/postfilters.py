@@ -75,6 +75,7 @@ class Conv2dPostFilter(BaseModel):
         init_type="kaiming_normal",
         scale=1.0,
         noise_type="bin_wise",
+        padding_mode="zeros",
     ):
         super().__init__()
         self.use_noise = use_noise
@@ -86,21 +87,34 @@ class Conv2dPostFilter(BaseModel):
         ks = np.asarray(list(kernel_size))
         padding = (ks - 1) // 2
         self.conv1 = nn.Sequential(
-            nn.Conv2d(2 if use_noise else 1, C, kernel_size=ks, padding=padding),
+            nn.Conv2d(
+                2 if use_noise else 1,
+                C,
+                kernel_size=ks,
+                padding=padding,
+                padding_mode=padding_mode,
+            ),
             nn.ReLU(),
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(C + 1, C * 2, kernel_size=ks, padding=padding),
+            nn.Conv2d(
+                C + 1, C * 2, kernel_size=ks, padding=padding, padding_mode=padding_mode
+            ),
             nn.ReLU(),
         )
         self.conv3 = nn.Sequential(
-            nn.Conv2d(C * 2 + 1, C, kernel_size=ks, padding=padding),
+            nn.Conv2d(
+                C * 2 + 1, C, kernel_size=ks, padding=padding, padding_mode=padding_mode
+            ),
             nn.ReLU(),
         )
-        self.conv4 = nn.Conv2d(C + 1, 1, kernel_size=ks, padding=padding)
+        self.conv4 = nn.Conv2d(
+            C + 1, 1, kernel_size=ks, padding=padding, padding_mode=padding_mode
+        )
 
         if use_tadn:
             assert in_dim is not None, "in_dim must be provided"
+            assert noise_type == "bin_wise", "tadn only works for bin_wise"
             self.tadn = SimplifiedTADN(in_dim)
         else:
             self.tadn = None
@@ -187,6 +201,7 @@ class Conv1dPostFilter(nn.Module):
         use_tadn=False,
         init_type="kaiming_normal",
         scale=1.0,
+        padding_mode="zeros",
     ):
         super().__init__()
         self.use_noise = use_noise
@@ -195,19 +210,41 @@ class Conv1dPostFilter(nn.Module):
         padding = (kernel_size - 1) // 2
         self.conv1 = nn.Sequential(
             nn.Conv1d(
-                2 if use_noise else 1, C, kernel_size=kernel_size, padding=padding
+                2 if use_noise else 1,
+                C,
+                kernel_size=kernel_size,
+                padding=padding,
+                padding_mode=padding_mode,
             ),
             nn.ReLU(),
         )
         self.conv2 = nn.Sequential(
-            nn.Conv1d(C + 1, C * 2, kernel_size=kernel_size, padding=padding),
+            nn.Conv1d(
+                C + 1,
+                C * 2,
+                kernel_size=kernel_size,
+                padding=padding,
+                padding_mode=padding_mode,
+            ),
             nn.ReLU(),
         )
         self.conv3 = nn.Sequential(
-            nn.Conv1d(C * 2 + 1, C, kernel_size=kernel_size, padding=padding),
+            nn.Conv1d(
+                C * 2 + 1,
+                C,
+                kernel_size=kernel_size,
+                padding=padding,
+                padding_mode=padding_mode,
+            ),
             nn.ReLU(),
         )
-        self.conv4 = nn.Conv1d(C + 1, 1, kernel_size=kernel_size, padding=padding)
+        self.conv4 = nn.Conv1d(
+            C + 1,
+            1,
+            kernel_size=kernel_size,
+            padding=padding,
+            padding_mode=padding_mode,
+        )
 
         if use_tadn:
             assert in_dim is not None, "in_dim must be provided"
