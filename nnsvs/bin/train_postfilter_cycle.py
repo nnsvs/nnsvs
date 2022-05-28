@@ -74,10 +74,12 @@ def train_step(
     )
 
     # Identity mapping loss
-    # TODO: warmup
-    loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + F.l1_loss(
-        netG_B2A(in_feats, lengths), in_feats
-    )
+    if id_weight > 0:
+        loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + F.l1_loss(
+            netG_B2A(in_feats, lengths), in_feats
+        )
+    else:
+        loss_id = torch.tensor(0.0).to(in_feats.device)
 
     # Adversarial loss
     real_netD_in_feats_A = select_streams(
