@@ -383,7 +383,7 @@ def train_loop(
                         config.model,
                         out_scaler,
                         writer,
-                        sr=48000,
+                        sr=config.data.sample_rate,
                     )
                     evaluated = True
 
