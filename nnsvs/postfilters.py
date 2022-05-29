@@ -363,3 +363,164 @@ class MultistreamPostFilter(BaseModel):
             out = torch.cat([mgc, lf0, vuv, bap, vib, vib_flags], dim=-1)
 
         return out
+
+
+class _PadConv2dPostFilter(BaseModel):
+    def __init__(
+        self,
+        in_dim=None,
+        channels=128,
+        kernel_size=5,
+        init_type="kaiming_normal",
+        padding_side="left",
+    ):
+        super().__init__()
+        assert not isinstance(kernel_size, list)
+        C = channels
+        ks = kernel_size
+        padding = (ks - 1) // 2
+        self.padding = padding
+
+        # Treat padding for the feature-axis carefully
+        # use normal padding for the time-axis (i.e., (padding, padding))
+        self.padding_side = padding_side
+        if padding_side == "left":
+            self.pad = nn.ReflectionPad2d((padding, 0, padding, padding))
+        elif padding_side == "none":
+            self.pad = nn.ReflectionPad2d((0, 0, padding, padding))
+        elif padding_side == "right":
+            self.pad = nn.ReflectionPad2d((0, padding, padding, padding))
+        else:
+            raise ValueError("Invalid padding side")
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(2, C, kernel_size=(ks, ks)),
+            nn.ReLU(),
+        )
+        # NOTE: for the subsequent layers, use fixed kernel_size 3 for feature-axis
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(
+                C + 1,
+                C * 2,
+                kernel_size=(ks, 3),
+                padding=(padding, 1),
+                padding_mode="reflect",
+            ),
+            nn.ReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(
+                C * 2 + 1,
+                C,
+                kernel_size=(ks, 3),
+                padding=(padding, 1),
+                padding_mode="reflect",
+            ),
+            nn.ReLU(),
+        )
+        self.conv4 = nn.Conv2d(
+            C + 1, 1, kernel_size=(ks, 1), padding=(padding, 0), padding_mode="reflect"
+        )
+
+        self.fc = nn.Linear(1, in_dim)
+
+        init_weights(self, init_type)
+
+    def forward(self, x, z, lengths=None):
+        # (B, T, C) -> (B, 1, T, C):
+        x = x.unsqueeze(1)
+        z = z.unsqueeze(1)
+
+        z = self.fc(z)
+
+        x_syn = x
+        y = self.conv1(torch.cat([self.pad(x_syn), self.pad(z)], dim=1))
+
+        if self.padding_side == "left":
+            x_syn = x[:, :, :, : -self.padding]
+        elif self.padding_side == "none":
+            x_syn = x[:, :, :, self.padding : -self.padding]
+        elif self.padding_side == "right":
+            x_syn = x[:, :, :, self.padding :]
+
+        y = self.conv2(torch.cat([x_syn, y], dim=1))
+        y = self.conv3(torch.cat([x_syn, y], dim=1))
+        residual = self.conv4(torch.cat([x_syn, y], dim=1))
+        out = x_syn + residual
+
+        # (B, 1, T, C) -> (B, T, C)
+        out = out.squeeze(1)
+
+        return out
+
+
+class MultistreamConv2dPostFilter(nn.Module):
+    """Conv2d-based multi-stream post-filter designed for MGC
+
+    Divide the MGC transformation into low/mid/high dim transfomations
+    with small overlaps. Overlap is determined by the kernel size.
+    """
+
+    def __init__(
+        self,
+        in_dim=None,
+        channels=128,
+        kernel_size=5,
+        init_type="kaiming_normal",
+        scale=1.0,
+        stream_sizes=(8, 20, 30),
+    ):
+        super().__init__()
+        assert len(stream_sizes) == 3
+        self.padding = (kernel_size - 1) // 2
+        self.scale = scale
+        self.stream_sizes = stream_sizes
+
+        self.low_postfilter = _PadConv2dPostFilter(
+            stream_sizes[0] + self.padding,
+            channels=channels,
+            kernel_size=kernel_size,
+            init_type=init_type,
+            padding_side="left",
+        )
+        self.mid_postfilter = _PadConv2dPostFilter(
+            stream_sizes[1] + 2 * self.padding,
+            channels=channels,
+            kernel_size=kernel_size,
+            init_type=init_type,
+            padding_side="none",
+        )
+        self.high_postfilter = _PadConv2dPostFilter(
+            stream_sizes[2] + self.padding,
+            channels=channels,
+            kernel_size=kernel_size,
+            init_type=init_type,
+            padding_side="right",
+        )
+
+    def forward(self, x, lengths):
+        assert x.shape[-1] == sum(self.stream_sizes)
+
+        # (B, T, C)
+        z = torch.randn(x.shape[0], x.shape[1], 1).to(x.device) * self.scale
+
+        # Process three streams separately with a overlap width of padding
+        out1 = self.low_postfilter(x[:, :, : self.stream_sizes[0] + self.padding], z)
+        out2 = self.mid_postfilter(
+            x[
+                :,
+                :,
+                self.stream_sizes[0]
+                - self.padding : sum(self.stream_sizes[:2])
+                + self.padding,
+            ],
+            z,
+        )
+        out3 = self.high_postfilter(
+            x[:, :, sum(self.stream_sizes[:2]) - self.padding :], z
+        )
+
+        # Merge the three outputs
+        out = torch.cat([out1, out2, out3], dim=-1)
+
+        return out
