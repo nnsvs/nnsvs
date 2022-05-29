@@ -377,3 +377,77 @@ class Conv2dD(nn.Module):
         outs.append(y)
 
         return [outs]
+
+
+class MultiscaleConv2d(nn.Module):
+    def __init__(
+        self,
+        in_dim=None,
+        channels=64,
+        kernel_size=(5, 3),
+        padding=None,
+        last_sigmoid=False,
+        init_type="kaiming_normal",
+        padding_mode="reflect",
+        stream_sizes=(8, 20, 30),
+    ):
+        super().__init__()
+        # NOTE: compute padding based on the kernel size of feature-axis
+        self.padding = (kernel_size[-1] - 1) // 2
+        self.stream_sizes = stream_sizes
+
+        self.conv1 = Conv2dD(
+            in_dim=stream_sizes[0],
+            channels=channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            last_sigmoid=last_sigmoid,
+            init_type=init_type,
+            padding_mode=padding_mode,
+        )
+        self.conv2 = Conv2dD(
+            in_dim=stream_sizes[1],
+            channels=channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            last_sigmoid=last_sigmoid,
+            init_type=init_type,
+            padding_mode=padding_mode,
+        )
+        self.conv3 = Conv2dD(
+            in_dim=stream_sizes[2],
+            channels=channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            last_sigmoid=last_sigmoid,
+            init_type=init_type,
+            padding_mode=padding_mode,
+        )
+
+    def forward(self, x, c=None, lengths=None):
+        assert x.shape[-1] == sum(self.stream_sizes)
+
+        outs = []
+        # (B, T, C)
+        outs.append(
+            self.conv1(x[:, :, : self.stream_sizes[0] + self.padding], c, lengths)[0]
+        )
+        outs.append(
+            self.conv2(
+                x[
+                    :,
+                    :,
+                    self.stream_sizes[0]
+                    - self.padding : sum(self.stream_sizes[:2])
+                    + self.padding,
+                ],
+                c,
+                lengths,
+            )[0]
+        )
+        outs.append(
+            self.conv3(
+                x[:, :, sum(self.stream_sizes[:2]) - self.padding :], c, lengths
+            )[0]
+        )
+        return outs
