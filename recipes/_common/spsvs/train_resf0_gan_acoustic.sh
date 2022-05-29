@@ -29,7 +29,7 @@ else
     post_args=""
 fi
 
-xrun ${NNSVS_ROOT}/nnsvs/experimental/bin/train_resf0_gan.py $ext $hydra_opt \
+xrun python ${NNSVS_ROOT}/nnsvs/experimental/bin/train_resf0_gan.py $ext $hydra_opt \
     model=$acoustic_model train=$acoustic_train data=$acoustic_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_acoustic/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_acoustic/ \
