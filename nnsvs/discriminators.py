@@ -390,11 +390,11 @@ class MultiscaleConv2d(nn.Module):
         init_type="kaiming_normal",
         padding_mode="reflect",
         stream_sizes=(8, 20, 30),
+        overlap=0,
     ):
         super().__init__()
-        # NOTE: compute padding based on the kernel size of feature-axis
-        self.padding = (kernel_size[-1] - 1) // 2
         self.stream_sizes = stream_sizes
+        self.overlap = overlap
 
         self.conv1 = Conv2dD(
             in_dim=stream_sizes[0],
@@ -430,7 +430,7 @@ class MultiscaleConv2d(nn.Module):
         outs = []
         # (B, T, C)
         outs.append(
-            self.conv1(x[:, :, : self.stream_sizes[0] + self.padding], c, lengths)[0]
+            self.conv1(x[:, :, : self.stream_sizes[0] + self.overlap], c, lengths)[0]
         )
         outs.append(
             self.conv2(
@@ -438,8 +438,8 @@ class MultiscaleConv2d(nn.Module):
                     :,
                     :,
                     self.stream_sizes[0]
-                    - self.padding : sum(self.stream_sizes[:2])
-                    + self.padding,
+                    - self.overlap : sum(self.stream_sizes[:2])
+                    + self.overlap,
                 ],
                 c,
                 lengths,
@@ -447,7 +447,7 @@ class MultiscaleConv2d(nn.Module):
         )
         outs.append(
             self.conv3(
-                x[:, :, sum(self.stream_sizes[:2]) - self.padding :], c, lengths
+                x[:, :, sum(self.stream_sizes[:2]) - self.overlap :], c, lengths
             )[0]
         )
         return outs
