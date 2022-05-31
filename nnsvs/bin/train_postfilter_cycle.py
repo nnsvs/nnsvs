@@ -76,15 +76,15 @@ def train_step(
     pred_out_feats_B = netG_A2B(in_feats, lengths)
 
     # Cycle consistency loss
-    loss_cycle = F.l1_loss(netG_A2B(pred_out_feats_A, lengths), out_feats) + F.l1_loss(
-        netG_B2A(pred_out_feats_B, lengths), in_feats
-    )
+    loss_cycle = F.l1_loss(
+        netG_A2B(pred_out_feats_A, lengths) * vuv, out_feats * vuv
+    ) + F.l1_loss(netG_B2A(pred_out_feats_B, lengths * vuv), in_feats * vuv)
 
     # Identity mapping loss
     if use_id_loss and id_weight > 0:
-        loss_id = F.l1_loss(netG_A2B(out_feats, lengths), out_feats) + F.l1_loss(
-            netG_B2A(in_feats, lengths), in_feats
-        )
+        loss_id = F.l1_loss(
+            netG_A2B(out_feats, lengths) * vuv, out_feats * vuv
+        ) + F.l1_loss(netG_B2A(in_feats, lengths) * vuv, in_feats * vuv)
     else:
         loss_id = torch.tensor(0.0).to(in_feats.device)
 
