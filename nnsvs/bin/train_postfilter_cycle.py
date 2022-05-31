@@ -58,10 +58,16 @@ def train_step(
     if vuv_mask:
         # NOTE: Assuming 3rd stream is the V/UV
         vuv_idx = np.sum(model_config.stream_sizes[:2])
-        vuv = torch.logical_and(
+        is_v = torch.logical_and(
             out_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
             in_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
         )
+        is_u = torch.logical_and(
+            out_feats[:, :, vuv_idx : vuv_idx + 1] < 0,
+            in_feats[:, :, vuv_idx : vuv_idx + 1] < 0,
+        )
+        # indices where both the input/target have the same V/UV
+        vuv = torch.logical_or(is_v, is_u)
     else:
         vuv = 1.0
 
