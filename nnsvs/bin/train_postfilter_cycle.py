@@ -78,7 +78,7 @@ def train_step(
     # Cycle consistency loss
     loss_cycle = F.l1_loss(
         netG_A2B(pred_out_feats_A, lengths) * vuv, out_feats * vuv
-    ) + F.l1_loss(netG_B2A(pred_out_feats_B, lengths * vuv), in_feats * vuv)
+    ) + F.l1_loss(netG_B2A(pred_out_feats_B, lengths) * vuv, in_feats * vuv)
 
     # Identity mapping loss
     if use_id_loss and id_weight > 0:
