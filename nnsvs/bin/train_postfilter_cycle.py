@@ -62,12 +62,7 @@ def train_step(
             out_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
             in_feats[:, :, vuv_idx : vuv_idx + 1] > 0,
         )
-        is_u = torch.logical_and(
-            out_feats[:, :, vuv_idx : vuv_idx + 1] < 0,
-            in_feats[:, :, vuv_idx : vuv_idx + 1] < 0,
-        )
-        # indices where both the input/target have the same V/UV
-        vuv = torch.logical_or(is_v, is_u)
+        vuv = is_v
     else:
         vuv = 1.0
 
