@@ -4,13 +4,21 @@ Papers
 Statistical parametric SVS
 --------------------------
 
+- :cite:t:`zhuang2021litesing`
 - :cite:t:`hono2021sinsy`
 - :cite:t:`zhuang2021litesing`
 - :cite:t:`hono2018recent`
 - :cite:t:`blaauw2017neural`
 - :cite:t:`oura2010recent`
 - :cite:t:`lu2020xiaoicesing`
-- :cite:t:`zhuang2021litesing`
+- :cite:t:`saino2006hmm`
+
+Towards end-to-end SVS
+-----------------------
+
+- :cite:t:`gu2021bytesing`
+- :cite:t:`chen2020hifisinger`
+- :cite:t:`zhang2022visinger`
 
 F0 modeling
 -----------
@@ -28,6 +36,11 @@ Post-filters
 
 - :cite:t:`Kaneko2017Interspeech`
 - :cite:t:`kaneko2017generative`
+
+TTS
+----
+- :cite:t:`wang2018comparison`
+
 
 All bibliography
 -----------------
