@@ -8,34 +8,30 @@ NNSVS
 
 Neural network based singing voice synthesis library
 
+Features
+--------
+
+- **Open-source**: NNSVS is fully open-source. You can create your own voicebanks with your dataset.
+- **Multiple languages**: NNSVS has been used for creating singing voice synthesis (SVS) systems for multiple languages by VocalSynth comminities (8+ as far as I know).
+- **Research friendly**: NNSVS comes with reproducible Kaldi/ESPnet-style recipes. You can use NNSVS to create baseline systems for your research.
+
+Note that NNSVS was originally designed for research purposes. Please check out more user-friendly `ENUNU <https://github.com/oatsu-gh/ENUNU>`_ for creative purposes.
+You can find a practical guide for NNSVS/ENUNU at https://nnsvs.carrd.co/.
+
 Audio samples
 -------------
 
-- Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
-- Samples by NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs?ref=nicotop_search>`_
+Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
 
-Installation
--------------
+Selected videos
+---------------
 
+Demo by https://github.com/DYVAUX
 
-For development
-^^^^^^^^^^^^^^^^
+..  youtube:: 0sSd31TUVCU
 
-.. code::
+You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs?ref=nicotop_search>`_
 
-   git clone https://github.com/r9y9/nnsvs.git && cd nnsvs
-   pip install -e ".[lint.test]"
-
-Note: adding ``[lint,test]`` to the end of the command above will install test/lint requirements as well.
-
-For inference only
-^^^^^^^^^^^^^^^^^^
-
-.. code::
-
-   pip install nnsvs
-
-If you don't need to train your models by yourself (I guess it's unlikely though), this should be enough.
 
 .. toctree::
    :maxdepth: 1
@@ -49,6 +45,8 @@ If you don't need to train your models by yourself (I guess it's unlikely though
    :maxdepth: 1
    :caption: Notes
 
+   installation
+   tutorial
    devdocs
    recipes
 
@@ -56,18 +54,22 @@ If you don't need to train your models by yourself (I guess it's unlikely though
    :maxdepth: 1
    :caption: Package reference
 
-   svs
    pretrained
+   svs
+   dsp
+   gen
    mdn
    pitch
+   multistream
    postfilters
+   discriminators
 
 .. toctree::
    :maxdepth: 1
    :caption: Resources
 
-   related
    papers
+   related
 
 
 Indices and tables
