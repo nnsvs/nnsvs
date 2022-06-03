@@ -86,7 +86,8 @@ def train_step(
         # (B, max(T)) or (B, max(T), D_out)
         mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
         # Compute loss and apply mask
-        loss = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
+        with autocast(enabled=grad_scaler is not None):
+            loss = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
         loss = loss.masked_select(mask_).mean()
     else:
         if stream_wise_loss:
@@ -95,16 +96,18 @@ def train_step(
             pred_streams = split_streams(pred_out_feats, stream_sizes)
             loss = 0
             for pred_stream, stream, sw in zip(pred_streams, streams, w):
-                loss += (
-                    sw
-                    * criterion(
-                        pred_stream.masked_select(mask), stream.masked_select(mask)
-                    ).mean()
-                )
+                with autocast(enabled=grad_scaler is not None):
+                    loss += (
+                        sw
+                        * criterion(
+                            pred_stream.masked_select(mask), stream.masked_select(mask)
+                        ).mean()
+                    )
         else:
-            loss = criterion(
-                pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-            ).mean()
+            with autocast(enabled=grad_scaler is not None):
+                loss = criterion(
+                    pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+                ).mean()
 
     if prediction_type == PredictionType.PROBABILISTIC:
         with torch.no_grad():
