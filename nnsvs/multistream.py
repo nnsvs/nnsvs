@@ -11,6 +11,17 @@ def select_streams(
     streams=None,
     concat=True,
 ):
+    """Select streams from multi-stream features
+
+    Args:
+        inputs (array like): input 3-d or 2-d array
+        stream_sizes (list): stream sizes
+        streams (list): Streams of interests. Returns all streams if streams is None.
+        concat (bool): Concatenate streams. Defaults to True.
+
+    Returns:
+        array like: selected streams
+    """
     if stream_sizes is None:
         stream_sizes = [60, 1, 1, 1]
     if streams is None:
@@ -36,6 +47,15 @@ def select_streams(
 
 
 def split_streams(inputs, stream_sizes=None):
+    """Split streams from multi-stream features
+
+    Args:
+        inputs (array like): input 3-d array
+        stream_sizes (list): sizes for each stream
+
+    Returns:
+        list: list of stream features
+    """
     if stream_sizes is None:
         stream_sizes = [60, 1, 1, 1]
     ret = []
@@ -51,7 +71,19 @@ def split_streams(inputs, stream_sizes=None):
 
 
 def get_static_stream_sizes(stream_sizes, has_dynamic_features, num_windows):
-    """Get static dimension for each feature stream."""
+    """Get stream sizes for static features
+
+    Args:
+        inputs (array like): input 3-d or 2-d array
+        num_windows (int): number of windows
+        stream_sizes (list): stream sizes
+        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams if streams is None.
+            Defaults to None.
+
+    Returns:
+        list: stream sizes
+    """
     static_stream_sizes = np.array(stream_sizes)
     static_stream_sizes[has_dynamic_features] = (
         static_stream_sizes[has_dynamic_features] / num_windows
@@ -67,7 +99,19 @@ def get_static_features(
     has_dynamic_features=None,
     streams=None,
 ):
-    """Get static features from static+dynamic features."""
+    """Get static features from static+dynamic features
+
+    Args:
+        inputs (array like): input 3-d or 2-d array
+        num_windows (int): number of windows
+        stream_sizes (list): stream sizes
+        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams if streams is None.
+            Defaults to None.
+
+    Returns:
+        list: list of static features
+    """
     if stream_sizes is None:
         stream_sizes = [180, 3, 1, 15]
     if has_dynamic_features is None:
@@ -104,7 +148,23 @@ def multi_stream_mlpg(
     has_dynamic_features=None,
     streams=None,
 ):
-    """Split streams and do apply MLPG if stream has dynamic features."""
+    """Split streams and do apply MLPG if stream has dynamic features
+
+    Args:
+        inputs (array like): input 3-d or 2-d array
+        variances (array like): variances of input features
+        windows (list): windows for parameter generation
+        stream_sizes (list): stream sizes
+        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams if streams is None.
+            Defaults to None.
+
+    Raises:
+        RuntimeError: if stream sizes are wrong
+
+    Returns:
+        array like: generated static features
+    """
     if stream_sizes is None:
         stream_sizes = [180, 3, 1, 3]
     if has_dynamic_features is None:

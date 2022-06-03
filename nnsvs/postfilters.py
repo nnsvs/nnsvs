@@ -7,6 +7,18 @@ from torch import nn
 
 
 def variance_scaling(gv, feats, offset=2):
+    """Variance scaling method to enhance synthetic speech quality
+
+    Method proposed in :cite:t:`silen2012ways`.
+
+    Args:
+        gv (tensor): global variance computed over training data
+        feats (tensor): input features
+        offset (int): offset
+
+    Returns:
+        tensor: scaled features
+    """
     utt_gv = feats.var(0)
     utt_mu = feats.mean(0)
     out = feats.copy()
@@ -54,7 +66,7 @@ class SimplifiedTADN(nn.Module):
 class Conv2dPostFilter(BaseModel):
     """A post-filter based on Conv2d
 
-    A model proposed in the paper :cite:t:`kaneko2017generative`.
+    A model proposed in :cite:t:`kaneko2017generative`.
 
     Args:
         channels (int): number of channels

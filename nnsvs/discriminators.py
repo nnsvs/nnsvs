@@ -1,4 +1,4 @@
-"""Discriminator implementations
+"""Discriminator implementations mostly used for GAN-based post-filters.
 
 All the discriminators must returns list of tensors.
 The last tensor of the list is regarded as the output of the discrminator.
@@ -283,6 +283,22 @@ class NUGAND(nn.Module):
 
 
 class Conv2dD(nn.Module):
+    """Conv2d-based discriminator
+
+
+    The implementation follows the discrimiantor of the GAN-based post-filters
+    in :cite:t:`Kaneko2017Interspeech`.
+
+    Args:
+        in_dim (int): Input feature dim
+        channels (int): Number of channels
+        kernel_size (tuple): Kernel size for 2d-convolution
+        padding (tuple): Padding for 2d-convolution
+        last_sigmoid (bool): If True, apply sigmoid on the output
+        init_type (str): Initialization type
+        padding_mode (str): Padding mode
+    """
+
     def __init__(
         self,
         in_dim=None,
@@ -364,6 +380,16 @@ class Conv2dD(nn.Module):
         init_weights(self, init_type)
 
     def forward(self, x, c=None, lengths=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): Input tensor
+            c (torch.Tensor): Optional conditional features
+            lengths (torch.Tensor): Optional lengths of the input
+
+        Returns:
+            list: List of output tensors
+        """
         outs = []
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)

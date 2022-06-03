@@ -14,6 +14,14 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 def get_windows(num_window=1):
+    """Get windows for MLPG.
+
+    Args:
+        num_window (int): number of windows
+
+    Returns:
+        list: list of windows
+    """
     windows = [(0, 0, np.array([1.0]))]
     if num_window >= 2:
         windows.append((1, 1, np.array([-0.5, 0.0, 0.5])))
@@ -59,6 +67,26 @@ def predict_timelag(
     allowed_range_rest=None,
     force_clip_input_features=False,
 ):
+    """Predict time-lag from HTS labels
+
+    Args:
+        device (torch.device): device
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS-style labels
+        timelag_model (nn.Module): time-lag model
+        timelag_config (dict): time-lag model config
+        timelag_in_scaler (sklearn.preprocessing.MinMaxScaler): input scaler
+        timelag_out_scaler (sklearn.preprocessing.MinMaxScaler): output scaler
+        binary_dict (dict): binary feature dict
+        numeric_dict (dict): numeric feature dict
+        pitch_indices (list): indices of pitch features
+        log_f0_conditioning (bool): whether to condition on log f0
+        allowed_range (list): allowed range of time-lag
+        allowed_range_rest (list): allowed range of time-lag for rest
+        force_clip_input_features (bool): whether to clip input features
+
+    Returns;
+        ndarray: time-lag predictions
+    """
     if allowed_range is None:
         allowed_range = [-20, 20]
     if allowed_range_rest is None:
@@ -186,6 +214,24 @@ def predict_duration(
     log_f0_conditioning=True,
     force_clip_input_features=False,
 ):
+    """Predict phoneme durations from HTS labels
+
+    Args:
+        device (torch.device): device to run the model on
+        labels (nnmnkwii.io.hts.HTSLabelFile): labels
+        duration_model (nn.Module): duration model
+        duration_config (dict): duration config
+        duration_in_scaler (sklearn.preprocessing.MinMaxScaler): duration input scaler
+        duration_out_scaler (sklearn.preprocessing.MinMaxScaler): duration output scaler
+        binary_dict (dict): binary feature dictionary
+        numeric_dict (dict): numeric feature dictionary
+        pitch_indices (list): indices of pitch features
+        log_f0_conditioning (bool): whether to use log-f0 conditioning
+        force_clip_input_features (bool): whether to clip input features
+
+    Returns:
+        np.ndarray: predicted durations
+    """
     # Extract musical/linguistic features
     duration_linguistic_features = fe.linguistic_features(
         labels,
@@ -366,7 +412,28 @@ def predict_acoustic(
     log_f0_conditioning=True,
     force_clip_input_features=False,
 ):
+    """Predict acoustic features from HTS labels
 
+    MLPG is applied to the predicted features if the output features have
+    dynamic features.
+
+    Args:
+        device (torch.device): device to use
+        labels (HTSLabelFile): HTS labels
+        acoustic_model (nn.Module): acoustic model
+        acoustic_config (AcousticConfig): acoustic configuration
+        acoustic_in_scaler (sklearn.preprocessing.StandardScaler): input scaler
+        acoustic_out_scaler (sklearn.preprocessing.StandardScaler): output scaler
+        binary_dict (dict): binary feature dictionary
+        numeric_dict (dict): numeric feature dictionary
+        subphone_features (str): subphone feature type
+        pitch_indices (list): indices of pitch features
+        log_f0_conditioning (bool): whether to use log f0 conditioning
+        force_clip_input_features (bool): whether to force clip input features
+
+    Returns:
+        ndarray: predicted acoustic features
+    """
     # Musical/linguistic features
     linguistic_features = fe.linguistic_features(
         labels,
@@ -465,6 +532,27 @@ def gen_spsvs_static_features(
     vuv_threshold=0.3,
     force_fix_vuv=True,
 ):
+    """Generate static features from predicted acoustic features
+
+    Args:
+        labels (HTSLabelFile): HTS labels
+        acoustic_features (ndarray): predicted acoustic features
+        binary_dict (dict): binary feature dictionary
+        numeric_dict (dict): numeric feature dictionary
+        stream_sizes (list): stream sizes
+        has_dynamic_features (list): whether each stream has dynamic features
+        subphone_features (str): subphone feature type
+        pitch_idx (int): index of pitch features
+        num_windows (int): number of windows
+        frame_period (float): frame period
+        relative_f0 (bool): whether to use relative f0
+        vibrato_scale (float): vibrato scale
+        vuv_threshold (float): vuv threshold
+        force_fix_vuv (bool): whether to use post-processing to fix VUV.
+
+    Returns:
+        tuple: tuple of mgc, lf0, vuv and bap.
+    """
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
             stream_sizes, has_dynamic_features, num_windows
@@ -579,6 +667,19 @@ def gen_spsvs_static_features(
 
 
 def gen_world_params(mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3):
+    """Generate WORLD parameters from mgc, lf0, vuv and bap.
+
+    Args:
+        mgc (ndarray): mgc
+        lf0 (ndarray): lf0
+        vuv (ndarray): vuv
+        bap (ndarray): bap
+        sample_rate (int): sample rate
+        vuv_threshold (float): threshold for VUV
+
+    Returns:
+        tuple: tuple of f0, spectrogram and aperiodicity
+    """
     fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
     alpha = pysptk.util.mcepalpha(sample_rate)
     spectrogram = pysptk.mc2sp(np.ascontiguousarray(mgc), fftlen=fftlen, alpha=alpha)

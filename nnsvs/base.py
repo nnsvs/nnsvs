@@ -28,7 +28,10 @@ class AcousticModel(ABC):
 
 
 class BaseModel(nn.Module):
+    """Base class for all models"""
+
     def inference(self, *args, **kwargs):
+        """Inference method"""
         return self.forward(*args, **kwargs)
 
     def preprocess_target(self, y):
@@ -43,7 +46,17 @@ class BaseModel(nn.Module):
         return y
 
     def prediction_type(self):
+        """Prediction type
+
+        Returns:
+            PredictionType: prediction type. Determisitic or probabilistic
+        """
         return PredictionType.DETERMINISTIC
 
     def is_autoregressive(self):
+        """Is autoregressive or not
+
+        Returns:
+            bool: True if autoregressive
+        """
         return False

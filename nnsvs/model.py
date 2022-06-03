@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
-from nnsvs.layer_norm import LayerNorm
+from nnsvs.layers.layer_norm import LayerNorm
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
 from nnsvs.util import init_weights
