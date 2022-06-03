@@ -9,6 +9,10 @@ checkpoint_epoch_interval: 20
 stream_wise_loss: false
 use_detect_anomaly: true
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 optim:
   optimizer:
     name: Adam

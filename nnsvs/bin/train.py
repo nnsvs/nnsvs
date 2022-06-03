@@ -22,6 +22,7 @@ from nnsvs.train_util import (
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
+from torch.cuda.amp import autocast
 from tqdm import tqdm
 
 
@@ -45,6 +46,7 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler):
 def train_step(
     model,
     optimizer,
+    grad_scaler,
     train,
     in_feats,
     out_feats,
@@ -72,7 +74,8 @@ def train_step(
         out_feats = model.preprocess_target(out_feats)
 
     # Run forward
-    pred_out_feats = model(in_feats, lengths)
+    with autocast(enabled=grad_scaler is not None):
+        pred_out_feats = model(in_feats, lengths)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
@@ -111,8 +114,13 @@ def train_step(
     distortions = compute_distortions(pred_out_feats_, out_feats, lengths, out_scaler)
 
     if train:
-        loss.backward()
-        optimizer.step()
+        if grad_scaler is not None:
+            grad_scaler.scale(loss).backward()
+            grad_scaler.step(optimizer)
+            grad_scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
 
     return loss, distortions
 
@@ -124,6 +132,7 @@ def train_loop(
     model,
     optimizer,
     lr_scheduler,
+    grad_scaler,
     data_loaders,
     writer,
     out_scaler,
@@ -148,6 +157,7 @@ def train_loop(
                 loss, distortions = train_step(
                     model,
                     optimizer,
+                    grad_scaler,
                     train,
                     in_feats,
                     out_feats,
@@ -219,6 +229,7 @@ def my_app(config: DictConfig) -> None:
         model,
         optimizer,
         lr_scheduler,
+        grad_scaler,
         data_loaders,
         writer,
         logger,
@@ -244,6 +255,7 @@ def my_app(config: DictConfig) -> None:
                 model,
                 optimizer,
                 lr_scheduler,
+                grad_scaler,
                 data_loaders,
                 writer,
                 out_scaler,
@@ -258,6 +270,7 @@ def my_app(config: DictConfig) -> None:
             model,
             optimizer,
             lr_scheduler,
+            grad_scaler,
             data_loaders,
             writer,
             out_scaler,

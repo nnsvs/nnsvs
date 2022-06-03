@@ -32,6 +32,7 @@ from nnsvs.util import MinMaxScaler, StandardScaler, init_seed, pad_2d
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from sklearn.preprocessing import MinMaxScaler as SKMinMaxScaler
 from torch import nn, optim
+from torch.cuda.amp import GradScaler
 from torch.utils import data as data_utils
 from torch.utils.tensorboard import SummaryWriter
 
@@ -328,6 +329,12 @@ def setup(config, device, collate_fn=collate_fn_default):
         torch.autograd.set_detect_anomaly(True)
         logger.info("Set to use torch.autograd.detect_anomaly")
 
+    if "use_amp" in config.train and config.train.use_amp:
+        logger.info("Use mixed precision training")
+        grad_scaler = GradScaler()
+    else:
+        grad_scaler = None
+
     # Model
     model = hydra.utils.instantiate(config.model.netG).to(device)
     logger.info(
@@ -405,6 +412,7 @@ def setup(config, device, collate_fn=collate_fn_default):
         model,
         optimizer,
         lr_scheduler,
+        grad_scaler,
         data_loaders,
         writer,
         logger,
