@@ -78,17 +78,20 @@ def train_step(
         # (B, max(T)) or (B, max(T), D_out)
         mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
         # Compute loss and apply mask
-        loss_feats = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
-        loss_feats = loss_feats.masked_select(mask_).mean()
+        with autocast(enabled=grad_scaler is not None):
+            loss_feats = mdn_loss(pi, sigma, mu, out_feats, reduce=False)
+            loss_feats = loss_feats.masked_select(mask_).mean()
     else:
-        loss_feats = criterion(
-            pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-        ).mean()
+        with autocast(enabled=grad_scaler is not None):
+            loss_feats = criterion(
+                pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+            ).mean()
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+    with autocast(enabled=grad_scaler is not None):
+        loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
 
     loss = loss_feats + pitch_reg_weight * loss_pitch
 
