@@ -11,16 +11,16 @@ netG:
   mgc_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 60
-    channels: 64
-    kernel_size: [5, 5]
+    channels: 2
+    kernel_size: [1, 1]
     use_tadn: true
     init_type: "kaiming_normal"
-  mgc_offset: 0
+  mgc_offset: 2
   bap_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 5
-    channels: 16
-    kernel_size: [5, 3]
+    channels: 2
+    kernel_size: [1, 1]
     use_tadn: true
     init_type: "kaiming_normal"
   lf0_postfilter: null
@@ -29,5 +29,5 @@ netD:
   _target_: nnsvs.discriminators.Conv2dD
   # If in_dim is not specified, it will be automatically set based on adv_streams
   in_dim: null
-  channels: 32
+  channels: 2
   last_sigmoid: false
