@@ -26,6 +26,10 @@ vuv_mask: false
 stream_wise_loss: false
 use_detect_anomaly: true
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 optim:
   netG:
     optimizer:

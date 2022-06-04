@@ -573,6 +573,12 @@ def setup_cyclegan(config, device, collate_fn=collate_fn_default):
         torch.autograd.set_detect_anomaly(True)
         logger.info("Set to use torch.autograd.detect_anomaly")
 
+    if "use_amp" in config.train and config.train.use_amp:
+        logger.info("Use mixed precision training")
+        grad_scaler = GradScaler()
+    else:
+        grad_scaler = None
+
     # Model G
     netG_A2B = hydra.utils.instantiate(config.model.netG).to(device)
     netG_B2A = hydra.utils.instantiate(config.model.netG).to(device)
@@ -653,6 +659,7 @@ def setup_cyclegan(config, device, collate_fn=collate_fn_default):
     return (
         (netG_A2B, netG_B2A, optG, schedulerG),
         (netD_A, netD_B, optD, schedulerD),
+        grad_scaler,
         data_loaders,
         writer,
         logger,

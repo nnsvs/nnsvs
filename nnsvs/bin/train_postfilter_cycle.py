@@ -20,6 +20,7 @@ from nnsvs.train_util import (
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
+from torch.cuda.amp import autocast
 from torch.nn import functional as F
 from tqdm import tqdm
 
@@ -33,6 +34,7 @@ def train_step(
     netD_A,
     netD_B,
     optD,
+    grad_scaler,
     train,
     in_feats,
     out_feats,
@@ -67,23 +69,23 @@ def train_step(
         vuv = 1.0
 
     # Run forward A2B and B2A
-    pred_out_feats_A = netG_B2A(out_feats, lengths)
-    pred_out_feats_B = netG_A2B(in_feats, lengths)
+    with autocast(enabled=grad_scaler is not None):
+        pred_out_feats_A = netG_B2A(out_feats, lengths)
+        pred_out_feats_B = netG_A2B(in_feats, lengths)
 
-    # Cycle consistency loss
-    loss_cycle = F.l1_loss(
-        netG_A2B(pred_out_feats_A, lengths) * vuv, out_feats * vuv
-    ) + F.l1_loss(netG_B2A(pred_out_feats_B, lengths) * vuv, in_feats * vuv)
+        # Cycle consistency loss
+        loss_cycle = F.l1_loss(
+            netG_A2B(pred_out_feats_A, lengths) * vuv, out_feats * vuv
+        ) + F.l1_loss(netG_B2A(pred_out_feats_B, lengths) * vuv, in_feats * vuv)
 
-    # Identity mapping loss
-    if use_id_loss and id_weight > 0:
-        loss_id = F.l1_loss(
-            netG_A2B(out_feats, lengths) * vuv, out_feats * vuv
-        ) + F.l1_loss(netG_B2A(in_feats, lengths) * vuv, in_feats * vuv)
-    else:
-        loss_id = torch.tensor(0.0).to(in_feats.device)
+        # Identity mapping loss
+        if use_id_loss and id_weight > 0:
+            loss_id = F.l1_loss(
+                netG_A2B(out_feats, lengths) * vuv, out_feats * vuv
+            ) + F.l1_loss(netG_B2A(in_feats, lengths) * vuv, in_feats * vuv)
+        else:
+            loss_id = torch.tensor(0.0).to(in_feats.device)
 
-    # Adversarial loss
     real_netD_in_feats_A = select_streams(
         in_feats, model_config.stream_sizes, adv_streams
     )
@@ -110,12 +112,13 @@ def train_step(
         fake_netD_in_feats_A = fake_netD_in_feats_A[:, :, mask_nth_mgc_for_adv_loss:]
         fake_netD_in_feats_B = fake_netD_in_feats_B[:, :, mask_nth_mgc_for_adv_loss:]
 
-    # Real
-    D_real_A = netD_A(real_netD_in_feats_A * vuv, in_feats, lengths)
-    D_real_B = netD_B(real_netD_in_feats_B * vuv, in_feats, lengths)
-    # Fake
-    D_fake_det_A = netD_A(fake_netD_in_feats_A.detach() * vuv, in_feats, lengths)
-    D_fake_det_B = netD_B(fake_netD_in_feats_B.detach() * vuv, in_feats, lengths)
+    with autocast(enabled=grad_scaler is not None):
+        # Real
+        D_real_A = netD_A(real_netD_in_feats_A * vuv, in_feats, lengths)
+        D_real_B = netD_B(real_netD_in_feats_B * vuv, in_feats, lengths)
+        # Fake
+        D_fake_det_A = netD_A(fake_netD_in_feats_A.detach() * vuv, in_feats, lengths)
+        D_fake_det_B = netD_B(fake_netD_in_feats_B.detach() * vuv, in_feats, lengths)
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
@@ -126,174 +129,189 @@ def train_step(
     loss_fake = 0
 
     # A
-    for idx, (D_real_, D_fake_det_) in enumerate(zip(D_real_A, D_fake_det_A)):
-        if gan_type == "lsgan":
-            loss_real_ = (D_real_[-1] - 1) ** 2
-            loss_fake_ = D_fake_det_[-1] ** 2
-        elif gan_type == "vanilla-gan":
-            loss_real_ = -torch.log(D_real_[-1] + eps)
-            loss_fake_ = -torch.log(1 - D_fake_det_[-1] + eps)
-        elif gan_type == "hinge":
-            loss_real_ = F.relu(1 - D_real_[-1])
-            loss_fake_ = F.relu(1 + D_fake_det_[-1])
-        else:
-            raise ValueError(f"Unknown gan type: {gan_type}")
-
-        # mask for D
-        if (
-            hasattr(netD_A, "downsample_scale")
-            and mask.shape[1] // netD_A.downsample_scale == D_real_[-1].shape[1]
-        ):
-            D_mask = mask[:, :: netD_A.downsample_scale, :]
-        else:
-            if D_real_[-1].shape[1] == out_feats.shape[1]:
-                D_mask = mask
+    with autocast(enabled=grad_scaler is not None):
+        for idx, (D_real_, D_fake_det_) in enumerate(zip(D_real_A, D_fake_det_A)):
+            if gan_type == "lsgan":
+                loss_real_ = (D_real_[-1] - 1) ** 2
+                loss_fake_ = D_fake_det_[-1] ** 2
+            elif gan_type == "vanilla-gan":
+                loss_real_ = -torch.log(D_real_[-1] + eps)
+                loss_fake_ = -torch.log(1 - D_fake_det_[-1] + eps)
+            elif gan_type == "hinge":
+                loss_real_ = F.relu(1 - D_real_[-1])
+                loss_fake_ = F.relu(1 + D_fake_det_[-1])
             else:
-                D_mask = None
+                raise ValueError(f"Unknown gan type: {gan_type}")
 
-        if D_mask is not None:
-            loss_real_ = loss_real_.masked_select(D_mask).mean()
-            loss_fake_ = loss_fake_.masked_select(D_mask).mean()
-        else:
-            loss_real_ = loss_real_.mean()
-            loss_fake_ = loss_fake_.mean()
-
-        log_metrics[f"Loss_Real_Scale{idx}_A"] = loss_real_.item()
-        log_metrics[f"Loss_Fake_Scale{idx}_A"] = loss_fake_.item()
-
-        loss_real += loss_real_
-        loss_fake += loss_fake_
-
-    # B
-    for idx, (D_real_, D_fake_det_) in enumerate(zip(D_real_B, D_fake_det_B)):
-        if gan_type == "lsgan":
-            loss_real_ = (D_real_[-1] - 1) ** 2
-            loss_fake_ = D_fake_det_[-1] ** 2
-        elif gan_type == "vanilla-gan":
-            loss_real_ = -torch.log(D_real_[-1] + eps)
-            loss_fake_ = -torch.log(1 - D_fake_det_[-1] + eps)
-        elif gan_type == "hinge":
-            loss_real_ = F.relu(1 - D_real_[-1])
-            loss_fake_ = F.relu(1 + D_fake_det_[-1])
-        else:
-            raise ValueError(f"Unknown gan type: {gan_type}")
-
-        # mask for D
-        if (
-            hasattr(netD_B, "downsample_scale")
-            and mask.shape[1] // netD_B.downsample_scale == D_real_[-1].shape[1]
-        ):
-            D_mask = mask[:, :: netD_B.downsample_scale, :]
-        else:
-            if D_real_[-1].shape[1] == out_feats.shape[1]:
-                D_mask = mask
+            # mask for D
+            if (
+                hasattr(netD_A, "downsample_scale")
+                and mask.shape[1] // netD_A.downsample_scale == D_real_[-1].shape[1]
+            ):
+                D_mask = mask[:, :: netD_A.downsample_scale, :]
             else:
-                D_mask = None
+                if D_real_[-1].shape[1] == out_feats.shape[1]:
+                    D_mask = mask
+                else:
+                    D_mask = None
 
-        if D_mask is not None:
-            loss_real_ = loss_real_.masked_select(D_mask).mean()
-            loss_fake_ = loss_fake_.masked_select(D_mask).mean()
-        else:
-            loss_real_ = loss_real_.mean()
-            loss_fake_ = loss_fake_.mean()
+            if D_mask is not None:
+                loss_real_ = loss_real_.masked_select(D_mask).mean()
+                loss_fake_ = loss_fake_.masked_select(D_mask).mean()
+            else:
+                loss_real_ = loss_real_.mean()
+                loss_fake_ = loss_fake_.mean()
 
-        log_metrics[f"Loss_Real_Scale{idx}_B"] = loss_real_.item()
-        log_metrics[f"Loss_Fake_Scale{idx}_B"] = loss_fake_.item()
+            log_metrics[f"Loss_Real_Scale{idx}_A"] = loss_real_.item()
+            log_metrics[f"Loss_Fake_Scale{idx}_A"] = loss_fake_.item()
 
-        loss_real += loss_real_
-        loss_fake += loss_fake_
+            loss_real += loss_real_
+            loss_fake += loss_fake_
 
-    loss_d = loss_real + loss_fake
+        # B
+        for idx, (D_real_, D_fake_det_) in enumerate(zip(D_real_B, D_fake_det_B)):
+            if gan_type == "lsgan":
+                loss_real_ = (D_real_[-1] - 1) ** 2
+                loss_fake_ = D_fake_det_[-1] ** 2
+            elif gan_type == "vanilla-gan":
+                loss_real_ = -torch.log(D_real_[-1] + eps)
+                loss_fake_ = -torch.log(1 - D_fake_det_[-1] + eps)
+            elif gan_type == "hinge":
+                loss_real_ = F.relu(1 - D_real_[-1])
+                loss_fake_ = F.relu(1 + D_fake_det_[-1])
+            else:
+                raise ValueError(f"Unknown gan type: {gan_type}")
+
+            # mask for D
+            if (
+                hasattr(netD_B, "downsample_scale")
+                and mask.shape[1] // netD_B.downsample_scale == D_real_[-1].shape[1]
+            ):
+                D_mask = mask[:, :: netD_B.downsample_scale, :]
+            else:
+                if D_real_[-1].shape[1] == out_feats.shape[1]:
+                    D_mask = mask
+                else:
+                    D_mask = None
+
+            if D_mask is not None:
+                loss_real_ = loss_real_.masked_select(D_mask).mean()
+                loss_fake_ = loss_fake_.masked_select(D_mask).mean()
+            else:
+                loss_real_ = loss_real_.mean()
+                loss_fake_ = loss_fake_.mean()
+
+            log_metrics[f"Loss_Real_Scale{idx}_B"] = loss_real_.item()
+            log_metrics[f"Loss_Fake_Scale{idx}_B"] = loss_fake_.item()
+
+            loss_real += loss_real_
+            loss_fake += loss_fake_
+
+        loss_d = loss_real + loss_fake
 
     if train:
         optD.zero_grad()
-        loss_d.backward()
-        grad_norm_d = torch.nn.utils.clip_grad_norm_(
-            netD_A.parameters(), optim_config.netD.clip_norm
-        )
-        log_metrics["GradNorm_D/netG_A2B"] = grad_norm_d
-        grad_norm_d = torch.nn.utils.clip_grad_norm_(
-            netD_B.parameters(), optim_config.netD.clip_norm
-        )
-        log_metrics["GradNorm_D/netG_B2A"] = grad_norm_d
-        optD.step()
+        if grad_scaler is not None:
+            grad_scaler.scale(loss_d).backward()
+            grad_scaler.unscale_(optD)
+            grad_norm_d = torch.nn.utils.clip_grad_norm_(
+                netD_A.parameters(), optim_config.netD.clip_norm
+            )
+            log_metrics["GradNorm_D/netG_A2B"] = grad_norm_d
+            grad_norm_d = torch.nn.utils.clip_grad_norm_(
+                netD_B.parameters(), optim_config.netD.clip_norm
+            )
+            log_metrics["GradNorm_D/netG_B2A"] = grad_norm_d
+            grad_scaler.step(optD)
+        else:
+            loss_d.backward()
+            grad_norm_d = torch.nn.utils.clip_grad_norm_(
+                netD_A.parameters(), optim_config.netD.clip_norm
+            )
+            log_metrics["GradNorm_D/netG_A2B"] = grad_norm_d
+            grad_norm_d = torch.nn.utils.clip_grad_norm_(
+                netD_B.parameters(), optim_config.netD.clip_norm
+            )
+            log_metrics["GradNorm_D/netG_B2A"] = grad_norm_d
+            optD.step()
 
     # adversarial loss
     loss_adv = 0
 
-    # A
-    D_fake_A = netD_A(fake_netD_in_feats_A * vuv, in_feats, lengths)
-    for idx, D_fake_ in enumerate(D_fake_A):
-        if gan_type == "lsgan":
-            loss_adv_ = (1 - D_fake_[-1]) ** 2
-        elif gan_type == "vanilla-gan":
-            loss_adv_ = -torch.log(D_fake_[-1] + eps)
-        elif gan_type == "hinge":
-            loss_adv_ = -D_fake_[-1]
-        else:
-            raise ValueError(f"Unknown gan type: {gan_type}")
-
-        if (
-            hasattr(netD_A, "downsample_scale")
-            and mask.shape[1] // netD_A.downsample_scale == D_fake_[-1].shape[1]
-        ):
-            D_mask = mask[:, :: netD_A.downsample_scale, :]
-        else:
-            if D_real_[-1].shape[1] == out_feats.shape[1]:
-                D_mask = mask
+    with autocast(enabled=grad_scaler is not None):
+        # A
+        D_fake_A = netD_A(fake_netD_in_feats_A * vuv, in_feats, lengths)
+        for idx, D_fake_ in enumerate(D_fake_A):
+            if gan_type == "lsgan":
+                loss_adv_ = (1 - D_fake_[-1]) ** 2
+            elif gan_type == "vanilla-gan":
+                loss_adv_ = -torch.log(D_fake_[-1] + eps)
+            elif gan_type == "hinge":
+                loss_adv_ = -D_fake_[-1]
             else:
-                D_mask = None
+                raise ValueError(f"Unknown gan type: {gan_type}")
 
-        if D_mask is not None:
-            loss_adv_ = loss_adv_.masked_select(D_mask).mean()
-        else:
-            loss_adv_ = loss_adv_.mean()
-
-        log_metrics[f"Loss_Adv_Scale{idx}_A"] = loss_adv_.item()
-
-        loss_adv += loss_adv_
-
-    # B
-    D_fake_B = netD_B(fake_netD_in_feats_B * vuv, in_feats, lengths)
-    for idx, D_fake_ in enumerate(D_fake_B):
-        if gan_type == "lsgan":
-            loss_adv_ = (1 - D_fake_[-1]) ** 2
-        elif gan_type == "vanilla-gan":
-            loss_adv_ = -torch.log(D_fake_[-1] + eps)
-        elif gan_type == "hinge":
-            loss_adv_ = -D_fake_[-1]
-        else:
-            raise ValueError(f"Unknown gan type: {gan_type}")
-
-        if (
-            hasattr(netD_B, "downsample_scale")
-            and mask.shape[1] // netD_B.downsample_scale == D_fake_[-1].shape[1]
-        ):
-            D_mask = mask[:, :: netD_B.downsample_scale, :]
-        else:
-            if D_real_[-1].shape[1] == out_feats.shape[1]:
-                D_mask = mask
+            if (
+                hasattr(netD_A, "downsample_scale")
+                and mask.shape[1] // netD_A.downsample_scale == D_fake_[-1].shape[1]
+            ):
+                D_mask = mask[:, :: netD_A.downsample_scale, :]
             else:
-                D_mask = None
+                if D_real_[-1].shape[1] == out_feats.shape[1]:
+                    D_mask = mask
+                else:
+                    D_mask = None
 
-        if D_mask is not None:
-            loss_adv_ = loss_adv_.masked_select(D_mask).mean()
-        else:
-            loss_adv_ = loss_adv_.mean()
+            if D_mask is not None:
+                loss_adv_ = loss_adv_.masked_select(D_mask).mean()
+            else:
+                loss_adv_ = loss_adv_.mean()
 
-        log_metrics[f"Loss_Adv_Scale{idx}_B"] = loss_adv_.item()
+            log_metrics[f"Loss_Adv_Scale{idx}_A"] = loss_adv_.item()
 
-        loss_adv += loss_adv_
+            loss_adv += loss_adv_
 
-    # Feature matching loss
-    loss_fm = torch.tensor(0.0).to(in_feats.device)
-    if fm_weight > 0:
-        for D_fake_, D_real_ in zip(D_fake_A, D_real_A):
-            for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
-                loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
-        for D_fake_, D_real_ in zip(D_fake_B, D_real_B):
-            for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
-                loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+        # B
+        D_fake_B = netD_B(fake_netD_in_feats_B * vuv, in_feats, lengths)
+        for idx, D_fake_ in enumerate(D_fake_B):
+            if gan_type == "lsgan":
+                loss_adv_ = (1 - D_fake_[-1]) ** 2
+            elif gan_type == "vanilla-gan":
+                loss_adv_ = -torch.log(D_fake_[-1] + eps)
+            elif gan_type == "hinge":
+                loss_adv_ = -D_fake_[-1]
+            else:
+                raise ValueError(f"Unknown gan type: {gan_type}")
+
+            if (
+                hasattr(netD_B, "downsample_scale")
+                and mask.shape[1] // netD_B.downsample_scale == D_fake_[-1].shape[1]
+            ):
+                D_mask = mask[:, :: netD_B.downsample_scale, :]
+            else:
+                if D_real_[-1].shape[1] == out_feats.shape[1]:
+                    D_mask = mask
+                else:
+                    D_mask = None
+
+            if D_mask is not None:
+                loss_adv_ = loss_adv_.masked_select(D_mask).mean()
+            else:
+                loss_adv_ = loss_adv_.mean()
+
+            log_metrics[f"Loss_Adv_Scale{idx}_B"] = loss_adv_.item()
+
+            loss_adv += loss_adv_
+
+        # Feature matching loss
+        loss_fm = torch.tensor(0.0).to(in_feats.device)
+        if fm_weight > 0:
+            for D_fake_, D_real_ in zip(D_fake_A, D_real_A):
+                for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+                    loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
+            for D_fake_, D_real_ in zip(D_fake_B, D_real_B):
+                for fake_fmap, real_fmap in zip(D_fake_[:-1], D_real_[:-1]):
+                    loss_fm += F.l1_loss(fake_fmap, real_fmap.detach())
 
     loss = (
         adv_weight * loss_adv
@@ -304,16 +322,33 @@ def train_step(
 
     if train:
         optG.zero_grad()
-        loss.backward()
-        grad_norm_g = torch.nn.utils.clip_grad_norm_(
-            netG_A2B.parameters(), optim_config.netG.clip_norm
-        )
-        log_metrics["GradNorm_G/netG_A2B"] = grad_norm_g
-        grad_norm_g = torch.nn.utils.clip_grad_norm_(
-            netG_B2A.parameters(), optim_config.netG.clip_norm
-        )
-        log_metrics["GradNorm_G/netG_B2A"] = grad_norm_g
-        optG.step()
+        if grad_scaler is not None:
+            grad_scaler.scale(loss).backward()
+            grad_scaler.unscale_(optG)
+            grad_norm_g = torch.nn.utils.clip_grad_norm_(
+                netG_A2B.parameters(), optim_config.netG.clip_norm
+            )
+            log_metrics["GradNorm_G/netG_A2B"] = grad_norm_g
+            grad_norm_g = torch.nn.utils.clip_grad_norm_(
+                netG_B2A.parameters(), optim_config.netG.clip_norm
+            )
+            log_metrics["GradNorm_G/netG_B2A"] = grad_norm_g
+            grad_scaler.step(optG)
+        else:
+            loss.backward()
+            grad_norm_g = torch.nn.utils.clip_grad_norm_(
+                netG_A2B.parameters(), optim_config.netG.clip_norm
+            )
+            log_metrics["GradNorm_G/netG_A2B"] = grad_norm_g
+            grad_norm_g = torch.nn.utils.clip_grad_norm_(
+                netG_B2A.parameters(), optim_config.netG.clip_norm
+            )
+            log_metrics["GradNorm_G/netG_B2A"] = grad_norm_g
+            optG.step()
+
+    # NOTE: this shouldn't be called multiple times in a training step
+    if train and grad_scaler is not None:
+        grad_scaler.update()
 
     # Metrics
     distortions = compute_distortions(
@@ -348,6 +383,7 @@ def train_loop(
     netD_B,
     optD,
     schedulerD,
+    grad_scaler,
     data_loaders,
     writer,
     out_scaler,
@@ -406,6 +442,7 @@ def train_loop(
                     netD_A=netD_A,
                     netD_B=netD_B,
                     optD=optD,
+                    grad_scaler=grad_scaler,
                     train=train,
                     in_feats=in_feats,
                     out_feats=out_feats,
@@ -524,6 +561,7 @@ def my_app(config: DictConfig) -> None:
     (
         (netG_A2B, netG_B2A, optG, schedulerG),
         (netD_A, netD_B, optD, schedulerD),
+        grad_scaler,
         data_loaders,
         writer,
         logger,
@@ -554,6 +592,7 @@ def my_app(config: DictConfig) -> None:
                 netD_B,
                 optD,
                 schedulerD,
+                grad_scaler,
                 data_loaders,
                 writer,
                 out_scaler,
@@ -573,6 +612,7 @@ def my_app(config: DictConfig) -> None:
             netD_B,
             optD,
             schedulerD,
+            grad_scaler,
             data_loaders,
             writer,
             out_scaler,
