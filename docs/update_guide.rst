@@ -10,7 +10,7 @@ config.yaml
 ^^^^^^^^^^^^
 
 - New parameter: ``trajectory_smoothing`` specifies if we apply trajectory smoothing proposed in :cite:t:`takamichi2015naist`. Default is false. It is likely to have little effects unless if you use (very experimental) learned post-filters.
-- New parameter: ``trajectory_smoothing_cutoff`` specifies the cuttoff frequency for the trajectory smoothing. Default is 50 Hz.
+- New parameter: ``trajectory_smoothing_cutoff`` specifies the cuttoff frequency for the trajectory smoothing. Default is 50 Hz. `This slide <https://www.slideshare.net/ShinnosukeTakamichi/apsipa2017-trajectory-smoothing-for-vocoderfree-speech-synthesis>`_ is useful to know the effects of the cutoff frequency.
 - Changed: ``sample_rate`` became mandatory parameter while it was optional.
 - New parameter: ``*_sweeper_args`` and ``*_sweeper_n_trials`` specifies configurations for hyperparameter optimization. See :doc:`optuna` for details.
 
