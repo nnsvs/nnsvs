@@ -15,7 +15,7 @@ checkpoint_epoch_interval: 20
 feats_criterion: mse
 
 stream_wise_loss: false
-use_detect_anomaly: true
+use_detect_anomaly: false
 
 optim:
   optimizer:

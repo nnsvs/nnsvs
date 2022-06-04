@@ -1,6 +1,10 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 200
@@ -31,10 +35,6 @@ vuv_mask: false
 
 stream_wise_loss: false
 use_detect_anomaly: true
-
-# Use automatic mixed precision training or not
-# only works on supported GPUs
-use_amp: false
 
 optim:
   netG:

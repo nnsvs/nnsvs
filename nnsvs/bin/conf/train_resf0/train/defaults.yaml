@@ -1,6 +1,10 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 50
@@ -19,7 +23,7 @@ feats_criterion: mse
 pitch_reg_weight: 1.0
 
 stream_wise_loss: false
-use_detect_anomaly: true
+use_detect_anomaly: false
 
 optim:
   optimizer:
