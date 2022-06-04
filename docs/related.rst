@@ -8,6 +8,7 @@ Custom language support
 - `Hed and Supporting Files for Romance Language NNSVS Dataset Creation <https://github.com/DYVAUX/nnsvs-romance-language-support>`_
 - `Hed and Supporting Files for Polish Language NNSVS Dataset Creation <https://github.com/SzopaTatyJarka/nnsvs-polish-support>`_
 - `Hed and Supporting Files for Russian Language NNSVS Dataset Creation <https://github.com/SCERYP/nnsvs-russian-support>`_
+- `Hed and Supporting Files for Korean Language NNSVS Dataset Creation <https://github.com/Kor-SVS/nnsvs-korean-support>`_
 
 Training kit
 ------------

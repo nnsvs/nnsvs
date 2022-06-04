@@ -1,5 +1,7 @@
-Development notes
-=================
+Notes for developers
+====================
+
+This is a note for developers of NNSVS. If you want to contribute to NNSVS itself, please check the document below.
 
 Installation
 ---------------
@@ -8,24 +10,27 @@ It is recommended to install full requirements with editiable mode  (``-e`` with
 
 .. code::
 
-   pip install -e ".[lint.test,docs]"
+   pip install -e ".[dev,lint.test,docs]"
 
 
 Repository structure
 ---------------------
 
 - Core library: ``nnsvs``
-- Command line programs: ``nnsvs/bin`` (configs: ``nnsvs/bin/conf``)
-- Recipes: ``recipes`` (previously ``egs``)
-
+- Recipes: ``recipes``
+- Documentation: ``docs``
+- Jupyter notebooks: ``notebooks``
+- Utility: ``utils``
 
 Python docstring style
 ----------------------
 
-https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
+NNSVS follows the Google's style: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
 
 Formatting and linting
 ----------------------
+
+https://github.com/pfnet/pysen is used for formatting and linting.
 
 Formatting
 ^^^^^^^^^^^

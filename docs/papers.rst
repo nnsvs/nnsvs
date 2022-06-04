@@ -36,12 +36,25 @@ Post-filters
 
 - :cite:t:`Kaneko2017Interspeech`
 - :cite:t:`kaneko2017generative`
+- :cite:t:`takamichi2016postfilters`
 - :cite:t:`silen2012ways`
 
 TTS
 ----
 - :cite:t:`wang2018comparison`
+- :cite:t:`wu2016merlin`
+- :cite:t:`zen2009statistical`
+- :cite:t:`takamichi2015naist`
 
+Vocoder
+-------
+
+- :cite:t:`morise2016world`
+
+Neural vocoders
+---------------
+
+- :cite:t:`wang2019neural`
 
 All bibliography
 -----------------

@@ -16,7 +16,8 @@ Features
 - **Research friendly**: NNSVS comes with reproducible Kaldi/ESPnet-style recipes. You can use NNSVS to create baseline systems for your research.
 
 Note that NNSVS was originally designed for research purposes. Please check out more user-friendly `ENUNU <https://github.com/oatsu-gh/ENUNU>`_ for creative purposes.
-You can find a practical guide for NNSVS/ENUNU at https://nnsvs.carrd.co/.
+You can find a practical guide for NNSVS/ENUNU at https://nnsvs.carrd.co/ (by `xuu <https://xuu.crd.co/>`_).
+A detailed tutorial for for making voice banks can be found at `NNSVS Database Making Tutorial <https://docs.google.com/document/d/1uMsepxbdUW65PfIWL1pt2OM6ZKa5ybTTJOpZ733Ht6s/edit?usp=sharing>`_ (by `PixProcuer <https://twitter.com/PixPrucer>`_).
 
 Audio samples
 -------------
@@ -46,9 +47,11 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    :caption: Notes
 
    installation
-   tutorial
-   devdocs
+   overview
    recipes
+   optuna
+   update_guide
+   devdocs
 
 .. toctree::
    :maxdepth: 1
@@ -70,6 +73,12 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
 
    papers
    related
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Meta information
+
+    changelog
 
 
 Indices and tables
