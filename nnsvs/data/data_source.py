@@ -9,7 +9,7 @@ from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
-from nnsvs.gen import get_windows
+from nnsvs.multistream import get_windows
 from nnsvs.pitch import (
     extract_smoothed_f0,
     extract_vibrato_likelihood,

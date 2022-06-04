@@ -5,6 +5,27 @@ import torch
 from nnmnkwii import paramgen
 
 
+def get_windows(num_window=1):
+    """Get windows for MLPG.
+
+    Args:
+        num_window (int): number of windows
+
+    Returns:
+        list: list of windows
+    """
+    windows = [(0, 0, np.array([1.0]))]
+    if num_window >= 2:
+        windows.append((1, 1, np.array([-0.5, 0.0, 0.5])))
+    if num_window >= 3:
+        windows.append((1, 1, np.array([1.0, -2.0, 1.0])))
+
+    if num_window >= 4:
+        raise ValueError(f"Not supported num windows: {num_window}")
+
+    return windows
+
+
 def select_streams(
     inputs,
     stream_sizes=None,

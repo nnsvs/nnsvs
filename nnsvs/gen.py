@@ -8,30 +8,14 @@ from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnsvs.base import PredictionType
 from nnsvs.io.hts import get_note_indices
-from nnsvs.multistream import get_static_stream_sizes, multi_stream_mlpg, split_streams
+from nnsvs.multistream import (
+    get_static_stream_sizes,
+    get_windows,
+    multi_stream_mlpg,
+    split_streams,
+)
 from nnsvs.pitch import gen_sine_vibrato
 from sklearn.preprocessing import MinMaxScaler
-
-
-def get_windows(num_window=1):
-    """Get windows for MLPG.
-
-    Args:
-        num_window (int): number of windows
-
-    Returns:
-        list: list of windows
-    """
-    windows = [(0, 0, np.array([1.0]))]
-    if num_window >= 2:
-        windows.append((1, 1, np.array([-0.5, 0.0, 0.5])))
-    if num_window >= 3:
-        windows.append((1, 1, np.array([1.0, -2.0, 1.0])))
-
-    if num_window >= 4:
-        raise ValueError(f"Not supported num windows: {num_window}")
-
-    return windows
 
 
 def _midi_to_hz(x, idx, log_f0=False):
