@@ -166,8 +166,8 @@ def train_step(
     # adversarial loss
     with autocast(enabled=grad_scaler is not None):
         D_fake = netD(fake_netD_in_feats * vuv, in_feats, lengths)
-    loss_adv = 0
-    with autocast(enabled=grad_scaler is not None):
+
+        loss_adv = 0
         for idx, D_fake_ in enumerate(D_fake):
             if gan_type == "lsgan":
                 loss_adv_ = (1 - D_fake_[-1]) ** 2
