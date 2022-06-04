@@ -27,6 +27,11 @@ timelag_features: defaults
 duration_features: defaults
 acoustic_features: static_deltadelta
 
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
+
 ###########################################################
 #                TRAINING SETTING                         #
 ###########################################################

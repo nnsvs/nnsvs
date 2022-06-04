@@ -27,6 +27,11 @@ timelag_features: defaults
 duration_features: defaults
 acoustic_features: static_deltadelta_sinevib
 
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
+
 # Base dump norm directory that contains scaler files
 base_dump_norm_dir:
 
