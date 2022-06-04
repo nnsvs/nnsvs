@@ -51,6 +51,20 @@ acoustic_data: myconfig
 # Pretrained model dir (leave empty to disable)
 pretrained_expdir:
 
+# Advanced settings for hyperparameter search with Hydra and Optuna.
+# https://hydra.cc/docs/plugins/optuna_sweeper/
+# NOTE: Don't use spaces for each search space configuration.
+# OK: data.batch_size=range(1,16)
+# NG: data.batch_size=range(1, 16)
+# Example 1: data.batch_size=range(1,16) model.netG.hidden_dim=choice(32,64,128)
+# Example 2: train.optim.optimizer.params.lr=interval(0.0001, 0.01)
+timelag_hydra_optuna_sweeper_args:
+timelag_hydra_optuna_sweeper_n_trials: 100
+duration_hydra_optuna_sweeper_args:
+duration_hydra_optuna_sweeper_n_trials: 100
+acoustic_hydra_optuna_sweeper_args:
+acoustic_hydra_optuna_sweeper_n_trials: 100
+
 ###########################################################
 #                SYNTHESIS SETTING                        #
 ###########################################################
