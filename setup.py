@@ -24,7 +24,7 @@ setup(
     install_requires=[
         "numpy",
         "cython",
-        "torch >= 1.1.0",
+        "torch >= 1.6.0",
         "torchaudio",
         "hydra-core >= 1.1.0, < 1.2.0",
         "hydra_colorlog >= 1.1.0",
