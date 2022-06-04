@@ -37,7 +37,7 @@ xrun python ${NNSVS_ROOT}/nnsvs/experimental/bin/train_resf0_gan.py $ext $hydra_
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
     data.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
-    data.sample_rate=$sample_rate \
+    +data.sample_rate=$sample_rate \
     train.out_dir=$expdir/${acoustic_model} \
     train.log_dir=tensorboard/${expname}_${acoustic_model} \
     train.resume.netG.checkpoint=$resume_checkpoint_g \

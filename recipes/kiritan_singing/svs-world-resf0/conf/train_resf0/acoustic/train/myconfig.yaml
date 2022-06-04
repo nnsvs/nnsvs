@@ -1,8 +1,18 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
+# steps can either be specified by steps or epochs
+max_train_steps: -1
 nepochs: 100
 checkpoint_epoch_interval: 50
+
+# mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
+# NOTE: no effect for MDN models
+feats_criterion: mse
 
 # Weight for pitch regularization loss
 # If > 0.0, add a pitch regularization loss that biases the model to
@@ -13,7 +23,7 @@ checkpoint_epoch_interval: 50
 pitch_reg_weight: 1.0
 
 stream_wise_loss: false
-use_detect_anomaly: true
+use_detect_anomaly: false
 
 optim:
   optimizer:
