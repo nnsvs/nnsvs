@@ -1,17 +1,21 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 50
 checkpoint_epoch_interval: 20
 
+# mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
+# NOTE: no effect for MDN models
+feats_criterion: mse
+
 stream_wise_loss: false
 use_detect_anomaly: true
-
-# Use automatic mixed precision training or not
-# only works on supported GPUs
-use_amp: false
 
 optim:
   optimizer:

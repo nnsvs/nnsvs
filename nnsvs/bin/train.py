@@ -52,6 +52,7 @@ def train_step(
     out_feats,
     lengths,
     out_scaler,
+    feats_criterion="mse",
     stream_wise_loss=False,
     stream_weights=None,
     stream_sizes=None,
@@ -59,7 +60,13 @@ def train_step(
     model.train() if train else model.eval()
     optimizer.zero_grad()
 
-    criterion = nn.MSELoss(reduction="none")
+    if feats_criterion in ["l2", "mse"]:
+        criterion = nn.MSELoss(reduction="none")
+    elif feats_criterion in ["l1", "mae"]:
+        criterion = nn.L1Loss(reduction="none")
+    else:
+        raise RuntimeError("not supported criterion")
+
     prediction_type = (
         model.module.prediction_type()
         if isinstance(model, nn.DataParallel)
@@ -145,6 +152,14 @@ def train_loop(
     best_dev_loss = torch.finfo(torch.float32).max
     last_dev_loss = torch.finfo(torch.float32).max
 
+    if "feats_criterion" not in config.train:
+        logger.warning(
+            "feats_criterion is not found in the data config. Fallback to MSE."
+        )
+        feats_criterion = "mse"
+    else:
+        feats_criterion = config.train.feats_criterion
+
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
@@ -158,17 +173,18 @@ def train_loop(
                     out_feats[indices].to(device),
                 )
                 loss, distortions = train_step(
-                    model,
-                    optimizer,
-                    grad_scaler,
-                    train,
-                    in_feats,
-                    out_feats,
-                    lengths,
-                    out_scaler,
-                    config.train.stream_wise_loss,
-                    config.model.stream_weights,
-                    config.model.stream_sizes,
+                    model=model,
+                    optimizer=optimizer,
+                    grad_scaler=grad_scaler,
+                    train=train,
+                    in_feats=in_feats,
+                    out_feats=out_feats,
+                    lengths=lengths,
+                    out_scaler=out_scaler,
+                    feats_criterion=feats_criterion,
+                    stream_wise_loss=config.train.stream_wise_loss,
+                    stream_weights=config.model.stream_weights,
+                    stream_sizes=config.model.stream_sizes,
                 )
                 running_loss += loss.item()
                 for k, v in distortions.items():
