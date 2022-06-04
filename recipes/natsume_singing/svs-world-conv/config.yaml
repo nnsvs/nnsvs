@@ -1,7 +1,6 @@
 ### General settings.
 ## The name of singer
 spk: "natsumeyuuri"
-sample_rate: 48000
 
 ## exp tag(for managing experiments)
 tag:
