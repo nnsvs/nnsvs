@@ -19,7 +19,6 @@ from nnsvs.train_util import (
 )
 from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
-from torch import nn
 from torch.cuda.amp import autocast
 from torch.nn import functional as F
 from tqdm import tqdm
