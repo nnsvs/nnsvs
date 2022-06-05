@@ -1,6 +1,6 @@
 import torch
+from nnsvs.wavenet import conv
 from torch import nn
-from ttslearn.wavenet import conv
 
 
 def Conv1d(in_channels, out_channels, kernel_size, *args, **kwargs):
