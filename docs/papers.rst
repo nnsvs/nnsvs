@@ -28,7 +28,7 @@ F0 modeling
 Vibrato modeling
 -----------------
 
-- :cite:t:`山田知彦2009hmm`
+- :cite:t:`yamada2009hmm`
 - :cite:t:`nakano2006automatic`
 
 Post-filters
@@ -41,6 +41,8 @@ Post-filters
 
 TTS
 ----
+
+- :cite:t:`ren2020fastspeech`
 - :cite:t:`wang2018comparison`
 - :cite:t:`wu2016merlin`
 - :cite:t:`zen2009statistical`
@@ -49,6 +51,7 @@ TTS
 Vocoder
 -------
 
+- :cite:t:`kumar2019melgan`
 - :cite:t:`morise2016world`
 
 Neural vocoders

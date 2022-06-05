@@ -4,8 +4,9 @@ Recipes
 What is a recipe?
 -----------------
 
-A recipe is a set of scripts and configuraitons that are used to reproduce experiments.
-All the steps used to conduct experiments are provided in a self-contained way.
+A recipe is a set of scripts and configuraitons to create singing voice synthesis (SVS) systems.
+A recipe describes all the necessary steps including data preprocessing, training, and synthesis.
+Since NNSVS provides recipes in a self-contained way, it is easy for anyone to create SVS systems.
 
 Recipes have been adopted for reproducibility in several research projects such as `Kaldi <https://github.com/kaldi-asr/kaldi>`_ and `ESPnet <https://github.com/espnet/espnet>`_.
 NNSVS follows a similar approach [1]_.
@@ -14,11 +15,41 @@ How to run a recipe
 -------------------
 
 All the recipes are stored in the ``recipes`` directory.
-There are three important files for every recipe:
+There are three important parts for every recipe:
 
 - ``run.sh``: The entry point of the recipe.
 - ``config.yaml``: A YAML based config file for recipe-specific configurations
 - ``conf``: A directory that contains detailed configurations for each model. YAML-based configuration files for time-lag/duration/acoustic models are stored in this directory.
+
+
+An example of ``conf`` directory is shown below. You can find model-specific configurations.
+
+.. code-block:: bash
+
+    conf
+    ├── train
+    │   ├── duration
+    │   │   ├── data
+    │   │   │   └── myconfig.yaml
+    │   │   ├── model
+    │   │   │   └── duration_mdn.yaml
+    │   │   └── train
+    │   │       └── myconfig.yaml
+    │   └── timelag
+    │       ├── data
+    │       │   └── myconfig.yaml
+    │       ├── model
+    │       │   └── timelag_mdn.yaml
+    │       └── train
+    │           └── myconfig.yaml
+    └── train_resf0
+        └── acoustic
+            ├── data
+            │   └── myconfig.yaml
+            ├── model
+            │   └── acoustic_resf0convlstm.yaml
+            └── train
+                └── myconfig.yaml
 
 
 A basic workflow to run a recipe is to run the ``run.sh`` from the command-line as follows:
@@ -65,7 +96,7 @@ Packing models
 As explained in the :doc:`overview`, NNSVS's SVS system is composed of multiple modules.
 NNSVS provides functionality to pack the multiple models into a single directory, which can then be shared/loaded easily.
 
-Some recipes have special step at 99 for model packaging purpose. Please check the recipes for ``kiritan_singing`` database for example.
+Some recipes have special step at 99 for the model packaging purpose. Please check the recipes for ``kiritan_singing`` database for example.
 
 .. code-block:: bash
 
@@ -115,12 +146,11 @@ A packed model directory will have the following files. Note that ``*postfilter_
 Some notes:
 
 - ``*.pth`` files contain parameters of neural networks.
-- ``*.yaml`` files contain definitions of neural networks such as the name of the PyTorch model (e.g., ``nnsvs.model.MDN``), number of layers, number of hidden units, etc.
+- ``*_model.yaml`` files contain definitions of neural networks such as the name of the PyTorch model (e.g., ``nnsvs.model.MDN``), number of layers, number of hidden units, etc.
 - ``*.npy`` files contain parameters of scikit-learn's scalers that are used to normalize/denormalize features.
 - ``qst.hed`` is the HED file used for training models.
+- ``config.yaml`` is the global config file. It specifies sampling rate for example.
 
 Once the packaging step is done, you can use the packaged model by the :doc:`svs` module. An example of using packed models can be found at :doc:`notebooks/Demos`.
-
-
 
 .. [1] Recipes in NNSVS and Kaldi are technically different. For example, NNSVS does't use ``text``, ``feats.scp``, ``wav.scp`` and ``segments`` that are traditionally used in Kaldi.

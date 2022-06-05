@@ -1,5 +1,5 @@
-Related projects
-================
+Useful links
+============
 
 Custom language support
 ------------------------

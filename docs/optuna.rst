@@ -33,7 +33,7 @@ Or if you want to install requirements explicitly, you can run the following com
 Run mlflow
 ----------
 
-Before running the hyderparameter optimization, you need to run mlflow. Mlflow is used to visualize and track results of hyperparameter search as showen in the top figure of this page.
+Before running the hyderparameter optimization, you need to run mlflow. Mlflow is used to visualize and track results of hyperparameter search as shown in the top figure of this page.
 
 .. code::
 
@@ -96,10 +96,23 @@ A detailed explanation of the arguments:
 Note that you can specify the search space by several different methods (e.g., ``choice`` and ``interval``).
 For more details, please refer to the `Optuna sweeper documentation <https://hydra.cc/docs/plugins/optuna_sweeper/>`_.
 
+Once the hyperparameter optimization is finished, you can find best parameters that achieved the best dev loss on the mlflow UI.
+As shown below, it is useful to sort results by objective metrics such as root mean squared error (RMSE), mel-cepstrum distortion (MCD), and F0-RMSE, V/UV errors.
+
+.. image:: _static/img/mlflow_sort_by_rmse.png
+   :alt: Sorted results of hyperparameter optimization
+
+The smaller the better for most metrics. Smaller development loss generally means smaller RMSE or MCD but note that it is not guaranteed.
+
 Notes
 -----
 
 Number of trials
 ^^^^^^^^^^^^^^^^
 
-The default number of trials is set to 100. This is not so large for training time-lag/duration models. However, for training acoustic models, it is recommended to set the number of trials to a smaller value unless you have sufficient compute resources. If you perform 100 trials for training acoustic models, it is likely to take weeks to finish.
+The default number of trials is set to 100. This is not so large for training time-lag/duration models. However, for training acoustic models, it is recommended to set the number of trials to a smaller value unless you have sufficient compute resources. If you perform 100 trials for training acoustic models, it is likely to take weeks to complete.
+
+Negative loss
+^^^^^^^^^^^^^^
+
+No problem with negative loss for MDN models.

@@ -59,6 +59,8 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
 
    pretrained
    svs
+   base
+   model
    dsp
    gen
    mdn
@@ -66,13 +68,15 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    multistream
    postfilters
    discriminators
+   util
+   train_util
 
 .. toctree::
    :maxdepth: 1
    :caption: Resources
 
+   links
    papers
-   related
 
 .. toctree::
     :maxdepth: 1

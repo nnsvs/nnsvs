@@ -1,8 +1,14 @@
 Update guide
 ==============
 
+This page summarizes some guides when you want to use the updated version of NNSVS.
+
 v0.0.2 to master
 ----------------
+
+.. note::
+
+    The master branch is the development version of NNSVS. It is ready for developers to try out new features but use it on your own.
 
 Please check the following changes and consider changing your config files accordingly.
 
@@ -13,6 +19,17 @@ config.yaml
 - New parameter: ``trajectory_smoothing_cutoff`` specifies the cuttoff frequency for the trajectory smoothing. Default is 50 Hz. `This slide <https://www.slideshare.net/ShinnosukeTakamichi/apsipa2017-trajectory-smoothing-for-vocoderfree-speech-synthesis>`_ is useful to know the effects of the cutoff frequency.
 - Changed: ``sample_rate`` became mandatory parameter while it was optional.
 - New parameter: ``*_sweeper_args`` and ``*_sweeper_n_trials`` specifies configurations for hyperparameter optimization. See :doc:`optuna` for details.
+
+Run.sh
+^^^^^^^
+
+- Consider adding model packing stage 99 by following ``kiritan_singing`` recipes.
+- Consider adding post-filter related steps on your own by following ``kiritan_singing`` recipes.
+
+Models
+^^^^^^^
+
+- All models now accept new argument ``init_type`` that specifies the initialization method for model parameters. Setting ``init_type`` to ``kaiming_normal`` or ``xavier_normal`` may improves convergence a bit for deep networks. The implementation was taken by `junyanz/pytorch-CycleGAN-and-pix2pix <https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix>`_.
 
 train.py: train config
 ^^^^^^^^^^^^^^^^^^^^^^

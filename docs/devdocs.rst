@@ -1,7 +1,7 @@
 Notes for developers
 ====================
 
-This is a note for developers of NNSVS. If you want to contribute to NNSVS itself, please check the document below.
+This page summarizes docs for developers of NNSVS. If you want to contribute to NNSVS itself, please check the document below.
 
 Installation
 ---------------
@@ -16,11 +16,11 @@ It is recommended to install full requirements with editiable mode  (``-e`` with
 Repository structure
 ---------------------
 
-- Core library: ``nnsvs``
-- Recipes: ``recipes``
-- Documentation: ``docs``
-- Jupyter notebooks: ``notebooks``
-- Utility: ``utils``
+- ``nnsvs``: The core Python library. Neural network implementations for SVS systems can be found here.
+- ``recipes``: Recipes.  The recipes are written mostly in bash and YAML-style configs. Some recipes use small Python scripts.
+- ``docs``: Documentation. It is written by `Sphinx <https://www.sphinx-doc.org/>`_.
+- ``notebooks``: Jupyter notebooks. Notebooks are helpful for interactive debugging and development.
+- ``utils``: Utility scripts
 
 Python docstring style
 ----------------------
