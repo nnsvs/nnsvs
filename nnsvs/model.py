@@ -35,6 +35,22 @@ class ResnetBlock(nn.Module):
 
 
 class Conv1dResnet(BaseModel):
+    """Conv1d + Resnet
+
+    The model is inspired by the MelGAN's model architecture (:cite:t:`kumar2019melgan`).
+    MDN layer is added if use_mdn is True.
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        init_type (str): the type of weight initialization
+        use_mdn (bool): whether to use MDN or not
+        num_gaussians (int): the number of gaussians in MDN
+        dim_wise (bool): whether to use dim-wise or not
+    """
+
     def __init__(
         self,
         in_dim,
@@ -42,9 +58,14 @@ class Conv1dResnet(BaseModel):
         out_dim,
         num_layers=4,
         init_type="none",
+        use_mdn=False,
+        num_gaussians=8,
+        dim_wise=False,
         **kwargs,
     ):
         super().__init__()
+        self.use_mdn = use_mdn
+
         if "dropout" in kwargs:
             warn(
                 "dropout argument in Conv1dResnet is deprecated"
@@ -57,17 +78,63 @@ class Conv1dResnet(BaseModel):
         ]
         for n in range(num_layers):
             model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
+
+        last_conv_out_dim = hidden_dim if use_mdn else out_dim
         model += [
             nn.LeakyReLU(0.2),
             nn.ReflectionPad1d(3),
-            WNConv1d(hidden_dim, out_dim, kernel_size=7, padding=0),
+            WNConv1d(hidden_dim, last_conv_out_dim, kernel_size=7, padding=0),
         ]
 
         self.model = nn.Sequential(*model)
+
+        if self.use_mdn:
+            self.mdn_layer = MDNLayer(
+                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+            )
+        else:
+            self.mdn_layer = None
+
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def prediction_type(self):
+        return (
+            PredictionType.PROBABILISTIC
+            if self.use_mdn
+            else PredictionType.DETERMINISTIC
+        )
+
+    def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         return self.model(x.transpose(1, 2)).transpose(1, 2)
+
+    def inference(self, x, lengths=None):
+        """Inference step
+
+        Find the most likely mean and variance if use_mdn is True
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+
+        Returns:
+            tuple: mean and variance of the output features
+        """
+        if self.use_mdn:
+            log_pi, log_sigma, mu = self(x, lengths)
+            sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            return mu, sigma
+        else:
+            return self(x, lengths)
 
 
 @torch.no_grad()
@@ -139,6 +206,18 @@ class Conv1dResnetSAR(Conv1dResnet):
 
 
 class FFN(BaseModel):
+    """Feed-forward network
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        dropout (float): dropout rate
+        init_type (str): the type of weight initialization
+        last_sigmoid (bool): whether to apply sigmoid on the output
+    """
+
     def __init__(
         self,
         in_dim,
@@ -161,6 +240,16 @@ class FFN(BaseModel):
         init_weights(self, init_type)
 
     def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         h = self.relu(self.first_linear(x))
         for hl in self.hidden_layers:
             h = self.dropout(self.relu(hl(h)))
@@ -174,6 +263,18 @@ FeedForwardNet = FFN
 
 
 class LSTMRNN(BaseModel):
+    """LSTM-based recurrent neural network
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        bidirectional (bool): whether to use bidirectional LSTM
+        dropout (float): dropout rate
+        init_type (str): the type of weight initialization
+    """
+
     def __init__(
         self,
         in_dim,
@@ -199,11 +300,21 @@ class LSTMRNN(BaseModel):
         self.hidden2out = nn.Linear(self.num_direction * self.hidden_dim, out_dim)
         init_weights(self, init_type)
 
-    def forward(self, sequence, lengths, y=None):
+    def forward(self, x, lengths, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
-        sequence = pack_padded_sequence(sequence, lengths, batch_first=True)
-        out, _ = self.lstm(sequence)
+        x = pack_padded_sequence(x, lengths, batch_first=True)
+        out, _ = self.lstm(x)
         out, _ = pad_packed_sequence(out, batch_first=True)
         out = self.hidden2out(out)
         return out
@@ -267,6 +378,19 @@ class RMDN(BaseModel):
         dim_wise=False,
         init_type="none",
     ):
+        """RNN-based mixture density networks (MDN)
+
+        Args:
+            in_dim (int): the dimension of the input
+            hidden_dim (int): the dimension of the hidden state
+            out_dim (int): the dimension of the output
+            num_layers (int): the number of layers
+            bidirectional (bool): whether to use bidirectional LSTM
+            dropout (float): dropout rate
+            num_gaussians (int): the number of gaussians
+            dim_wise (bool): whether to use dimension-wise or not
+            init_type (str): the type of weight initialization
+        """
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
         self.relu = nn.ReLU()
@@ -288,6 +412,16 @@ class RMDN(BaseModel):
         return PredictionType.PROBABILISTIC
 
     def forward(self, x, lengths, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
         out = self.linear(x)
@@ -298,6 +432,17 @@ class RMDN(BaseModel):
         return out
 
     def inference(self, x, lengths=None):
+        """Inference step
+
+        Find the most likely mean and variance
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+
+        Returns:
+            tuple: mean and variance of the output features
+        """
         log_pi, log_sigma, mu = self.forward(x, lengths)
         sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
         return mu, sigma
@@ -315,6 +460,17 @@ class MDN(BaseModel):
         init_type="none",
         **kwargs,
     ):
+        """Mixture density networks (MDN) with FFN
+
+        Args:
+            in_dim (int): the dimension of the input
+            hidden_dim (int): the dimension of the hidden state
+            out_dim (int): the dimension of the output
+            num_layers (int): the number of layers
+            num_gaussians (int): the number of gaussians
+            dim_wise (bool): whether to use dimension-wise or not
+            init_type (str): the type of weight initialization
+        """
         super(MDN, self).__init__()
         if "dropout" in kwargs:
             warn(
@@ -333,14 +489,36 @@ class MDN(BaseModel):
         return PredictionType.PROBABILISTIC
 
     def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         return self.model(x)
 
     def inference(self, x, lengths=None):
+        """Inference step
+
+        Find the most likely mean and variance
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+
+        Returns:
+            tuple: mean and variance of the output features
+        """
         log_pi, log_sigma, mu = self.forward(x, lengths)
         sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
         return mu, sigma
 
 
+# Will be removed in future versions
 class Conv1dResnetMDN(BaseModel):
     def __init__(
         self,
@@ -427,6 +605,27 @@ def predict_lf0_with_residual(
 
 
 class ResF0Conv1dResnet(BaseModel):
+    """Conv1d + Resnet + Residual F0 prediction
+
+    Residual F0 prediction is inspired by  :cite:t:`hono2021sinsy`.
+
+    Args:
+        in_dim (int): input dimension
+        hidden_dim (int): hidden dimension
+        out_dim (int): output dimension
+        num_layers (int): number of layers
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+        init_type (str): initialization type
+        use_mdn (bool): whether to use MDN or not
+        num_gaussians (int): number of gaussians in MDN
+        dim_wise (bool): whether to use dimension-wise MDN or not
+    """
+
     def __init__(
         self,
         in_dim,
@@ -485,7 +684,17 @@ class ResF0Conv1dResnet(BaseModel):
             else PredictionType.DETERMINISTIC
         )
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): input features
+            lengths (torch.Tensor): lengths of input features
+            y (torch.Tensor): output features
+
+        Returns:
+            tuple: (output features, residual log-F0)
+        """
         out = self.model(x.transpose(1, 2)).transpose(1, 2)
 
         if self.use_mdn:
@@ -516,6 +725,15 @@ class ResF0Conv1dResnet(BaseModel):
             return mu, lf0_residual
 
     def inference(self, x, lengths=None):
+        """Inference step
+
+        Args:
+            x (torch.Tensor): input features
+            lengths (torch.Tensor): lengths of input features
+
+        Returns:
+            tuple: (mu, sigma) if use_mdn, (output, ) otherwise
+        """
         if self.use_mdn:
             (log_pi, log_sigma, mu), _ = self(x, lengths)
             sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
@@ -529,6 +747,32 @@ ResF0Conv1dResnetMDN = partial(ResF0Conv1dResnet, use_mdn=True)
 
 
 class ResSkipF0FFConvLSTM(BaseModel):
+    """FFN + Conv1d + LSTM + residual/skip connections
+
+    A model proposed in :cite:t:`hono2021sinsy`.
+
+    Args:
+        in_dim (int): input dimension
+        ff_hidden_dim (int): hidden dimension of feed-forward layer
+        conv_hidden_dim (int): hidden dimension of convolutional layer
+        lstm_hidden_dim (int): hidden dimension of LSTM layer
+        out_dim (int): output dimension
+        dropout (float): dropout rate
+        num_ls (int): number of layers of LSTM
+        bidirectional (bool): whether to use bidirectional LSTM or not
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum of lf0 in the training data of input features
+        in_lf0_max (float): maximum of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+        skip_inputs (bool): whether to use skip connection for the input features
+        init_type (str): initialization type
+        use_mdn (bool): whether to use MDN or not
+        num_gaussians (int): number of gaussians in MDN
+        dim_wise (bool): whether to use MDN with dim-wise or not
+    """
+
     def __init__(
         self,
         in_dim,
@@ -618,6 +862,16 @@ class ResSkipF0FFConvLSTM(BaseModel):
         )
 
     def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
 
@@ -660,6 +914,15 @@ class ResSkipF0FFConvLSTM(BaseModel):
             return mu, lf0_residual
 
     def inference(self, x, lengths=None):
+        """Inference step
+
+        Args:
+            x (torch.Tensor): input features
+            lengths (torch.Tensor): lengths of input features
+
+        Returns:
+            tuple: (mu, sigma) if use_mdn, (output, ) otherwise
+        """
         if self.use_mdn:
             (log_pi, log_sigma, mu), _ = self(x, lengths)
             sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
@@ -681,6 +944,10 @@ class FFConvLSTM(BaseModel):
         bidirectional=True,
         init_type="none",
     ):
+        """FFN + Conv1d + LSTM
+
+        A model proposed in :cite:t:`hono2021sinsy` without residual F0 prediction.
+        """
         super().__init__()
 
         self.ff = nn.Sequential(
@@ -722,6 +989,16 @@ class FFConvLSTM(BaseModel):
         init_weights(self, init_type)
 
     def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
 
@@ -736,6 +1013,19 @@ class FFConvLSTM(BaseModel):
 
 
 class VariancePredictor(BaseModel):
+    """Variance predictor in :cite:t:`ren2020fastspeech`.
+
+    The model is basically composed of stacks of Conv1d + ReLU + BatchNorm1d layers.
+
+    Args:
+        in_dim (int): the input dimension
+        out_dim (int): the output dimension
+        num_layers (int): the number of layers
+        hidden_dim (int): the hidden dimension
+        kernel_size (int): the kernel size
+        dropout (float): the dropout rate
+    """
+
     def __init__(
         self, in_dim, out_dim, num_layers=5, hidden_dim=256, kernel_size=5, dropout=0.5
     ):
@@ -761,11 +1051,38 @@ class VariancePredictor(BaseModel):
         self.fc = nn.Linear(hidden_dim, out_dim)
 
     def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
         x = self.conv(x.transpose(1, 2))
         return self.fc(x.transpose(1, 2))
 
 
 class ResF0VariancePredictor(VariancePredictor):
+    """Variance predictor in :cite:t:`ren2020fastspeech` with residual F0 prediction
+
+    Args:
+        in_dim (int): the input dimension
+        out_dim (int): the output dimension
+        num_layers (int): the number of layers
+        hidden_dim (int): the hidden dimension
+        kernel_size (int): the kernel size
+        dropout (float): the dropout rate
+        in_lf0_idx (int): the index of the input LF0
+        in_lf0_min (float): the minimum value of the input LF0
+        in_lf0_max (float): the maximum value of the input LF0
+        out_lf0_idx (int): the index of the output LF0
+        out_lf0_mean (float): the mean value of the output LF0
+        out_lf0_scale (float): the scale value of the output LF0
+    """
+
     def __init__(
         self,
         in_dim,

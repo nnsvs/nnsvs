@@ -16,6 +16,14 @@ EXAMPLE_DIR = "_example_data"
 
 # Adapted from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
 def init_weights(net, init_type="normal", init_gain=0.02):
+    """Initialize network weights.
+
+    Args:
+        net (torch.nn.Module): network to initialize
+        init_type (str): the name of an initialization method:
+            normal | xavier | kaiming | orthogonal | none.
+        init_gain (float): scaling factor for normal, xavier and orthogonal.
+    """
     if init_type == "none":
         return
 
@@ -47,6 +55,17 @@ def init_weights(net, init_type="normal", init_gain=0.02):
 
 
 def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
+    """Get stream sizes for WORLD-based acoustic features
+
+    Args:
+        sr (int): sampling rate
+        mgc_order (int): order of mel-generalized cepstrum
+        num_windows (int): number of windows
+        vibrato_mode (str): vibrato analysis mode
+
+    Returns:
+        tuple: stream sizes and flags for dynamic features
+    """
     # [mgc, lf0, vuv, bap]
     stream_sizes = [
         (mgc_order + 1) * num_windows,
@@ -74,6 +93,14 @@ def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
 
 
 def load_utt_list(utt_list):
+    """Load a list of utterances.
+
+    Args:
+        utt_list (str): path to a file containing a list of utterances
+
+    Returns:
+        List[str]: list of utterances
+    """
     with open(utt_list) as f:
         utt_ids = f.readlines()
     utt_ids = map(lambda utt_id: utt_id.strip(), utt_ids)
@@ -97,6 +124,11 @@ def example_xml_file(key="haruga_kita"):
 
 
 def init_seed(seed):
+    """Initialize random seed.
+
+    Args:
+        seed (int): random seed
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -200,6 +232,13 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
 
 
 class PyTorchStandardScaler(nn.Module):
+    """PyTorch module for standardization.
+
+    Args:
+        mean (torch.Tensor): mean
+        scale (torch.Tensor): scale
+    """
+
     def __init__(self, mean, scale):
         super().__init__()
         self.mean_ = nn.Parameter(mean, requires_grad=False)
@@ -218,7 +257,8 @@ class StandardScaler:
 
     Args:
         mean (np.ndarray): mean
-        std (np.ndarray): standard deviation
+        var (np.ndarray): variance
+        scale (np.ndarray): scale
     """
 
     def __init__(self, mean, var, scale):

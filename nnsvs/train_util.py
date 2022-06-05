@@ -155,6 +155,15 @@ def collate_fn_random_segments(batch, max_time_frames=256):
 
 
 def get_data_loaders(data_config, collate_fn):
+    """Get data loaders for training and validation.
+
+    Args:
+        data_config (dict): Data configuration.
+        collate_fn (callable): Collate function.
+
+    Returns:
+        dict: Data loaders.
+    """
     data_loaders = {}
     for phase in ["train_no_dev", "dev"]:
         in_dir = to_absolute_path(data_config[phase].in_dir)
@@ -225,6 +234,19 @@ def save_checkpoint(
     is_best=False,
     postfix="",
 ):
+    """Save a checkpoint.
+
+    Args:
+        logger (logging.Logger): Logger.
+        out_dir (str): Output directory.
+        model (nn.Module): Model.
+        optimizer (Optimizer): Optimizer.
+        lr_scheduler (LRScheduler): Learning rate scheduler.
+        epoch (int): Current epoch.
+        is_best (bool, optional): Whether or not the current model is the best.
+            Defaults to False.
+        postfix (str, optional): Postfix. Defaults to "".
+    """
     if isinstance(model, nn.DataParallel):
         model = model.module
 
@@ -302,10 +324,11 @@ def setup(config, device, collate_fn=collate_fn_default):
     Args:
         config (dict): configuration for training
         device (torch.device): device to use for training
+        collate_fn (callable, optional): collate function. Defaults to collate_fn_default.
 
     Returns:
         (tuple): tuple containing model, optimizer, learning rate scheduler,
-            data loaders, tensorboard writer, and logger.
+            data loaders, tensorboard writer, logger, and scalers.
     """
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
@@ -427,10 +450,11 @@ def setup_gan(config, device, collate_fn=collate_fn_default):
     Args:
         config (dict): configuration for training
         device (torch.device): device to use for training
+        collate_fn (callable, optional): collate function. Defaults to collate_fn_default.
 
     Returns:
         (tuple): tuple containing model, optimizer, learning rate scheduler,
-            data loaders, tensorboard writer, and logger.
+            data loaders, tensorboard writer, logger, and scalers.
     """
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
@@ -546,10 +570,11 @@ def setup_cyclegan(config, device, collate_fn=collate_fn_default):
     Args:
         config (dict): configuration for training
         device (torch.device): device to use for training
+        collate_fn (callable, optional): collate function. Defaults to collate_fn_default.
 
     Returns:
         (tuple): tuple containing model, optimizer, learning rate scheduler,
-            data loaders, tensorboard writer, and logger.
+            data loaders, tensorboard writer, logger, and scalers.
     """
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
@@ -1073,7 +1098,7 @@ def eval_spss_model(
             else:
                 group = f"utt{np.abs(utt_idx)}_forward"
             writer.add_audio(group, wav, step, sr)
-            plot_spss_params(
+            plot_spsvs_params(
                 step,
                 writer,
                 mgc,
@@ -1090,9 +1115,25 @@ def eval_spss_model(
 
 
 @torch.no_grad()
-def plot_spss_params(
+def plot_spsvs_params(
     step, writer, mgc, lf0, vuv, bap, pred_mgc, pred_lf0, pred_vuv, pred_bap, group, sr
 ):
+    """Plot acoustic parameters of parametric SVS
+
+    Args:
+        step (int): step of the current iteration
+        writer (tensorboard.SummaryWriter): tensorboard writer
+        mgc (np.ndarray): mgc
+        lf0 (np.ndarray): lf0
+        vuv (np.ndarray): vuv
+        bap (np.ndarray): bap
+        pred_mgc (np.ndarray): predicted mgc
+        pred_lf0 (np.ndarray): predicted lf0
+        pred_vuv (np.ndarray): predicted vuv
+        pred_bap (np.ndarray): predicted bap
+        group (str): group name
+        sr (int): sampling rate
+    """
     fftlen = pyworld.get_cheaptrick_fft_size(sr)
     alpha = pysptk.util.mcepalpha(sr)
     hop_length = int(sr * 0.005)
