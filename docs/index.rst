@@ -52,6 +52,7 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    overview
    recipes
    optuna
+   tips
    update_guide
    devdocs
 

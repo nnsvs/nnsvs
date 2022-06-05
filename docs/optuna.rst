@@ -107,12 +107,13 @@ The smaller the better for most metrics. Smaller development loss generally mean
 Notes
 -----
 
+Development set
+~~~~~~~~~~~~~~~~
+
+Hyperparameter optimization is performed to find the set of parameters that yields the **best development loss**.
+Therefore, it is better to use a large portion of data for the development set. Otherwise you may suffer from over-fitting issues.
+
 Number of trials
 ^^^^^^^^^^^^^^^^
 
 The default number of trials is set to 100. This is not so large for training time-lag/duration models. However, for training acoustic models, it is recommended to set the number of trials to a smaller value unless you have sufficient compute resources. If you perform 100 trials for training acoustic models, it is likely to take weeks to complete.
-
-Negative loss
-^^^^^^^^^^^^^^
-
-No problem with negative loss for MDN models.
