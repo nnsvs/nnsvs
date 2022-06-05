@@ -1,0 +1,77 @@
+out_dir: exp
+log_dir: tensorboard/exp
+
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
+# steps can either be specified by steps or epochs
+max_train_steps: -1
+nepochs: 200
+checkpoint_epoch_interval: 100
+
+# GAN type (lsgan or vanilla-gan)
+gan_type: lsgan
+# Adversarial loss weight
+adv_weight: 1.0
+# Cycle consistency loss weight
+cycle_weight: 10.0
+# Identity mapping loss weight
+id_weight: 5.0
+# Identity mapping loss is used only for the first N-epochs
+# set a negative value to use identity mapping loss for all epoch
+id_loss_until: 10
+
+# [mgc, lf0, vuv, bap, vib, vib_flags]
+adv_streams: [true, false, false, false, false, false]
+# Feature matching loss weight
+fm_weight: 0.0
+# Don't set the value > 0 unless you are sure what you are doing
+# mask 0 to n-th mgc for adversarial loss
+# e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
+mask_nth_mgc_for_adv_loss: 2
+# Mask out unvoiced frames in the adversarial loss
+vuv_mask: false
+
+stream_wise_loss: false
+use_detect_anomaly: true
+
+optim:
+  netG:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 20
+        gamma: 0.5
+    clip_norm: 1.0
+  netD:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 20
+        gamma: 0.5
+    clip_norm: 1.0
+
+resume:
+  netG:
+    checkpoint:
+    load_optimizer: false
+  netD:
+    checkpoint:
+    load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: true

@@ -1,0 +1,29 @@
+# (mgc, lf0, vuv, bap, vib, vib_flags)
+stream_sizes: [180, 3, 1, 15, 6, 1]
+has_dynamic_features: [true, true, false, true, true, false]
+num_windows: 3
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.model.ResSkipF0FFConvLSTM
+  in_dim: 341
+  out_dim: 206
+  ff_hidden_dim: 1024
+  conv_hidden_dim: 512
+  lstm_hidden_dim: 256
+  dropout: 0.0
+  num_lstm_layers: 2
+  bidirectional: true
+  init_type: kaiming_normal
+  use_mdn: false
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_lf0_idx: 292
+  out_lf0_idx: 180
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null

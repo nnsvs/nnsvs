@@ -4,3 +4,6 @@ scaler:
 
 list_path: list.txt
 out_path: scaler.joblib
+
+# If specified, scaler will be loaded from this path and updated accordingly
+external_scaler:

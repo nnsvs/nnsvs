@@ -8,5 +8,4 @@ netG:
   out_dim: 1
   hidden_dim: 1024
   num_layers: 4
-  dropout: 0.5
   num_gaussians: 4

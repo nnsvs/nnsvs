@@ -3,6 +3,8 @@ question_path:
 wav_dir: data/acoustic/wav
 label_dir: data/acoustic/label_phone_align
 
+sample_rate: 48000
+
 subphone_features: coarse_coding
 
 # kiritan
@@ -12,6 +14,7 @@ f0_floor: 150
 f0_ceil: 700
 
 use_harvest: true
+d4c_threshold: 0.85
 
 frame_period: 5 # ms
 mgc_order: 59
@@ -38,3 +41,8 @@ interp_unvoiced_aperiodicity: true
 # For example, if you use sine-based vibrato modeling (w/ dynamic features),
 # you'd need to increase 2*num_windows + 1 for the `out_dim` of the acoustic model.
 vibrato_mode: none
+
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50

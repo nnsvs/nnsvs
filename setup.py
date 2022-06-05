@@ -24,7 +24,7 @@ setup(
     install_requires=[
         "numpy",
         "cython",
-        "torch >= 1.1.0",
+        "torch >= 1.6.0",
         "torchaudio",
         "hydra-core >= 1.1.0, < 1.2.0",
         "hydra_colorlog >= 1.1.0",
@@ -36,12 +36,18 @@ setup(
         "pysinsy",
     ],
     extras_require={
+        "dev": [
+            "mlflow",
+            "optuna",
+            "hydra-optuna-sweeper",
+        ],
         "docs": [
             "sphinx",
             "sphinx-autobuild",
             "sphinx_rtd_theme",
             "nbsphinx>=0.8.6",
             "sphinxcontrib-bibtex",
+            "sphinxcontrib-youtube",
             "Jinja2>=3.0.1,<=3.0.3",
             "pandoc",
             "ipython",
@@ -63,11 +69,16 @@ setup(
     entry_points={
         "console_scripts": [
             "nnsvs-prepare-features = nnsvs.bin.prepare_features:entry",
+            "nnsvs-prepare-static-features = nnsvs.bin.prepare_static_features:entry",
+            "nnsvs-prepare-voc-features = nnsvs.bin.prepare_voc_features:entry",
             "nnsvs-fit-scaler = nnsvs.bin.fit_scaler:entry",
             "nnsvs-preprocess-normalize = nnsvs.bin.preprocess_normalize:entry",
             "nnsvs-train = nnsvs.bin.train:entry",
             "nnsvs-train-resf0 = nnsvs.bin.train_resf0:entry",
+            "nnsvs-train-postfilter = nnsvs.bin.train_postfilter:entry",
+            "nnsvs-train-postfilter-cycle = nnsvs.bin.train_postfilter_cycle:entry",
             "nnsvs-generate = nnsvs.bin.generate:entry",
+            "nnsvs-gen-static-features = nnsvs.bin.gen_static_features:entry",
             "nnsvs-synthesis = nnsvs.bin.synthesis:entry",
         ],
     },

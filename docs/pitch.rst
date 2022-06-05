@@ -24,5 +24,4 @@ Utility
 
     hz_to_cent_based_c4
     cent_to_hz_based_c4
-    lowpass_filter
     nonzero_segments

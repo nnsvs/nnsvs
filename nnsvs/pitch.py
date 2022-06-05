@@ -21,7 +21,7 @@ I tested this code with kiritan_singing and nit-song070 database.
 """
 import librosa
 import numpy as np
-from scipy import signal
+from nnsvs.dsp import lowpass_filter
 from scipy.signal import argrelmax, argrelmin
 
 _c4_hz = 440 * 2 ** (3 / 12 - 1)
@@ -60,32 +60,6 @@ def cent_to_hz_based_c4(cent):
         np.exp((cent[nonzero_indices] - _c4_cent) * np.log(2) / 1200) * _c4_hz
     )
     return out
-
-
-def lowpass_filter(x, fs, cutoff=5):
-    """Lowpass filter
-
-    Args:
-        x (np.ndarray): input signal
-        fs (int): sampling rate
-        cutoff (int): cutoff frequency
-
-    Returns:
-        np.ndarray: filtered signal
-    """
-    nyquist = fs // 2
-    norm_cutoff = cutoff / nyquist
-    Wn = [norm_cutoff]
-
-    b, a = signal.butter(5, Wn, "lowpass")
-    if len(x) <= len(b) * 3:
-        # NOTE: input signal is too short
-        return x
-
-    # NOTE: use zero-phase filter
-    y = signal.filtfilt(b, a, x)
-
-    return y
 
 
 def nonzero_segments(f0):

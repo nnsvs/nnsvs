@@ -55,14 +55,22 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     kiritan_singing=downloads/kiritan_singing
     cd $kiritan_singing && git checkout .
-    echo "" >> config.py
-    echo "wav_dir = \"$wav_root\"" >> config.py
+    if [ ! -z "${wav_root}" ]; then
+        echo "" >> config.py
+        echo "wav_dir = \"$wav_root\"" >> config.py
+    fi
     ./run.sh
     cd -
     mkdir -p data/list
     ln -sfn $PWD/$kiritan_singing/kiritan_singing_extra/timelag data/timelag
     ln -sfn $PWD/$kiritan_singing/kiritan_singing_extra/duration data/duration
     ln -sfn $PWD/$kiritan_singing/kiritan_singing_extra/acoustic data/acoustic
+
+    # Normalize audio if sv56 is available
+    if command -v sv56demo &> /dev/null; then
+        echo "Normalize audio gain with sv56"
+        python $NNSVS_COMMON_ROOT/sv56.py $out_dir/acoustic/wav $out_dir/acoustic/wav
+    fi
 
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
@@ -102,15 +110,88 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
 fi
 
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    echo "stage 7: Prepare input/output features for post-filter"
+    . $NNSVS_COMMON_ROOT/prepare_postfilter.sh
+fi
+
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    echo "stage 8: Training post-filter"
+    . $NNSVS_COMMON_ROOT/train_postfilter.sh
+fi
+
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+    echo "stage 9: Prepare vocoder input/output features"
+    . $NNSVS_COMMON_ROOT/prepare_voc_features.sh
+fi
+
+if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
+    echo "stage 10: Compute statistics of vocoder's input features"
+    xrun python $NNSVS_COMMON_ROOT/scaler_joblib2npy_voc.py \
+        $dump_norm_dir/out_acoustic_scaler.joblib $dump_norm_dir/
+fi
+
+if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
+    echo "stage 11: Training vocoder using parallel_wavegan"
+    if [ ! -z ${pretrained_vocoder_checkpoint} ]; then
+        extra_args="--resume $pretrained_vocoder_checkpoint"
+    else
+        extra_args=""
+    fi
+    # NOTE: copy normalization stats to expdir for convenience
+    mkdir -p $expdir/$vocoder_model
+    cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
+    xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
+        --train-dumpdir $dump_norm_dir/$train_set/in_vocoder \
+        --dev-dumpdir $dump_norm_dir/$dev_set/in_vocoder/ \
+        --outdir $expdir/$vocoder_model $extra_args
+fi
+
+if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
+    echo "stage 12: Synthesis waveforms by parallel_wavegan"
+    if [ -z "${vocoder_eval_checkpoint}" ]; then
+        vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"
+    fi
+    outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
+    for s in ${testsets[@]}; do
+        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/in_vocoder \
+            --checkpoint $vocoder_eval_checkpoint \
+            --outdir $outdir
+    done
+fi
+
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
-    dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
+    if [[ -z "${vocoder_eval_checkpoint}" && -d ${expdir}/${vocoder_model}/config.yml ]]; then
+        vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
+    fi
+    # Determine the directory name of a packed model
+    if [ -e "$vocoder_eval_checkpoint" ]; then
+        # PWG's expdir or packed model's dir
+        voc_dir=$(dirname $vocoder_eval_checkpoint)
+        # PWG's expdir
+        if [ -e ${voc_dir}/config.yml ]; then
+            voc_config=${voc_dir}/config.yml
+        # Packed model's dir
+        elif [ -e ${voc_dir}/vocoder_model.yaml ]; then
+            voc_config=${voc_dir}/vocoder_model.yaml
+        else
+            echo "ERROR: vocoder config is not found!"
+            exit 1
+        fi
+        vocoder_config_name=$(basename $(grep config: ${voc_config} | awk '{print $2}'))
+        vocoder_config_name=${vocoder_config_name/.yaml/}
+        dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}_${vocoder_config_name}
+    else
+        dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
+    fi
+
     mkdir -p $dst_dir
     # global config file
     # NOTE: New residual F0 prediction models require relative_f0 to be false.
     cat > ${dst_dir}/config.yaml <<EOL
 # Global configs
-sample_rate: 48000
+sample_rate: ${sample_rate}
 frame_period: 5
 log_f0_conditioning: true
 

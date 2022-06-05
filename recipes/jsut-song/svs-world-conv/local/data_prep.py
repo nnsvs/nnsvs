@@ -38,7 +38,6 @@ def get_parser():
     parser.add_argument("jsut_lab_root", type=str, help="JSUT lab dir")
     parser.add_argument("hts_demo_root", type=str, help="HTS demo root")
     parser.add_argument("out_dir", type=str, help="Output directory")
-    parser.add_argument("--gain-normalize", action="store_true")
     return parser
 
 
@@ -47,7 +46,6 @@ args = get_parser().parse_args(sys.argv[1:])
 out_dir = args.out_dir
 nit_song080_label_root = join(args.hts_demo_root, "data/labels/full")
 jsut_song_root = join(args.jsut_song_root, "child_song")
-gain_normalize = args.gain_normalize
 
 # Time-lag constraints to filter outliers
 timelag_allowed_range = (-20, 19)
@@ -55,6 +53,7 @@ timelag_allowed_range_rest = (-40, 39)
 
 offset_correction_threshold = 0.005
 
+prefix = "jsut"
 
 # Make aligned full context labels
 
@@ -148,6 +147,10 @@ for lab_align_path in full_lab_align_files:
     lab_align = lab_align[valid_note_indices]
     lab_score = lab_score[valid_note_indices]
 
+    # NOTE: before saving file, let's add a prefix
+    # 01.lab -> ${prefix}_01.lab
+    name = prefix + "_" + name
+
     # Save lab files
     lab_align_dst_path = join(lab_align_dst_dir, name)
     with open(lab_align_dst_path, "w") as of:
@@ -171,6 +174,10 @@ for lab_align_path in full_lab_align_files:
     name = basename(lab_align_path)
 
     lab_align = hts.load(lab_align_path)
+
+    # NOTE: before saving file, let's add a prefix
+    # 01.lab -> ${prefix}_01.lab
+    name = prefix + "_" + name
 
     # Save lab file
     lab_align_dst_path = join(lab_align_dst_dir, name)
@@ -200,11 +207,12 @@ for lab_align_path in full_lab_align_files:
     # sr, wave = wavfile.read(wav_path)
     wav, sr = librosa.load(wav_path, sr=48000)
 
-    if gain_normalize:
-        wav = wav / wav.max() * 0.99
-
     lab_align = hts.load(lab_align_path)
     lab_score = hts.load(lab_score_path)
+
+    # NOTE: before saving file, let's add a prefix
+    # 01.lab -> ${prefix}_01.lab
+    name = prefix + "_" + name
 
     # Save caudio
     wav_dst_path = join(wav_dst_dir, name + ".wav")

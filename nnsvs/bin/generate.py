@@ -10,9 +10,8 @@ import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
 from nnsvs.base import PredictionType
-from nnsvs.gen import get_windows
 from nnsvs.logger import getLogger
-from nnsvs.multistream import multi_stream_mlpg
+from nnsvs.multistream import get_windows, multi_stream_mlpg
 from nnsvs.train_util import NpyFileSource
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
@@ -40,6 +39,7 @@ def my_app(config: DictConfig) -> None:
         map_location=lambda storage, loc: storage,
     )
     model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
 
     scaler = joblib.load(to_absolute_path(config.out_scaler_path))
 

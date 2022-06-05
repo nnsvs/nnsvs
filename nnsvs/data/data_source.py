@@ -9,12 +9,13 @@ from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
-from nnsvs.gen import get_windows
+from nnsvs.multistream import get_windows
 from nnsvs.pitch import (
     extract_smoothed_f0,
     extract_vibrato_likelihood,
     extract_vibrato_parameters,
     hz_to_cent_based_c4,
+    lowpass_filter,
 )
 from scipy.io import wavfile
 
@@ -129,6 +130,10 @@ class WORLDAcousticSource(FileDataSource):
         relative_f0=True,
         interp_unvoiced_aperiodicity=True,
         vibrato_mode="none",  # diff, sine
+        sample_rate=48000,
+        d4c_threshold=0.85,
+        trajectory_smoothing=False,
+        trajectory_smoothing_cutoff=50,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -146,6 +151,10 @@ class WORLDAcousticSource(FileDataSource):
         self.interp_unvoiced_aperiodicity = interp_unvoiced_aperiodicity
         self.vibrato_mode = vibrato_mode
         self.windows = get_windows(num_windows)
+        self.sample_rate = sample_rate
+        self.d4c_threshold = d4c_threshold
+        self.trajectory_smoothing = trajectory_smoothing
+        self.trajectory_smoothing_cutoff = trajectory_smoothing_cutoff
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -178,6 +187,10 @@ class WORLDAcousticSource(FileDataSource):
 
         fs, x = wavfile.read(wav_path)
         x = x.astype(np.float64)
+        if fs != self.sample_rate:
+            raise RuntimeError(
+                "Sample rate mismatch! {} != {}".format(fs, self.sample_rate)
+            )
 
         if self.use_harvest:
             f0, timeaxis = pyworld.harvest(
@@ -238,7 +251,7 @@ class WORLDAcousticSource(FileDataSource):
             raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
-        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs)
+        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
 
         mgc = pysptk.sp2mc(
             spectrogram, order=self.mgc_order, alpha=pysptk.util.mcepalpha(fs)
@@ -269,6 +282,18 @@ class WORLDAcousticSource(FileDataSource):
                         aperiodicity[is_voiced, k],
                     )
         bap = pyworld.code_aperiodicity(aperiodicity, fs)
+
+        # Parameter trajectory smoothing
+        if self.trajectory_smoothing:
+            modfs = int(1 / 0.005)
+            for d in range(mgc.shape[1]):
+                mgc[:, d] = lowpass_filter(
+                    mgc[:, d], modfs, cutoff=self.trajectory_smoothing_cutoff
+                )
+            for d in range(bap.shape[1]):
+                bap[:, d] = lowpass_filter(
+                    bap[:, d], modfs, cutoff=self.trajectory_smoothing_cutoff
+                )
 
         # Adjust lengths
         mgc = mgc[: labels.num_frames()]

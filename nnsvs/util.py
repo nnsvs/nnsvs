@@ -5,11 +5,107 @@ from typing import Any
 
 import numpy as np
 import pkg_resources
+import pyworld
 import torch
+from torch import nn
 
 # mask-related functions were adapted from https://github.com/espnet/espnet
 
 EXAMPLE_DIR = "_example_data"
+
+
+# Adapted from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
+def init_weights(net, init_type="normal", init_gain=0.02):
+    """Initialize network weights.
+
+    Args:
+        net (torch.nn.Module): network to initialize
+        init_type (str): the name of an initialization method:
+            normal | xavier | kaiming | orthogonal | none.
+        init_gain (float): scaling factor for normal, xavier and orthogonal.
+    """
+    if init_type == "none":
+        return
+
+    def init_func(m):
+        classname = m.__class__.__name__
+        if hasattr(m, "weight") and (
+            classname.find("Conv") != -1 or classname.find("Linear") != -1
+        ):
+            if init_type == "normal":
+                nn.init.normal_(m.weight.data, 0.0, init_gain)
+            elif init_type == "xavier_normal":
+                nn.init.xavier_normal_(m.weight.data, gain=init_gain)
+            elif init_type == "kaiming_normal":
+                nn.init.kaiming_normal_(m.weight.data, a=0, mode="fan_in")
+            elif init_type == "orthogonal":
+                nn.init.orthogonal_(m.weight.data, gain=init_gain)
+            else:
+                raise NotImplementedError(
+                    "initialization method [%s] is not implemented" % init_type
+                )
+            if hasattr(m, "bias") and m.bias is not None:
+                nn.init.constant_(m.bias.data, 0.0)
+        elif classname.find("BatchNorm2d") != -1:
+            # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+            nn.init.normal_(m.weight.data, 1.0, init_gain)
+            nn.init.constant_(m.bias.data, 0.0)
+
+    net.apply(init_func)
+
+
+def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
+    """Get stream sizes for WORLD-based acoustic features
+
+    Args:
+        sr (int): sampling rate
+        mgc_order (int): order of mel-generalized cepstrum
+        num_windows (int): number of windows
+        vibrato_mode (str): vibrato analysis mode
+
+    Returns:
+        tuple: stream sizes and flags for dynamic features
+    """
+    # [mgc, lf0, vuv, bap]
+    stream_sizes = [
+        (mgc_order + 1) * num_windows,
+        num_windows,
+        1,
+        pyworld.get_num_aperiodicities(sr) * 3,
+    ]
+    has_dynamic_features = [True, True, False, True]
+    if vibrato_mode == "diff":
+        # vib
+        stream_sizes.append(num_windows)
+        has_dynamic_features.append(True)
+    elif vibrato_mode == "sine":
+        # vib + vib_flags
+        stream_sizes.append(3 * num_windows)
+        has_dynamic_features.append(True)
+        stream_sizes.append(1)
+        has_dynamic_features.append(False)
+    elif vibrato_mode == "none":
+        pass
+    else:
+        raise RuntimeError("Unknown vibrato mode: {}".format(vibrato_mode))
+
+    return stream_sizes, has_dynamic_features
+
+
+def load_utt_list(utt_list):
+    """Load a list of utterances.
+
+    Args:
+        utt_list (str): path to a file containing a list of utterances
+
+    Returns:
+        List[str]: list of utterances
+    """
+    with open(utt_list) as f:
+        utt_ids = f.readlines()
+    utt_ids = map(lambda utt_id: utt_id.strip(), utt_ids)
+    utt_ids = filter(lambda utt_id: len(utt_id) > 0, utt_ids)
+    return list(utt_ids)
 
 
 def example_xml_file(key="haruga_kita"):
@@ -28,6 +124,11 @@ def example_xml_file(key="haruga_kita"):
 
 
 def init_seed(seed):
+    """Initialize random seed.
+
+    Args:
+        seed (int): random seed
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -130,13 +231,34 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1, maxlen=None):
     return ~make_pad_mask(lengths, xs, length_dim, maxlen)
 
 
+class PyTorchStandardScaler(nn.Module):
+    """PyTorch module for standardization.
+
+    Args:
+        mean (torch.Tensor): mean
+        scale (torch.Tensor): scale
+    """
+
+    def __init__(self, mean, scale):
+        super().__init__()
+        self.mean_ = nn.Parameter(mean, requires_grad=False)
+        self.scale_ = nn.Parameter(scale, requires_grad=False)
+
+    def transform(self, x):
+        return (x - self.mean_) / self.scale_
+
+    def inverse_transform(self, x):
+        return x * self.scale_ + self.mean_
+
+
 class StandardScaler:
     """sklearn.preprocess.StandardScaler like class with only
     transform functionality
 
     Args:
         mean (np.ndarray): mean
-        std (np.ndarray): standard deviation
+        var (np.ndarray): variance
+        scale (np.ndarray): scale
     """
 
     def __init__(self, mean, var, scale):
@@ -159,12 +281,16 @@ class MinMaxScaler:
     Args:
         min (np.ndarray): minimum
         scale (np.ndarray): scale
+        data_min (np.ndarray): minimum of input data
+        data_max (np.ndarray): maximum of input data
         feature_range (tuple): (min, max)
     """
 
-    def __init__(self, min, scale, feature_range=(0, 1)):
+    def __init__(self, min, scale, data_min=None, data_max=None, feature_range=(0, 1)):
         self.min_ = min
         self.scale_ = scale
+        self.data_min_ = data_min
+        self.data_max_ = data_max
         self.feature_range = feature_range
 
     def transform(self, x):

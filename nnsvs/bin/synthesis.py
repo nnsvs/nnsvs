@@ -4,11 +4,14 @@ from os.path import exists, join
 import hydra
 import joblib
 import numpy as np
+import pysptk
 import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
+from nnmnkwii.postfilters import merlin_post_filter
 from nnsvs.gen import (
+    gen_spsvs_static_features,
     gen_world_params,
     postprocess_duration,
     predict_acoustic,
@@ -126,7 +129,7 @@ def synthesis(
     )
 
     # Generate WORLD parameters
-    f0, spectrogram, aperiodicity = gen_world_params(
+    mgc, lf0, vuv, bap = gen_spsvs_static_features(
         duration_modified_labels,
         acoustic_features,
         binary_dict,
@@ -136,11 +139,17 @@ def synthesis(
         config.acoustic.subphone_features,
         pitch_idx,
         acoustic_config.num_windows,
-        config.acoustic.post_filter,
-        config.sample_rate,
         config.frame_period,
         config.acoustic.relative_f0,
         config.vibrato_scale,
+    )
+
+    if config.acoustic.post_filter:
+        alpha = pysptk.util.mcepalpha(config.sample_rate)
+        mgc = merlin_post_filter(mgc, alpha)
+
+    f0, spectrogram, aperiodicity = gen_world_params(
+        mgc, lf0, vuv, bap, config.sample_rate
     )
 
     wav = pyworld.synthesize(

@@ -61,7 +61,7 @@ for d in [full_align_dir, full_score_dir]:
     os.makedirs(d, exist_ok=True)
 
 sinsy = pysinsy.sinsy.Sinsy()
-assert sinsy.setLanguages("j", "/usr/local/lib/sinsy/dic")
+assert sinsy.setLanguages("j", pysinsy.get_default_dic_dir())
 
 mono_lab_files = sorted(glob(join(args.pjs_root, "**/*.lab")))
 muxicxml_files = sorted(glob(join(args.pjs_root, "**/*.musicxml")))

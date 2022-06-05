@@ -1,0 +1,33 @@
+# (mgc, lf0, vuv, bap, vib, vib_flags)
+stream_sizes: [60, 1, 1, 5, 2, 1]
+has_dynamic_features: [false, false, false, false, false, false]
+num_windows: 1
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.postfilters.MultistreamPostFilter
+  stream_sizes: [60, 1, 1, 5, 2, 1]
+  mgc_postfilter:
+    _target_: nnsvs.postfilters.Conv2dPostFilter
+    in_dim: 60
+    channels: 2
+    kernel_size: [1, 1]
+    use_tadn: true
+    init_type: "kaiming_normal"
+  mgc_offset: 2
+  bap_postfilter:
+    _target_: nnsvs.postfilters.Conv2dPostFilter
+    in_dim: 5
+    channels: 2
+    kernel_size: [1, 1]
+    use_tadn: true
+    init_type: "kaiming_normal"
+  lf0_postfilter: null
+
+netD:
+  _target_: nnsvs.discriminators.Conv2dD
+  # If in_dim is not specified, it will be automatically set based on adv_streams
+  in_dim: null
+  channels: 2
+  last_sigmoid: false

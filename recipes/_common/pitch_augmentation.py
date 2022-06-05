@@ -4,15 +4,18 @@ import argparse
 import os
 import re
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from glob import glob
 from os.path import basename, join
 
 import librosa
+import numpy as np
+import pysptk
 import soundfile as sf
-import torch
 from nnmnkwii.frontend import NOTE_MAPPING
 from nnmnkwii.io import hts
-from torchaudio.sox_effects import apply_effects_tensor
+from pysptk.synthesis import AllPoleDF, AllZeroDF, Synthesizer
+from scipy.io import wavfile
 from tqdm.auto import tqdm
 
 MIDI_MAPPING = {v: k for k, v in NOTE_MAPPING.items()}
@@ -28,6 +31,7 @@ def get_parser():
     parser.add_argument(
         "shift_in_cent", default=100, type=int, help="Pitch shift in cent"
     )
+    parser.add_argument("--n_jobs", help="n_jobs")
     parser.add_argument(
         "--filter_augmented_files",
         action="store_true",
@@ -36,30 +40,57 @@ def get_parser():
     return parser
 
 
-def process_wav(wav_files, out_dir, shift_in_cent):
-    for wav_file in tqdm(wav_files):
-        wav, sr = librosa.load(wav_file, sr=None)
-        x = torch.from_numpy(wav).view(1, -1)
+def pitch_shift_on_lpc_residual(
+    wav,
+    sr,
+    shift_in_cent,
+    frame_length=4096,
+    hop_length=240,
+    mgc_order=59,
+):
+    assert wav.dtype == np.int16
+    frames = (
+        librosa.util.frame(wav, frame_length=frame_length, hop_length=hop_length)
+        .astype(np.float64)
+        .T
+    )
+    frames *= pysptk.blackman(frame_length)
+    alpha = pysptk.util.mcepalpha(sr)
 
-        # pitch shift by sox
-        effects = [["pitch", f"{shift_in_cent}"], ["rate", f"{sr}"]]
-        y, y_sr = apply_effects_tensor(x, sr, effects)
-        y = y.view(-1)
+    mgc = pysptk.mcep(frames, mgc_order, alpha, eps=1e-5, etype=1)
+    c = pysptk.freqt(mgc, mgc_order, -alpha)
 
-        assert y_sr == sr
-        if len(y) != len(wav):
-            print(f"{wav_file}: there's small difference between the length of wavs")
-            print(y.shape, wav.shape)
-            if len(y) > len(wav):
-                y = y[: len(wav)]
-            else:
-                y = torch.cat([y, torch.zeros(len(wav) - len(y))])
-        assert len(y) == len(wav)
+    lpc = pysptk.levdur(pysptk.c2acr(c, mgc_order, frame_length))
+    # remove gain
+    lpc[:, 0] = 0
 
-        postfix = str(shift_in_cent).replace("-", "minus") + "cent_aug"
+    # Compute LPC residual
+    synth = Synthesizer(AllZeroDF(mgc_order), hop_length)
+    wav_lpc = synth.synthesis(wav.astype(np.float64), -lpc)
+    residual = wav - wav_lpc
 
-        out_file = join(out_dir, basename(wav_file).replace(".wav", f"_{postfix}.wav"))
-        sf.write(out_file, y.numpy(), sr)
+    # Pitch-shift on LPC residual
+    residual_shifted = librosa.effects.pitch_shift(
+        residual, sr=sr, n_steps=shift_in_cent, bins_per_octave=1200
+    )
+
+    # Filtering by LPC
+    synth = Synthesizer(AllPoleDF(mgc_order), hop_length)
+    wav_shifted = synth.synthesis(residual_shifted, lpc)
+
+    return wav_shifted.astype(np.int16)
+
+
+def process_wav(wav_file, out_dir, shift_in_cent):
+    sr, wav = wavfile.read(wav_file)
+    assert wav.dtype == np.int16
+
+    y = pitch_shift_on_lpc_residual(wav, sr, shift_in_cent)
+
+    postfix = str(shift_in_cent).replace("-", "minus") + "cent_aug"
+
+    out_file = join(out_dir, basename(wav_file).replace(".wav", f"_{postfix}.wav"))
+    sf.write(out_file, y, sr)
 
 
 def process_lab(lab_files, out_dir, shift_in_cent):
@@ -109,4 +140,15 @@ if __name__ == "__main__":
         assert len(lab_files) > 0
         process_lab(lab_files, out_dir, args.shift_in_cent)
     else:
-        process_wav(wav_files, out_dir, args.shift_in_cent)
+        with ProcessPoolExecutor(args.n_jobs) as executor:
+            futures = [
+                executor.submit(
+                    process_wav,
+                    wav_file,
+                    out_dir,
+                    args.shift_in_cent,
+                )
+                for wav_file in wav_files
+            ]
+            for future in tqdm(futures):
+                future.result()

@@ -20,7 +20,10 @@ def my_app(config: DictConfig) -> None:
     list_path = to_absolute_path(config.list_path)
     out_path = to_absolute_path(config.out_path)
 
-    scaler = hydra.utils.instantiate(config.scaler)
+    if config.external_scaler is not None:
+        scaler = joblib.load(config.external_scaler)
+    else:
+        scaler = hydra.utils.instantiate(config.scaler)
     with open(list_path) as f:
         for path in f:
             c = np.load(to_absolute_path(path.strip()))

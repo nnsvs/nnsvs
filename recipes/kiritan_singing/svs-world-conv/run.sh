@@ -55,8 +55,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     kiritan_singing=downloads/kiritan_singing
     cd $kiritan_singing && git checkout .
-    echo "" >> config.py
-    echo "wav_dir = \"$wav_root\"" >> config.py
+    if [ ! -z "${kiritan_wav_root}" ]; then
+        echo "" >> config.py
+        echo "wav_dir = \"$kiritan_wav_root\"" >> config.py
+    fi
     ./run.sh
     cd -
     mkdir -p data/list

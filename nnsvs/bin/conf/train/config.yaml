@@ -4,7 +4,24 @@ defaults:
   - data: defaults
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
+  - override hydra/sweeper: optuna
+  - override hydra/sweeper/sampler: tpe
   - _self_
+
+hydra:
+  sweeper:
+    sampler:
+      seed: 123
+    direction: minimize
+    study_name: train
+    storage: null
+    n_trials: 10
+    n_jobs: 1
+
+# NOTE: tensorboard logging is disabled when mlflow is on
+mlflow:
+  enabled: false
+  experiment: test
 
 verbose: 100
 seed: 773

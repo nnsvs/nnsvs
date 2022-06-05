@@ -1,0 +1,27 @@
+defaults:
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
+
+verbose: 100
+
+utt_list:
+in_dir:
+out_dir:
+
+# GV post-filter
+gv_postfilter: true
+# NOTE: 0-th and 1-th dims of mgc are strongly related the the power and the coarse shape of spectral envelope.
+# It is recommended to keep them as is (i.e., skip the post-filtering for the 0-th and 1-th dims).
+mgc_offset: 2
+bap_offset: 0
+
+# Normalize the output static features or not
+normalize: false
+
+out_scaler_path:
+
+model:
+  checkpoint:
+  model_yaml:
+
