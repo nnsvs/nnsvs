@@ -4,7 +4,7 @@ Hyperparameter optimization with Optuna
 .. image:: _static/img/mlflow_optuna.png
    :alt: MLFlow + Optuna
 
-It is often frustrating to search optimal hyperparamters (e.g., learning rate) by the trial-and-error methodology.
+It is often frustrating to search optimal hyperparamters (e.g., learning rate and step size) by the trial-and-error methodology.
 To address this situation, NNSVS integrates `Optuna <https://github.com/optuna/optuna>`_, a hyperparameter optimization framework.
 
 You can check the following blog post to know more about the hyperparameter optimization with Optuna: `Easy Hyperparameter Management with Hydra, MLflow, and Optuna <https://medium.com/optuna/easy-hyperparameter-management-with-hydra-mlflow-and-optuna-783730700e7d>`_.
@@ -75,7 +75,7 @@ You can specify the search space by following the above comments and examples.
 
 
 An example to perform hyperparameter optimization
-------------------------------------------------
+---------------------------------------------------
 
 The following example was took from my command line history. You may refer to my example as a starting point.
 
