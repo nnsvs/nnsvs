@@ -29,6 +29,7 @@ before_install:
 
 install:
   - pip install -e ".[test,docs]"
+  - pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
 
 script:
   - pytest -v -s
