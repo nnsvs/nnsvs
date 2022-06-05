@@ -29,7 +29,9 @@ Selected videos
 
 Demo by https://github.com/DYVAUX
 
+
 ..  youtube:: 0sSd31TUVCU
+   :align: center
 
 You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs?ref=nicotop_search>`_
 
