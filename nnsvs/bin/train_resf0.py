@@ -159,7 +159,7 @@ def train_loop(
 
     if "feats_criterion" not in config.train:
         logger.warning(
-            "feats_criterion is not found in the data config. Fallback to MSE."
+            "feats_criterion is not found in the train config. Fallback to MSE."
         )
         feats_criterion = "mse"
     else:

@@ -29,14 +29,14 @@ Run.sh
 Models
 ^^^^^^^
 
-- All models now accept new argument ``init_type`` that specifies the initialization method for model parameters. Setting ``init_type`` to ``kaiming_normal`` or ``xavier_normal`` may improves convergence a bit for deep networks. The implementation was taken by `junyanz/pytorch-CycleGAN-and-pix2pix <https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix>`_.
+- All models now accept new argument ``init_type`` that specifies the initialization method for model parameters. Setting ``init_type`` to ``kaiming_normal`` or ``xavier_normal`` may improve convergence a bit for deep networks. The implementation was taken by `junyanz/pytorch-CycleGAN-and-pix2pix <https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix>`_.
 
 train.py: train config
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``use_amp`` specifies if we use mixed precision training or not. Default is false. If you have GPUs/CUDA that supports mixed precision training, you can get performance gain by setting it to true.
 - New parameter: ``max_train_steps`` specifies maximum number of training steps (not epoch). Default is -1, which means maximum number of epochs is used to check if training is finished.
-- New parameter: ``feats_criterion`` specifiefs where we use MSE loss or L1 loss. You can use L1 loss if you want while it was hardcoded to use MSE loss.
+- New parameter: ``feats_criterion`` specifies where we use MSE loss or L1 loss. You can use L1 loss if you want while it was hardcoded to use MSE loss.
 
 train.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -49,7 +49,7 @@ train_resf0.py: train config
 
 - New parameter: ``use_amp`` specifies if we use mixed precision training or not. Default is false. If you have GPUs/CUDA that supports mixed precision training, you can get performance gain by setting it to true.
 - New parameter: ``max_train_steps`` specifies maximum number of training steps (not epoch). Default is -1, which means maximum number of epochs is used to check if training is finished.
-- New parameter: ``feats_criterion`` specifiefs where we use MSE loss or L1 loss. You can use L1 loss if you want while it was hardcoded to use MSE loss.
+- New parameter: ``feats_criterion`` specifies where we use MSE loss or L1 loss. You can use L1 loss if you want while it was hardcoded to use MSE loss.
 
 train_resf0.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
