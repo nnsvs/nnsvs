@@ -1162,6 +1162,9 @@ class ResF0VariancePredictor(VariancePredictor):
 
         return out, lf0_residual
 
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0]
+
 
 class MultistreamParametricModel(BaseModel):
     def __init__(
