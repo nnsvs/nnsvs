@@ -90,7 +90,10 @@ class Conv1dResnet(BaseModel):
 
         if self.use_mdn:
             self.mdn_layer = MDNLayer(
-                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
             )
         else:
             self.mdn_layer = None
@@ -420,7 +423,10 @@ class RMDN(BaseModel):
             dropout=dropout,
         )
         self.mdn = MDNLayer(
-            self.num_direction * hidden_dim, out_dim, num_gaussians, dim_wise
+            in_dim=self.num_direction * hidden_dim,
+            out_dim=out_dim,
+            num_gaussians=num_gaussians,
+            dim_wise=dim_wise,
         )
         init_weights(self, init_type)
 
@@ -497,7 +503,14 @@ class MDN(BaseModel):
         if num_layers > 1:
             for _ in range(num_layers - 1):
                 model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
-        model += [MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)]
+        model += [
+            MDNLayer(
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            )
+        ]
         self.model = nn.Sequential(*model)
         init_weights(self, init_type)
 
@@ -563,7 +576,12 @@ class Conv1dResnetMDN(BaseModel):
                 num_layers=num_layers,
             ),
             nn.ReLU(),
-            MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise),
+            MDNLayer(
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            ),
         ]
         self.model = nn.Sequential(*model)
         init_weights(self, init_type)
@@ -698,7 +716,10 @@ class ResF0Conv1dResnet(BaseModel):
 
         if self.use_mdn:
             self.mdn_layer = MDNLayer(
-                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
             )
         else:
             self.mdn_layer = None
