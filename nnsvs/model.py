@@ -177,17 +177,28 @@ class Conv1dResnetSAR(Conv1dResnet):
         hidden_dim,
         out_dim,
         num_layers=4,
-        dropout=0.0,
         stream_sizes=None,
         ar_orders=None,
         init_type="none",
+        **kwargs,
     ):
-        super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout, init_type)
+        super().__init__(
+            in_dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, num_layers=num_layers
+        )
+
+        if "dropout" in kwargs:
+            warn(
+                "dropout argument in Conv1dResnetSAR is deprecated"
+                " and will be removed in future versions"
+            )
+
         if stream_sizes is None:
             stream_sizes = [180, 3, 1, 15]
         if ar_orders is None:
             ar_orders = [20, 200, 20, 20]
         self.stream_sizes = stream_sizes
+
+        init_weights(self, init_type)
 
         self.analysis_filts = nn.ModuleList()
         for s, K in zip(stream_sizes, ar_orders):
@@ -526,12 +537,19 @@ class Conv1dResnetMDN(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=4,
-        dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
         init_type="none",
+        **kwargs,
     ):
         super().__init__()
+
+        if "dropout" in kwargs:
+            warn(
+                "dropout argument in Conv1dResnet is deprecated"
+                " and will be removed in future versions"
+            )
+
         model = [
             Conv1dResnet(
                 in_dim=in_dim,
