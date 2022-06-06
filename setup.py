@@ -41,6 +41,7 @@ setup(
             "mlflow",
             "optuna",
             "hydra-optuna-sweeper",
+            "protobuf <= 3.20.1",
         ],
         "docs": [
             "sphinx",
