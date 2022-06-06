@@ -115,7 +115,12 @@ class Conv1dResnet(BaseModel):
         Returns:
             torch.Tensor: the output tensor
         """
-        return self.model(x.transpose(1, 2)).transpose(1, 2)
+        out = self.model(x.transpose(1, 2)).transpose(1, 2)
+
+        if self.use_mdn:
+            return self.mdn_layer(out)
+        else:
+            return out
 
     def inference(self, x, lengths=None):
         """Inference step
