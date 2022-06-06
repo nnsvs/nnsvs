@@ -37,6 +37,7 @@ setup(
     ],
     extras_require={
         "dev": [
+            "matplotlib",
             "mlflow",
             "optuna",
             "hydra-optuna-sweeper",
