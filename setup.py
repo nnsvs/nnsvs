@@ -37,9 +37,11 @@ setup(
     ],
     extras_require={
         "dev": [
+            "matplotlib",
             "mlflow",
             "optuna",
             "hydra-optuna-sweeper",
+            "protobuf <= 3.20.1",
         ],
         "docs": [
             "sphinx",

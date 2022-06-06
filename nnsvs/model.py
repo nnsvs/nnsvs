@@ -90,7 +90,10 @@ class Conv1dResnet(BaseModel):
 
         if self.use_mdn:
             self.mdn_layer = MDNLayer(
-                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
             )
         else:
             self.mdn_layer = None
@@ -115,7 +118,12 @@ class Conv1dResnet(BaseModel):
         Returns:
             torch.Tensor: the output tensor
         """
-        return self.model(x.transpose(1, 2)).transpose(1, 2)
+        out = self.model(x.transpose(1, 2)).transpose(1, 2)
+
+        if self.use_mdn:
+            return self.mdn_layer(out)
+        else:
+            return out
 
     def inference(self, x, lengths=None):
         """Inference step
@@ -177,17 +185,28 @@ class Conv1dResnetSAR(Conv1dResnet):
         hidden_dim,
         out_dim,
         num_layers=4,
-        dropout=0.0,
         stream_sizes=None,
         ar_orders=None,
         init_type="none",
+        **kwargs,
     ):
-        super().__init__(in_dim, hidden_dim, out_dim, num_layers, dropout, init_type)
+        super().__init__(
+            in_dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, num_layers=num_layers
+        )
+
+        if "dropout" in kwargs:
+            warn(
+                "dropout argument in Conv1dResnetSAR is deprecated"
+                " and will be removed in future versions"
+            )
+
         if stream_sizes is None:
             stream_sizes = [180, 3, 1, 15]
         if ar_orders is None:
             ar_orders = [20, 200, 20, 20]
         self.stream_sizes = stream_sizes
+
+        init_weights(self, init_type)
 
         self.analysis_filts = nn.ModuleList()
         for s, K in zip(stream_sizes, ar_orders):
@@ -404,7 +423,10 @@ class RMDN(BaseModel):
             dropout=dropout,
         )
         self.mdn = MDNLayer(
-            self.num_direction * hidden_dim, out_dim, num_gaussians, dim_wise
+            in_dim=self.num_direction * hidden_dim,
+            out_dim=out_dim,
+            num_gaussians=num_gaussians,
+            dim_wise=dim_wise,
         )
         init_weights(self, init_type)
 
@@ -481,7 +503,14 @@ class MDN(BaseModel):
         if num_layers > 1:
             for _ in range(num_layers - 1):
                 model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
-        model += [MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise)]
+        model += [
+            MDNLayer(
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            )
+        ]
         self.model = nn.Sequential(*model)
         init_weights(self, init_type)
 
@@ -526,16 +555,33 @@ class Conv1dResnetMDN(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=4,
-        dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
         init_type="none",
+        **kwargs,
     ):
         super().__init__()
+
+        if "dropout" in kwargs:
+            warn(
+                "dropout argument in Conv1dResnet is deprecated"
+                " and will be removed in future versions"
+            )
+
         model = [
-            Conv1dResnet(in_dim, hidden_dim, hidden_dim, num_layers, dropout),
+            Conv1dResnet(
+                in_dim=in_dim,
+                hidden_dim=hidden_dim,
+                out_dim=hidden_dim,
+                num_layers=num_layers,
+            ),
             nn.ReLU(),
-            MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise),
+            MDNLayer(
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            ),
         ]
         self.model = nn.Sequential(*model)
         init_weights(self, init_type)
@@ -670,7 +716,10 @@ class ResF0Conv1dResnet(BaseModel):
 
         if self.use_mdn:
             self.mdn_layer = MDNLayer(
-                hidden_dim, out_dim, num_gaussians=num_gaussians, dim_wise=dim_wise
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
             )
         else:
             self.mdn_layer = None
@@ -1133,6 +1182,9 @@ class ResF0VariancePredictor(VariancePredictor):
         out[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
         return out, lf0_residual
+
+    def inference(self, x, lengths=None):
+        return self(x, lengths)[0]
 
 
 class MultistreamParametricModel(BaseModel):
