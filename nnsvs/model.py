@@ -533,7 +533,12 @@ class Conv1dResnetMDN(BaseModel):
     ):
         super().__init__()
         model = [
-            Conv1dResnet(in_dim, hidden_dim, hidden_dim, num_layers, dropout),
+            Conv1dResnet(
+                in_dim=in_dim,
+                hidden_dim=hidden_dim,
+                out_dim=hidden_dim,
+                num_layers=num_layers,
+            ),
             nn.ReLU(),
             MDNLayer(hidden_dim, out_dim, num_gaussians, dim_wise),
         ]
