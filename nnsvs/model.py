@@ -1,7 +1,5 @@
-from functools import partial
 from warnings import warn
 
-import numpy as np
 import torch
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
@@ -21,7 +19,8 @@ __all__ = [
     "RMDN",
     "Conv1dResnet",
     "Conv1dResnetMDN",
-    "Conv1dResnetSAR" "FFConvLSTM",
+    "Conv1dResnetSAR",
+    "FFConvLSTM",
     "VariancePredictor",
 ]
 

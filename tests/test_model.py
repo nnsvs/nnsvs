@@ -16,12 +16,10 @@ from nnsvs.util import init_seed
 
 
 def test_deprecated_imports():
-    from nnsvs.model import (
-        ResF0Conv1dResnet,
-        ResF0Conv1dResnetMDN,
-        ResF0VariancePredictor,
-        ResSkipF0FFConvLSTM,
-    )
+    from nnsvs.model import ResF0Conv1dResnet  # noqa: F401
+    from nnsvs.model import ResF0Conv1dResnetMDN  # noqa: F401
+    from nnsvs.model import ResF0VariancePredictor  # noqa: F401
+    from nnsvs.model import ResSkipF0FFConvLSTM  # noqa: F401
 
 
 def _test_model_impl(model, in_dim, out_dim):
