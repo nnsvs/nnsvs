@@ -326,6 +326,9 @@ def postprocess_duration(labels, pred_durations, lag):
         else:
             L_hat = L - (lag[i - 1]) / 50000
 
+        # Prevent negative duration
+        L_hat = max(L_hat, 1)
+
         # adjust the start time of the note
         p.start_times = np.minimum(
             np.asarray(p.start_times) + lag[i - 1].reshape(-1),

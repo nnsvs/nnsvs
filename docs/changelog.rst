@@ -17,6 +17,11 @@ New features
 - Number of training iterations can be now specified by either epochs or steps.
 - Mixed precision training `#106`_
 
+Bug fixes
+~~~~~~~~~
+
+- Add a heuristic trick to prevent non-negative durations at synthesis time
+
 Deprecations
 ^^^^^^^^^^^^^
 
