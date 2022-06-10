@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from enum import Enum
 
 from torch import nn
@@ -9,30 +8,25 @@ class PredictionType(Enum):
     PROBABILISTIC = 2
 
 
-class TimeLagModel(ABC):
-    @abstractmethod
-    def forward(self, feats, feats_lens=None):
-        pass
-
-
-class DurationModel(ABC):
-    @abstractmethod
-    def forward(self, feats, feats_lens=None):
-        pass
-
-
-class AcousticModel(ABC):
-    @abstractmethod
-    def forward(self, feats, feats_lens=None):
-        pass
-
-
 class BaseModel(nn.Module):
     """Base class for all models"""
 
+    def forward(self, x, lengths=None, y=None):
+        """Forward pass
+
+        Args:
+            x (tensor): input features
+            lengths (tensor): lengths of the input features
+            y (tensor): optional target features
+
+        Returns:
+            tensor: output features
+        """
+        pass
+
     def inference(self, *args, **kwargs):
         """Inference method"""
-        return self.forward(*args, **kwargs)
+        return self(*args, **kwargs)
 
     def preprocess_target(self, y):
         """Preprocess target signals at training time
