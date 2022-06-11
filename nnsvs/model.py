@@ -480,10 +480,10 @@ class MDN(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=1,
+        dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
         init_type="none",
-        **kwargs,
     ):
         """Mixture density networks (MDN) with FFN
 
@@ -492,20 +492,20 @@ class MDN(BaseModel):
             hidden_dim (int): the dimension of the hidden state
             out_dim (int): the dimension of the output
             num_layers (int): the number of layers
+            dropout (float): dropout rate
             num_gaussians (int): the number of gaussians
             dim_wise (bool): whether to use dimension-wise or not
             init_type (str): the type of weight initialization
         """
         super(MDN, self).__init__()
-        if "dropout" in kwargs:
-            warn(
-                "dropout argument in MDN is deprecated"
-                " and will be removed in future versions"
-            )
-        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
+        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout)]
         if num_layers > 1:
             for _ in range(num_layers - 1):
-                model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+                model += [
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
         model += [
             MDNLayer(
                 in_dim=hidden_dim,

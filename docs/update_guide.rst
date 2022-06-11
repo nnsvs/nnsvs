@@ -16,7 +16,6 @@ Models
 ^^^^^^^
 
 - New parameter: All models now accept new argument ``init_type`` that specifies the initialization method for model parameters. Setting ``init_type`` to ``kaiming_normal`` or ``xavier_normal`` may improve convergence a bit for deep networks. Defaults to ``none``. The implementation was taken by `junyanz/pytorch-CycleGAN-and-pix2pix <https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix>`_.
-- Deprecated: ``dropout`` for ``nnsvs.model.MDN`` is deprecated. Please consider removing the parameter as it has no effect.
 - Deprecated: ``FeedForwardNet`` is renamed to ``FFN``.
 - Deprecated: ``ResF0Conv1dResnetMDN`` is deprecated. You can use ``ResF0Conv1dMDN`` with ``use_mdn=True``.
 
