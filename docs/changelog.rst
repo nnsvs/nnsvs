@@ -16,6 +16,7 @@ New features
 - GV post-filter (:cite:t:`silen2012ways`)
 - Number of training iterations can be now specified by either epochs or steps.
 - Mixed precision training `#106`_
+- Added VariancePredictor (:cite:t:`ren2020fastspeech`).
 
 Bug fixes
 ~~~~~~~~~

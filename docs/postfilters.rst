@@ -10,8 +10,12 @@ nnsvs.postfilters
     variance_scaling
 
 
+Conv2dPostFilter
+----------------
+
 .. autoclass:: Conv2dPostFilter
-    :members:
+
+MultistreamPostFilter
+---------------------
 
 .. autoclass:: MultistreamPostFilter
-    :members:
