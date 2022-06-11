@@ -22,10 +22,14 @@ Bug fixes
 
 - Add a heuristic trick to prevent non-negative durations at synthesis time
 
+Changes
+~~~~~~~
+
+- ```nnsvs.model.MDN`` now support dropout by the ``dropout`` argument. The ``dropout`` argument existed before but it was no-op for a long time.
+
 Deprecations
 ^^^^^^^^^^^^^
 
-- ``dropout`` for ``nnsvs.model.MDN`` is deprecated. Please consider removing the parameter as it has no effect.
 - ``dropout`` for ``nnsvs.model.Conv1dResnet`` is deprecated. Please consider removing the parameter as it has no effect.
 - ``FeedForwardNet`` is renamed to ``FFN`` to be consistent with other names (such as MDN)
 - ``ResF0Conv1dResnetMDN`` is deprecated. You can use ``ResF0Conv1dResnet`` with ``use_mdn=True``.
