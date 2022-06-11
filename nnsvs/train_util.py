@@ -118,7 +118,7 @@ def collate_fn_random_segments(batch, max_time_frames=256):
 
     Use segmented frames instead of padded entire frames. No padding is performed.
 
-    .. warn::
+    .. warning::
 
         max_time_frames must be larger than the shortest sequence in the training data.
 
@@ -874,6 +874,19 @@ def compute_batch_pitch_regularization_weight(lf0_score_denorm):
 
 @torch.no_grad()
 def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_config):
+    """Compute distortion measures between predicted and ground-truth acoustic features
+
+
+    Args:
+        pred_out_feats (nn.Tensor): predicted acoustic features
+        out_feats (nn.Tensor): ground-truth acoustic features
+        lengths (nn.Tensor): lengths of the sequences
+        out_scaler (nn.Module): scaler to denormalize features
+        model_config (dict): model configuration
+
+    Returns:
+        dict: a dict that includes MCD for mgc/bap, V/UV error and F0 RMSE
+    """
     out_feats = out_scaler.inverse_transform(out_feats)
     pred_out_feats = out_scaler.inverse_transform(pred_out_feats)
     out_streams = get_static_features(
