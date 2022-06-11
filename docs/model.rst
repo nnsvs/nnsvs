@@ -3,42 +3,54 @@ nnsvs.model
 
 .. automodule:: nnsvs.model
 
-Generic models
---------------
-
 Generic models that can be used for time-lag/duration/acoustic models.
 
+FFN
+----
+
 .. autoclass:: FFN
-    :members:
+
+LSTMRNN
+-------
 
 .. autoclass:: LSTMRNN
-    :members:
+
+LSTMRNNSAR
+-----------
+
+.. autoclass:: LSTMRNNSAR
+
+Conv1dResnet
+-------------
 
 .. autoclass:: Conv1dResnet
-    :members:
+
+Conv1dResnetMDN
+-----------------
+
+.. autoclass:: Conv1dResnetMDN
+
+Conv1dResnetSAR
+-----------------
+
+.. autoclass:: Conv1dResnetSAR
+
+MDN
+---
 
 .. autoclass:: MDN
-    :members:
+
+RMDN
+----
 
 .. autoclass:: RMDN
-    :members:
+
+FFConvLSTM
+-----------
 
 .. autoclass:: FFConvLSTM
-    :members:
+
+VariancePredictor
+------------------
 
 .. autoclass:: VariancePredictor
-    :members:
-
-Acoustic models
----------------
-
-Models that can only be used for acoustic models.
-
-.. autoclass:: ResF0Conv1dResnet
-    :members:
-
-.. autoclass:: ResSkipF0FFConvLSTM
-    :members:
-
-.. autoclass:: ResF0VariancePredictor
-    :members:

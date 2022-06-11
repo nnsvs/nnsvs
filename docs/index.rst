@@ -64,13 +64,14 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    svs
    base
    model
+   acoustic_models
+   postfilters
+   discriminators
    dsp
    gen
    mdn
    pitch
    multistream
-   postfilters
-   discriminators
    util
    train_util
 
