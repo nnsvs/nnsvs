@@ -18,4 +18,3 @@ ResF0VariancePredictor
 -----------------------
 
 .. autoclass:: ResF0VariancePredictor
-    :members:

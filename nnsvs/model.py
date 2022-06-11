@@ -388,6 +388,20 @@ class LSTMRNNSAR(LSTMRNN):
 
 
 class RMDN(BaseModel):
+    """RNN-based mixture density networks (MDN)
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        bidirectional (bool): whether to use bidirectional LSTM
+        dropout (float): dropout rate
+        num_gaussians (int): the number of gaussians
+        dim_wise (bool): whether to use dimension-wise or not
+        init_type (str): the type of weight initialization
+    """
+
     def __init__(
         self,
         in_dim,
@@ -400,19 +414,6 @@ class RMDN(BaseModel):
         dim_wise=False,
         init_type="none",
     ):
-        """RNN-based mixture density networks (MDN)
-
-        Args:
-            in_dim (int): the dimension of the input
-            hidden_dim (int): the dimension of the hidden state
-            out_dim (int): the dimension of the output
-            num_layers (int): the number of layers
-            bidirectional (bool): whether to use bidirectional LSTM
-            dropout (float): dropout rate
-            num_gaussians (int): the number of gaussians
-            dim_wise (bool): whether to use dimension-wise or not
-            init_type (str): the type of weight initialization
-        """
         super(RMDN, self).__init__()
         self.linear = nn.Linear(in_dim, hidden_dim)
         self.relu = nn.ReLU()
@@ -474,6 +475,19 @@ class RMDN(BaseModel):
 
 
 class MDN(BaseModel):
+    """Mixture density networks (MDN) with FFN
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        dropout (float): dropout rate
+        num_gaussians (int): the number of gaussians
+        dim_wise (bool): whether to use dimension-wise or not
+        init_type (str): the type of weight initialization
+    """
+
     def __init__(
         self,
         in_dim,
@@ -485,18 +499,6 @@ class MDN(BaseModel):
         dim_wise=False,
         init_type="none",
     ):
-        """Mixture density networks (MDN) with FFN
-
-        Args:
-            in_dim (int): the dimension of the input
-            hidden_dim (int): the dimension of the hidden state
-            out_dim (int): the dimension of the output
-            num_layers (int): the number of layers
-            dropout (float): dropout rate
-            num_gaussians (int): the number of gaussians
-            dim_wise (bool): whether to use dimension-wise or not
-            init_type (str): the type of weight initialization
-        """
         super(MDN, self).__init__()
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout)]
         if num_layers > 1:
@@ -629,6 +631,22 @@ class Conv1dResnetMDN(BaseModel):
 
 
 class FFConvLSTM(BaseModel):
+    """FFN + Conv1d + LSTM
+
+    A model proposed in :cite:t:`hono2021sinsy` without residual F0 prediction.
+
+    Args:
+        in_dim (int): the dimension of the input
+        ff_hidden_dim (int): the dimension of the hidden state of the FFN
+        conv_hidden_dim (int): the dimension of the hidden state of the conv1d
+        lstm_hidden_dim (int): the dimension of the hidden state of the LSTM
+        out_dim (int): the dimension of the output
+        dropout (float): dropout rate
+        num_lstm_layers (int): the number of layers of the LSTM
+        bidirectional (bool): whether to use bidirectional LSTM
+        init_type (str): the type of weight initialization
+    """
+
     def __init__(
         self,
         in_dim,
@@ -641,10 +659,6 @@ class FFConvLSTM(BaseModel):
         bidirectional=True,
         init_type="none",
     ):
-        """FFN + Conv1d + LSTM
-
-        A model proposed in :cite:t:`hono2021sinsy` without residual F0 prediction.
-        """
         super().__init__()
 
         self.ff = nn.Sequential(
