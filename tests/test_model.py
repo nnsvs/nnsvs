@@ -147,6 +147,7 @@ def test_mdn():
         "hidden_dim": 8,
         "out_dim": 180,
         "num_layers": 2,
+        "dropout": 0.5,
         "num_gaussians": 2,
         "dim_wise": True,
         "init_type": "none",
