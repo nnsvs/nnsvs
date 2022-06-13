@@ -58,3 +58,11 @@ jobs:
       run: |
         pip install pytest
         pytest
+    - name: Test recipes
+      shell: bash -l {0}
+      run: |
+          case "${{ runner.os }}" in
+          Linux | macOS)
+            ./tests/test_recipes.sh
+            ;;
+          esac
