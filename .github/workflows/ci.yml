@@ -50,6 +50,9 @@ jobs:
         pip install -r requirements.txt
         pip install -e ".[dev,lint,test]"
 
+        # Install NSF implementations for PWG
+        pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
+
     - name: Lint with pysen
       run: |
         pysen run lint
@@ -58,3 +61,11 @@ jobs:
       run: |
         pip install pytest
         pytest
+    - name: Test recipes
+      shell: bash -l {0}
+      run: |
+          case "${{ runner.os }}" in
+          Linux)
+            ./tests/test_recipes.sh
+            ;;
+          esac
