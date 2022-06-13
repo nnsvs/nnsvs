@@ -21,7 +21,7 @@ Generate training data for post-filtering
     --acoustic_model acoustic_resf0conv \
     --postfilter_model postfilter_mgc --postfilter_train mgc
 
-# Train post-filter for mgc/bap seperately
+# Train post-filter for mgc/bap separately
 # NOTE: we must use specific model/train configs for mgc/bap respectively.
 for typ in mgc bap;
 do
