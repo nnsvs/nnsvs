@@ -14,7 +14,7 @@ cd $NNSVS_ROOT/recipes/nit-song070/test-latest
     --duration-model duration_mdn \
     --acoustic_model acoustic_resf0conv
 
-Generate training data for post-filtering
+# Generate training data for post-filtering
 ./run.sh --stage 7 --stop-stage 7 \
     --timelag-model timelag_mdn \
     --duration-model duration_mdn \
