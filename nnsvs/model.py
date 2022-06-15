@@ -494,20 +494,21 @@ class MDN(BaseModel):
         hidden_dim,
         out_dim,
         num_layers=1,
-        dropout=0.0,
         num_gaussians=8,
         dim_wise=False,
         init_type="none",
+        **kwargs,
     ):
         super(MDN, self).__init__()
-        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout)]
+        if "dropout" in kwargs:
+            warn(
+                "dropout argument in MDN is deprecated"
+                " and will be removed in future versions"
+            )
+        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         if num_layers > 1:
             for _ in range(num_layers - 1):
-                model += [
-                    nn.Linear(hidden_dim, hidden_dim),
-                    nn.ReLU(),
-                    nn.Dropout(dropout),
-                ]
+                model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
         model += [
             MDNLayer(
                 in_dim=hidden_dim,

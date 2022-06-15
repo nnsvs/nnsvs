@@ -1,0 +1,13 @@
+stream_sizes:
+- 1
+has_dynamic_features:
+- false
+stream_weights:
+- 1
+netG:
+  _target_: nnsvs.model.MDN
+  in_dim: 331
+  out_dim: 1
+  hidden_dim: 4
+  num_layers: 1
+  num_gaussians: 1
