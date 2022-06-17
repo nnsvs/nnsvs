@@ -16,6 +16,7 @@ __all__ = [
     "LSTMRNN",
     "LSTMRNNSAR",
     "MDN",
+    "MDNv2",
     "RMDN",
     "Conv1dResnet",
     "Conv1dResnetMDN",
@@ -477,12 +478,16 @@ class RMDN(BaseModel):
 class MDN(BaseModel):
     """Mixture density networks (MDN) with FFN
 
+    .. warning::
+
+        It is recommended to use MDNv2 instead, unless you want to
+        fine-turn from a old checkpoint of MDN.
+
     Args:
         in_dim (int): the dimension of the input
         hidden_dim (int): the dimension of the hidden state
         out_dim (int): the dimension of the output
         num_layers (int): the number of layers
-        dropout (float): dropout rate
         num_gaussians (int): the number of gaussians
         dim_wise (bool): whether to use dimension-wise or not
         init_type (str): the type of weight initialization
@@ -509,6 +514,86 @@ class MDN(BaseModel):
         if num_layers > 1:
             for _ in range(num_layers - 1):
                 model += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+        model += [
+            MDNLayer(
+                in_dim=hidden_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            )
+        ]
+        self.model = nn.Sequential(*model)
+        init_weights(self, init_type)
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
+    def forward(self, x, lengths=None, y=None):
+        """Forward step
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+            y (torch.Tensor): the optional target tensor
+
+        Returns:
+            torch.Tensor: the output tensor
+        """
+        return self.model(x)
+
+    def inference(self, x, lengths=None):
+        """Inference step
+
+        Find the most likely mean and variance
+
+        Args:
+            x (torch.Tensor): the input tensor
+            lengths (torch.Tensor): the lengths of the input tensor
+
+        Returns:
+            tuple: mean and variance of the output features
+        """
+        log_pi, log_sigma, mu = self.forward(x, lengths)
+        sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+        return mu, sigma
+
+
+class MDNv2(BaseModel):
+    """Mixture density networks (MDN) with FFN
+
+    MDN (v1) + Dropout
+
+    Args:
+        in_dim (int): the dimension of the input
+        hidden_dim (int): the dimension of the hidden state
+        out_dim (int): the dimension of the output
+        num_layers (int): the number of layers
+        dropout (float): dropout rate
+        num_gaussians (int): the number of gaussians
+        dim_wise (bool): whether to use dimension-wise or not
+        init_type (str): the type of weight initialization
+    """
+
+    def __init__(
+        self,
+        in_dim,
+        hidden_dim,
+        out_dim,
+        num_layers=1,
+        dropout=0.5,
+        num_gaussians=8,
+        dim_wise=False,
+        init_type="none",
+    ):
+        super(MDNv2, self).__init__()
+        model = [nn.Linear(in_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout)]
+        if num_layers > 1:
+            for _ in range(num_layers - 1):
+                model += [
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
         model += [
             MDNLayer(
                 in_dim=hidden_dim,

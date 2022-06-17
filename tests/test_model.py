@@ -10,6 +10,7 @@ from nnsvs.model import (
     Conv1dResnetMDN,
     Conv1dResnetSAR,
     FFConvLSTM,
+    MDNv2,
     VariancePredictor,
 )
 from nnsvs.util import init_seed
@@ -147,12 +148,27 @@ def test_mdn():
         "hidden_dim": 8,
         "out_dim": 180,
         "num_layers": 2,
-        "dropout": 0.5,
         "num_gaussians": 2,
         "dim_wise": True,
         "init_type": "none",
     }
     model = MDN(**params)
+    assert model.prediction_type() == PredictionType.PROBABILISTIC
+    _test_model_impl(model, params["in_dim"], params["out_dim"])
+
+
+def test_mdnv2():
+    params = {
+        "in_dim": 300,
+        "hidden_dim": 8,
+        "out_dim": 180,
+        "num_layers": 2,
+        "dropout": 0.5,
+        "num_gaussians": 2,
+        "dim_wise": True,
+        "init_type": "none",
+    }
+    model = MDNv2(**params)
     assert model.prediction_type() == PredictionType.PROBABILISTIC
     _test_model_impl(model, params["in_dim"], params["out_dim"])
 
