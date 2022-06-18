@@ -503,6 +503,62 @@ def predict_acoustic(
     return pred_acoustic
 
 
+def correct_vuv_by_phone(vuv, binary_dict, linguistic_features):
+    """Correct V/UV by phone-related flags in a hed file
+
+    This function allows us to control V/UV explicitly by ``C-VUV_Voiced``
+    and ``C-VUV_Unvoied`` flags in a hed file. This is useful when you see
+    your trained acoustic model have lots of V/UV errors.
+    Note that manually controlling V/UV means we are ignoring the
+    acoustic model's prediction. It would have negative impact in some
+    cases, but most cases it would help workaround V/UV errors.
+
+    Args:
+        vuv (ndarray): V/UV flags
+        binary_dict (dict): binary feature dictionary
+        linguistic_features (ndarray): linguistic features
+
+    Returns:
+        ndarray: corrected V/UV flags
+    """
+    vuv = vuv.copy()
+
+    # Set V/UV to 1 based on the C-VUV_Voiced flag
+    in_voiced_idx = -1
+    for k, v in binary_dict.items():
+        name, _ = v
+        if "C-VUV_Voiced" in name:
+            in_voiced_idx = k
+            break
+    if in_voiced_idx > 0:
+        indices = linguistic_features[:, in_voiced_idx : in_voiced_idx + 1] > 0
+        vuv[indices] = 1.0
+
+    # Set V/UV to 0 based on the C-VUV_Unvoiced flag
+    in_unvoiced_indices = []
+    for k, v in binary_dict.items():
+        name, _ = v
+        if "C-VUV_Unvoiced" in name:
+            in_unvoiced_indices.append(k)
+    if len(in_unvoiced_indices) > 0:
+        for in_unvoiced_idx in in_unvoiced_indices:
+            indices = linguistic_features[:, in_unvoiced_idx : in_unvoiced_idx + 1] > 0
+            vuv[indices] = 0.0
+
+    # Set V/UV to 0 for sil/pau/br
+    in_sil_indices = []
+    for k, v in binary_dict.items():
+        name, _ = v
+        if "C-Phone_sil" in name or "C-Phone_pau" in name or "C-Phone_br" in name:
+            in_sil_indices.append(k)
+    if len(in_sil_indices) > 0:
+        for in_sil_idx in in_sil_indices:
+            indices = linguistic_features[:, in_sil_idx : in_sil_idx + 1] > 0
+            vuv[indices] = 0.0
+
+    return vuv
+
+
 def gen_spsvs_static_features(
     labels,
     acoustic_features,
@@ -547,6 +603,9 @@ def gen_spsvs_static_features(
     else:
         static_stream_sizes = stream_sizes
 
+    # Copy here to avoid inplace operations on input acoustic features
+    acoustic_features = acoustic_features.copy()
+
     # Split multi-stream features
     streams = split_streams(acoustic_features, static_stream_sizes)
 
@@ -571,41 +630,9 @@ def gen_spsvs_static_features(
         subphone_features=subphone_features,
     )
 
-    # Fix V/UV based on the input musical score information
-    # NOTE: only works for nnsvs's JP hed files,
-    # but it should be straightforward to tweak for other files
+    # Correct V/UV based on special phone flags
     if force_fix_vuv:
-        # Set V/UV to 1 for Yuusei-boin (有声母音)
-        in_yuusei_boin_idx = -1
-        for k, v in binary_dict.items():
-            name, regex = v
-            if "C-Phone_Yuusei_Boin" in name:
-                in_yuusei_boin_idx = k
-        if in_yuusei_boin_idx > 0:
-            indices = (
-                linguistic_features[:, in_yuusei_boin_idx : in_yuusei_boin_idx + 1] > 0
-            )
-            vuv[indices] = 1.0
-
-        # Set V/UV to 0 for sil/pau
-        in_rest_idx = -1
-        for k, v in binary_dict.items():
-            name, regex = v
-            if "C-Phone_Muon" in name:
-                in_rest_idx = k
-        if in_rest_idx > 0:
-            indices = linguistic_features[:, in_rest_idx : in_rest_idx + 1] > 0
-            vuv[indices] = 0.0
-
-        # Set V/UV to 0 for br
-        in_br_idx = -1
-        for k, v in binary_dict.items():
-            name, regex = v
-            if "C-Phone_br" in name:
-                in_br_idx = k
-        if in_br_idx > 0:
-            indices = linguistic_features[:, in_br_idx : in_br_idx + 1] > 0
-            vuv[indices] = 0.0
+        vuv = correct_vuv_by_phone(vuv, binary_dict, linguistic_features)
 
     # F0
     if relative_f0:
