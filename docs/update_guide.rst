@@ -12,6 +12,27 @@ v0.0.2 to master
 
 Please check the following changes and consider changing your config files accordingly.
 
+Hed
+~~~
+
+If your hed file does not contain QS features that specify voiced/unvoiced phones, consider adding them to tell NNSVS to generate stable V/UV sounds. For example, add the followings for a JP hed:
+
+.. code-block::
+
+    QS "C-VUV_Voiced" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
+    QS "C-VUV_Unvoiced"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
+
+Then NNSVS will check the flags to correct V/UV at synthesis time by default.
+
+If your hed file contains the following QS features,
+
+.. code-block::
+
+    QS "C-Phone_Yuuseion" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
+    QS "C-Phone_Museion"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
+
+Please rename them to ``C-VUV_Voiced`` and ``C-VUV_Unvoiced``.
+
 Models
 ^^^^^^^
 
