@@ -1,17 +1,15 @@
-# This is the latest hed file for JP (by r9y9)
+# This is the latest hed file for development (by r9y9)
 # Note that this hed file is meant to be used for experimental purposes and is subject to change.
-# I use this config for nit-song070 and kiritan_singing databases for testing.
-# made based on jp_qst004_nnsvs.hed
-# feature dim:: 335 for acoustic model, 331 for duration/timelag
+# feature dim:: 341 for acoustic model, 337 for duration/timelag
 # in_rest_idx: 1
-# in_lf0_idx: 286
+# in_lf0_idx: 292
 
 QS "L-Phone_Muon"     {*^sil-*,*^pau-*}
 QS "C-Phone_Muon"     {*-sil+*,*-pau+*}
 QS "R-Phone_Muon"     {*+sil=*,*+pau=*}
 
-QS "L-Phone_Yuuseion" {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^v-*,*^b-*,*^by-*,*^m-*,*^my-*,*^w-*,*^z-*,*^j-*,*^d-*,*^dy-*,*^n-*,*^ny-*,*^N-*,*^r-*,*^ry-*,*^g-*,*^gy-*,*^y-*}
-QS "L-Phone_Museion"  {*^A-*,*^I-*,*^U-*,*^E-*,*^O-*,*^f-*,*^p-*,*^py-*,*^s-*,*^sh-*,*^ts-*,*^ch-*,*^t-*,*^ty-*,*^k-*,*^ky-*,*^h-*,*^hy-*}
+QS "L-VUV_Voiced" {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^v-*,*^b-*,*^by-*,*^m-*,*^my-*,*^w-*,*^z-*,*^j-*,*^d-*,*^dy-*,*^n-*,*^ny-*,*^N-*,*^r-*,*^ry-*,*^g-*,*^gy-*,*^y-*}
+QS "L-VUV_Unvoiced"  {*^A-*,*^I-*,*^U-*,*^E-*,*^O-*,*^f-*,*^p-*,*^py-*,*^s-*,*^sh-*,*^ts-*,*^ch-*,*^t-*,*^ty-*,*^k-*,*^ky-*,*^h-*,*^hy-*}
 
 QS "L-Phone_Boin"                  {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*,*^A-*,*^I-*,*^U-*,*^E-*,*^O-*}
 QS "L-Phone_Yuusei_Boin"           {*^a-*,*^i-*,*^u-*,*^e-*,*^o-*}
@@ -110,6 +108,8 @@ QS "L-Phone_v"   {*^v-*}
 QS "L-Phone_w"   {*^w-*}
 QS "L-Phone_y"   {*^y-*}
 QS "L-Phone_z"   {*^z-*}
+QS "L-Phone_GlottalStop"   {*^GlottalStop-*}
+QS "L-Phone_Edge"          {*^Edge-*}
 
 QS "C-VUV_Voiced" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
 QS "C-VUV_Unvoiced"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
@@ -211,9 +211,11 @@ QS "C-Phone_v"   {*-v+*}
 QS "C-Phone_w"   {*-w+*}
 QS "C-Phone_y"   {*-y+*}
 QS "C-Phone_z"   {*-z+*}
+QS "C-Phone_GlottalStop"   {*-GlottalStop+*}
+QS "C-Phone_Edge"          {*-Edge+*}
 
-QS "R-Phone_Yuuseion" {*+a=*,*+i=*,*+u=*,*+e=*,*+o=*,*+v=*,*+b=*,*+by=*,*+m=*,*+my=*,*+w=*,*+z=*,*+j=*,*+d=*,*+dy=*,*+n=*,*+ny=*,*+N=*,*+r=*,*+ry=*,*+g=*,*+gy=*,*+y=*}
-QS "R-Phone_Museion"  {*+A=*,*+I=*,*+U=*,*+E=*,*+O=*,*+f=*,*+p=*,*+py=*,*+s=*,*+sh=*,*+ts=*,*+ch=*,*+t=*,*+ty=*,*+k=*,*+ky=*,*+h=*,*+hy=*}
+QS "R-VUV_Voiced" {*+a=*,*+i=*,*+u=*,*+e=*,*+o=*,*+v=*,*+b=*,*+by=*,*+m=*,*+my=*,*+w=*,*+z=*,*+j=*,*+d=*,*+dy=*,*+n=*,*+ny=*,*+N=*,*+r=*,*+ry=*,*+g=*,*+gy=*,*+y=*}
+QS "R-VUV_Unvoiced"  {*+A=*,*+I=*,*+U=*,*+E=*,*+O=*,*+f=*,*+p=*,*+py=*,*+s=*,*+sh=*,*+ts=*,*+ch=*,*+t=*,*+ty=*,*+k=*,*+ky=*,*+h=*,*+hy=*}
 
 QS "R-Phone_Boin"                  {*+a=*,*+i=*,*+u=*,*+e=*,*+o=*,*+A=*,*+I=*,*+U=*,*+E=*,*+O=*}
 QS "R-Phone_Yuusei_Boin"           {*+a=*,*+i=*,*+u=*,*+e=*,*+o=*}
@@ -312,6 +314,8 @@ QS "R-Phone_v"   {*+v=*}
 QS "R-Phone_w"   {*+w=*}
 QS "R-Phone_y"   {*+y=*}
 QS "R-Phone_z"   {*+z=*}
+QS "R-Phone_GlottalStop"   {*+GlottalStop=*}
+QS "R-Phone_Edge"          {*+Edge=*}
 
 # absolute pitch (L/C/R)
 CQS "d1" {/D:(\NOTE)!}
