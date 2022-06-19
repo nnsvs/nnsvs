@@ -48,7 +48,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 	cat<<EOF
 stage -1: Downloading
 
-This recipe does not download the archive of singing voice database automatically to 
+This recipe does not download the archive of singing voice database automatically to
 provide you the opportunity to read the original license.
 
 Please visit https://drive.google.com/drive/folders/1XA2cm3UyRpAk_BJb1LTytOWrhjsZKbSN
@@ -63,39 +63,15 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     mkdir -p data/list
 
     echo "train/dev/eval split"
+    # NOTE: 110 songs in total
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
-	| sort > data/list/utt_list.txt
-    grep 2018 data/list/utt_list.txt > data/list/$eval_set.list
-    grep ARROW data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v 2018 data/list/utt_list.txt | grep -v ARROW > data/list/$train_set.list
+	 | sort > data/list/utt_list.txt
+    # # 5 songs for dev/eval
+    grep -e 1st_color -e 2018 -e ARROW -e BC -e VRD data/list/utt_list.txt > data/list/$eval_set.list
+    grep -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v -e 1st_color -e 2018 -e ARROW -e BC -e VRD -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/list/utt_list.txt > data/list/$train_set.list
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    echo "stage 1: Feature generation"
-    . $NNSVS_COMMON_ROOT/feature_generation.sh
-fi
-
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    echo "stage 2: Training time-lag model"
-    . $NNSVS_COMMON_ROOT/train_timelag.sh
-fi
-
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "stage 3: Training duration model"
-    . $NNSVS_COMMON_ROOT/train_duration.sh
-fi
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    echo "stage 4: Training acoustic model"
-    . $NNSVS_COMMON_ROOT/train_acoustic.sh
-fi
-
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    echo "stage 5: Generate features from timelag/duration/acoustic models"
-    . $NNSVS_COMMON_ROOT/generate.sh
-fi
-
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    echo "stage 6: Synthesis waveforms"
-    . $NNSVS_COMMON_ROOT/synthesis.sh
-fi
+# Run the rest of the steps
+# Please check the script file for more details
+. $NNSVS_COMMON_ROOT/run_common_steps_dev.sh

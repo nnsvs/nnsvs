@@ -25,7 +25,7 @@ exclude_songs: []
 utaupy_table_path: "../../_common/no2/utaupy/kana2phonemes_002_oto2lab.table"
 
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "../../_common/hed/jp_experimental_ritsu.hed"
+question_path: "../../_common/hed/jp_dev.hed"
 
 ### Data preparation related settings.
 ## Song segmentation by silence durations.
@@ -84,7 +84,7 @@ timelag_model: timelag_mdn
 timelag_train: myconfig
 timelag_data: myconfig
 
-duration_model: duration_mdn
+duration_model: duration_vp_mdn
 duration_train: myconfig
 duration_data: myconfig
 
@@ -131,7 +131,7 @@ postfilter_eval_checkpoint: latest.pth
 ###########################################################
 
 # NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
-vocoder_model: hn-sinc-nsf_sr48k_pwgD
+vocoder_model:
 # Pretrained checkpoint path for the vocoder model
 # NOTE: if you want to try fine-tuning, please specify the path here
 pretrained_vocoder_checkpoint:
