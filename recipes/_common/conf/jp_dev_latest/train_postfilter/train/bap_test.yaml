@@ -1,6 +1,10 @@
 out_dir: exp
 log_dir: tensorboard/exp
 
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 2
@@ -10,7 +14,7 @@ checkpoint_epoch_interval: 2
 gan_type: lsgan
 # MSE loss weight
 mse_weight: 0.0
-# Adverdarial loss weight
+# Adversarial loss weight
 adv_weight: 1.0
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [false, false, false, true, false, false]
