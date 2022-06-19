@@ -1,7 +1,6 @@
 ### General settings.
 ## The name of singer
 spk: "oniku_kurumi"
-sample_rate: 48000
 
 ## exp tag(for managing experiments)
 tag:
@@ -26,7 +25,7 @@ exclude_songs: []
 sinsy_dic: "../../_common/no2/dic"
 
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "../../_common/hed/jp_experimental.hed"
+question_path: "../../_common/hed/jp_dev.hed"
 
 ### Data preparation related settings.
 ## Song segmentation by silence durations.
@@ -79,13 +78,17 @@ timelag_model: timelag_mdn
 timelag_train: myconfig
 timelag_data: myconfig
 
-duration_model: duration_mdn
+duration_model: duration_vp_mdn
 duration_train: myconfig
 duration_data: myconfig
 
 acoustic_model: acoustic_resf0convlstm
 acoustic_train: myconfig
 acoustic_data: myconfig
+
+postfilter_model: postfilter_mgc
+postfilter_train: mgc
+postfilter_data: myconfig
 
 # Pretrained model dir (leave empty to disable)
 pretrained_expdir:
@@ -115,6 +118,7 @@ acoustic_synthesis: defaults
 timelag_eval_checkpoint: latest.pth
 duration_eval_checkpoint: latest.pth
 acoustic_eval_checkpoint: latest.pth
+postfilter_eval_checkpoint: latest.pth
 
 ###########################################################
 #                VOCODER SETTING                          #
