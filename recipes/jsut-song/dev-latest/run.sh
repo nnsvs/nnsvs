@@ -73,6 +73,13 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     python local/data_prep.py ./downloads/jsut-song_ver1 \
         ./downloads/todai_child/ \
         ./downloads/HTS-demo_NIT-SONG070-F001/ data
+
+    # Normalize audio if sv56 is available
+    if command -v sv56demo &> /dev/null; then
+        echo "Normalize audio gain with sv56"
+        python $NNSVS_COMMON_ROOT/sv56.py data/acoustic/wav data/acoustic/wav
+    fi
+
     echo "train/dev/eval split"
     mkdir -p data/list
     # exclude 045 since the label file is not available
@@ -83,32 +90,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     grep -v 003 data/list/utt_list.txt | grep -v 004 > data/list/$train_set.list
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    echo "stage 1: Feature generation"
-    . $NNSVS_COMMON_ROOT/feature_generation.sh
-fi
-
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    echo "stage 2: Training time-lag model"
-    . $NNSVS_COMMON_ROOT/train_timelag.sh
-fi
-
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "stage 3: Training duration model"
-    . $NNSVS_COMMON_ROOT/train_duration.sh
-fi
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    echo "stage 4: Training acoustic model"
-    . $NNSVS_COMMON_ROOT/train_acoustic.sh
-fi
-
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    echo "stage 5: Generate features from timelag/duration/acoustic models"
-    . $NNSVS_COMMON_ROOT/generate.sh
-fi
-
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    echo "stage 6: Synthesis waveforms"
-    . $NNSVS_COMMON_ROOT/synthesis.sh
-fi
+# Run the rest of the steps
+# Please check the script file for more details
+. $NNSVS_COMMON_ROOT/run_common_steps_dev.sh
