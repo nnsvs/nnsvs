@@ -1,1 +1,1 @@
-../../../jsut-song/svs-world-resf0/local/data_prep.py
+../../../jsut-song/dev-latest/local/data_prep.py
