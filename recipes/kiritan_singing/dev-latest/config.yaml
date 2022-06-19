@@ -17,7 +17,7 @@ wav_root:
 ###########################################################
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "../../_common/hed/jp_experimental.hed"
+question_path: "../../_common/hed/jp_dev.hed"
 
 timelag_features: defaults
 duration_features: defaults
@@ -43,7 +43,7 @@ timelag_model: timelag_mdn
 timelag_train: myconfig
 timelag_data: myconfig
 
-duration_model: duration_mdn
+duration_model: duration_vp_mdn
 duration_train: myconfig
 duration_data: myconfig
 
@@ -51,8 +51,8 @@ acoustic_model: acoustic_resf0convlstm
 acoustic_train: myconfig
 acoustic_data: myconfig
 
-postfilter_model: defaults
-postfilter_train: myconfig
+postfilter_model: postfilter_mgc
+postfilter_train: mgc
 postfilter_data: myconfig
 
 # Pretrained model dir (leave empty to disable)
@@ -90,7 +90,7 @@ postfilter_eval_checkpoint: latest.pth
 ###########################################################
 
 # NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
-vocoder_model: hn-sinc-nsf_sr48k_pwgD
+vocoder_model:
 # Pretrained checkpoint path for the vocoder model
 # NOTE: if you want to try fine-tuning, please specify the path here
 pretrained_vocoder_checkpoint:
