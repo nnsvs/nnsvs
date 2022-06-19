@@ -155,7 +155,6 @@ if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
     done
 fi
 
-
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
     if [[ -z "${vocoder_eval_checkpoint}" && -f ${expdir}/${vocoder_model}/config.yml ]]; then

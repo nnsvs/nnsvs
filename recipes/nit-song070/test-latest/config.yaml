@@ -21,7 +21,7 @@ out_dir: "./data"
 ###########################################################
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "../../_common/hed/jp_experimental.hed"
+question_path: "../../_common/hed/jp_dev.hed"
 
 timelag_features: defaults
 duration_features: defaults
@@ -46,21 +46,21 @@ base_dump_norm_dir:
 # NOTE: *_model: model definition, *_train: general train configs,
 # *_data: data configs (e.g., batch size)
 
-timelag_model: timelag_mdn
-timelag_train: myconfig
-timelag_data: myconfig
+timelag_model: timelag_test
+timelag_train: test
+timelag_data: test
 
-duration_model: duration_mdn
-duration_train: myconfig
-duration_data: myconfig
+duration_model: duration_test
+duration_train: test
+duration_data: test
 
-acoustic_model: acoustic_resf0conv
-acoustic_train: myconfig
-acoustic_data: myconfig
+acoustic_model: acoustic_test
+acoustic_train: test
+acoustic_data: test
 
-postfilter_model: postfilter_mgc
-postfilter_train: mgc
-postfilter_data: myconfig
+postfilter_model: postfilter_mgc_test
+postfilter_train: mgc_test
+postfilter_data: test
 
 # Pretrained model dir (leave empty to disable)
 pretrained_expdir:
