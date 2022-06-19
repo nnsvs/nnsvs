@@ -70,9 +70,13 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     mkdir -p data/list
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
-    grep _003 data/list/utt_list.txt > data/list/$eval_set.list
-    grep _004 data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v _003 data/list/utt_list.txt | grep -v _004 > data/list/$train_set.list
+    # train: 25
+    # dev: 5
+    # eval: 1
+    n=$(( $(wc -l < data/list/utt_list.txt) - 6 ))
+    head -n 1 data/list/utt_list.txt > data/list/$eval_set.list
+    head -n 6 data/list/utt_list.txt | tail -n 5 > data/list/$dev_set.list
+    tail -n $n data/list/utt_list.txt > data/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
