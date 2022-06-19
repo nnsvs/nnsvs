@@ -97,7 +97,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
     . $NNSVS_COMMON_ROOT/train_resf0_acoustic.sh
-fix
+fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "stage 5: Generate features from timelag/duration/acoustic models"
