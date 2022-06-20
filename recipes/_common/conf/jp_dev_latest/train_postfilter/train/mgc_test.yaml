@@ -18,8 +18,8 @@ mse_weight: 0.0
 adv_weight: 1.0
 # [mgc, lf0, vuv, bap, vib, vib_flags]
 adv_streams: [true, false, false, false, false, false]
-# Feature matching loss weightn
-fm_weight: 5.0
+# Feature matching loss weight
+fm_weight: 10.0
 # Don't set the value > 0 unless you are sure what you are doing
 # mask 0 to n-th mgc for adversarial loss
 # e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
