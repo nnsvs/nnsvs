@@ -55,9 +55,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     kiritan_singing=downloads/kiritan_singing
     cd $kiritan_singing && git checkout .
-    if [ ! -z "${kiritan_wav_root}" ]; then
+    if [ ! -z "${wav_root}" ]; then
         echo "" >> config.py
-        echo "wav_dir = \"$kiritan_wav_root\"" >> config.py
+        echo "wav_dir = \"$wav_root\"" >> config.py
     fi
     ./run.sh
     cd -
@@ -69,17 +69,17 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Normalize audio if sv56 is available
     if command -v sv56demo &> /dev/null; then
         echo "Normalize audio gain with sv56"
-        python $NNSVS_COMMON_ROOT/sv56.py $out_dir/acoustic/wav $out_dir/acoustic/wav
+        python $NNSVS_COMMON_ROOT/sv56.py data/acoustic/wav data/acoustic/wav
     fi
 
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
     # train: 40
-    # dev: 9
-    # eval: 1
-    grep 05_ data/list/utt_list.txt > data/list/$eval_set.list
-    grep -e 01_ -e 02_ -e 03_ -e 04_ -e 06_ -e 07_ -e 08_ -e 09_ -e 10_ data/list/utt_list.txt > data/list/$dev_set.list
+    # dev: 5
+    # eval: 5
+    grep -e 01_ -e 02_ -e 03_ -e 04_ -e 05_ data/list/utt_list.txt > data/list/$eval_set.list
+    grep -e 06_ -e 07_ -e 08_ -e 09_ -e 10_ data/list/utt_list.txt > data/list/$dev_set.list
     grep -v 01_ data/list/utt_list.txt | grep -v 02_ | grep -v 03_ | grep -v 04_ | grep -v 05_ | grep -v 06_ | grep -v 07_ | grep -v 08_ | grep -v 09_ | grep -v 10_ > data/list/$train_set.list
 fi
 
