@@ -11,7 +11,7 @@ netG:
   stream_sizes: null
   mgc_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
-    in_dim: 60
+    in_dim: 58
     channels: 2
     kernel_size: [1, 1]
     use_tadn: true
