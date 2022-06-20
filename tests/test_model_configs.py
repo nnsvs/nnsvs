@@ -76,7 +76,7 @@ def _test_postfilter_impl(model, model_config):
     T = 100
     init_seed(B * T)
 
-    in_dim = sum(model_config.netG.stream_sizes)
+    in_dim = sum(model_config.stream_sizes)
     x = torch.rand(B, T, in_dim)
     lengths = torch.Tensor([T] * B).long()
 
