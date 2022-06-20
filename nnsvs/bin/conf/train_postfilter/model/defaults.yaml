@@ -7,7 +7,8 @@ stream_weights:
 
 netG:
   _target_: nnsvs.postfilters.MultistreamPostFilter
-  stream_sizes: [60, 1, 1, 5, 2, 1]
+  # If stream_sizes here is not specified, it will be set automatically.
+  stream_sizes: null
   mgc_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 60
