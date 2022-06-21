@@ -14,16 +14,19 @@ netG:
     in_dim: 58
     channels: 2
     kernel_size: [1, 1]
-    use_tadn: true
     init_type: "kaiming_normal"
+    noise_type: "frame_wise"
+    noise_scale: 1.0
   mgc_offset: 2
   bap_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 5
     channels: 2
     kernel_size: [1, 1]
-    use_tadn: true
     init_type: "kaiming_normal"
+    noise_type: "bin_wise"
+    noise_scale: 1.0
+  bap_offset: 0
   lf0_postfilter: null
 
 netD:

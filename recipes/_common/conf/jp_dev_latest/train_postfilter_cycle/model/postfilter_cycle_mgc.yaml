@@ -14,10 +14,11 @@ netG:
     in_dim: 58
     channels: 64
     kernel_size: [5, 5]
-    use_tadn: false
     init_type: "kaiming_normal"
-    scale: 1.0
+    noise_type: "frame_wise"
+    noise_scale: 1.0
   mgc_offset: 2
+  bap_offset: 0
   bap_postfilter: null
   lf0_postfilter: null
 

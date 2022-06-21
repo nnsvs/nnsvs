@@ -16,8 +16,12 @@ netG:
     channels: 2
     kernel_size: [5, 1]
     init_type: "kaiming_normal"
-    scale: 1.0
+    noise_type: "bin_wise"
+    noise_scale: 1.0
+  mgc_offset: 2
+  bap_offset: 0
   lf0_postfilter: null
+
 
 netD:
   _target_: nnsvs.discriminators.Conv2dD
