@@ -96,9 +96,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     mkdir -p data/$dbname/list
     find data/$dbname/acoustic/ -type f -name "nitech*.wav" -exec basename {} .wav \; \
         | sort > data/$dbname/list/utt_list.txt
-    grep _003 data/$dbname/list/utt_list.txt > data/$dbname/list/$eval_set.list
-    grep _004 data/$dbname/list/utt_list.txt > data/$dbname/list/$dev_set.list
-    grep -v _003 data/$dbname/list/utt_list.txt | grep -v _004 > data/$dbname/list/$train_set.list
+    n=$(( $(wc -l < data/$dbname/list/utt_list.txt) - 6 ))
+    head -n 1 data/$dbname/list/utt_list.txt > data/$dbname/list/$eval_set.list
+    head -n 6 data/$dbname/list/utt_list.txt | tail -n 5 > data/$dbname/list/$dev_set.list
+    tail -n $n data/$dbname/list/utt_list.txt > data/$dbname/list/$train_set.list
 
     ###########################################################
     #                kiritan_singing                          #
@@ -122,9 +123,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     mkdir -p data/$dbname/list
     find -L data/$dbname/acoustic/ -type f -name "kiritan_singing_*.wav" -exec basename {} .wav \; \
         | sort > data/$dbname/list/utt_list.txt
-    grep 05_ data/$dbname/list/utt_list.txt >> data/$dbname/list/$eval_set.list
-    grep 01_ data/$dbname/list/utt_list.txt >> data/$dbname/list/$dev_set.list
-    grep -v 01_ data/$dbname/list/utt_list.txt | grep -v 05_ >> data/$dbname/list/$train_set.list
+
+    grep -e 01_ -e 02_ -e 03_ -e 04_ -e 05_ data/$dbname/list/utt_list.txt > data/$dbname/list/$eval_set.list
+    grep -e 06_ -e 07_ -e 08_ -e 09_ -e 10_ data/$dbname/list/utt_list.txt > data/$dbname/list/$dev_set.list
+    grep -v 01_ data/$dbname/list/utt_list.txt | grep -v 02_ | grep -v 03_ | grep -v 04_ | grep -v 05_ | grep -v 06_ | grep -v 07_ | grep -v 08_ | grep -v 09_ | grep -v 10_ > data/$dbname/list/$train_set.list
 
     ###########################################################
     #                jsut-song                                #
