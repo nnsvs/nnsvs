@@ -11,6 +11,7 @@ netG:
   hidden_dim: 8
   out_dim: 206
   num_layers: 1
+  init_type: "kaiming_normal"
   # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
   # otherwise the model does't work at all
   in_lf0_idx: 292

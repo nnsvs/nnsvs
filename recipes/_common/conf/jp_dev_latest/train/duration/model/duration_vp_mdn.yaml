@@ -12,3 +12,4 @@ netG:
   dropout: 0.5
   use_mdn: true
   num_gaussians: 4
+  init_type: "kaiming_normal"

@@ -10,3 +10,4 @@ netG:
   dropout: 0.5
   num_layers: 2
   num_gaussians: 1
+  init_type: "kaiming_normal"
