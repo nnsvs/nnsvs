@@ -548,6 +548,8 @@ def my_app(config: DictConfig) -> None:
         if config.train.mask_nth_mgc_for_adv_loss > 0:
             D_in_dim -= config.train.mask_nth_mgc_for_adv_loss
         config.model.netD.in_dim = D_in_dim
+    if "stream_sizes" in config.model.netG:
+        config.model.netG.stream_sizes = config.model.stream_sizes
 
     if "max_time_frames" in config.data and config.data.max_time_frames > 0:
         collate_fn = partial(

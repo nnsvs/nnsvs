@@ -13,20 +13,13 @@ netG:
     _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 58
     channels: 2
-    kernel_size: [1, 1]
+    kernel_size: [3, 3]
     init_type: "kaiming_normal"
     noise_type: "frame_wise"
     noise_scale: 1.0
   mgc_offset: 2
-  bap_postfilter:
-    _target_: nnsvs.postfilters.Conv2dPostFilter
-    in_dim: 5
-    channels: 2
-    kernel_size: [1, 1]
-    init_type: "kaiming_normal"
-    noise_type: "bin_wise"
-    noise_scale: 1.0
   bap_offset: 0
+  bap_postfilter: null
   lf0_postfilter: null
 
 netD:
@@ -34,4 +27,8 @@ netD:
   # If in_dim is not specified, it will be automatically set based on adv_streams
   in_dim: null
   channels: 2
+  kernel_size: [3, 3]
+  padding: [0, 0]
+  padding_mode: "zeros"
   last_sigmoid: false
+  init_type: "kaiming_normal"

@@ -29,40 +29,6 @@ def variance_scaling(gv, feats, offset=2):
     return out
 
 
-class SimplifiedTADN(nn.Module):
-    """Simplified temporal adaptive de-normalization for Gaussian noise
-
-    Args:
-        channels (int): number of channels
-        kernel_size (int): kernel size. Default is 7.
-    """
-
-    def __init__(self, channels, kernel_size=7):
-        super().__init__()
-        C = channels
-        padding = (kernel_size - 1) // 2
-        # NOTE: process each channel independently by setting groups=C
-        self.conv_gamma = nn.Conv1d(
-            C, C, kernel_size=kernel_size, padding=padding, groups=C
-        )
-
-    def forward(self, z, c):
-        """Forward pass
-
-        Args:
-            z (torch.Tensor): input Gaussian noise of shape (B, C, T)
-            c (torch.Tensor): input 2d feature of shape (B, C, T)
-
-        Returns:
-            torch.Tensor: output 2d feature of shape (B, C, T)
-        """
-        # NOTE: assuming z ~ N(0, I)
-        # (B, C, T)
-        gamma = torch.sigmoid(self.conv_gamma(c))
-        # N(0, I) -> N(0, I*gamma) where gamma is a learned parameter in [0, 1]
-        return z * gamma
-
-
 class Conv2dPostFilter(BaseModel):
     """A post-filter based on Conv2d
 
@@ -71,9 +37,10 @@ class Conv2dPostFilter(BaseModel):
     Args:
         channels (int): number of channels
         kernel_size (tuple): kernel sizes for Conv2d
-        use_noise (bool): whether to use noise
-        use_tadn (bool): whether to use temporal adaptive de-normalization
         init_type (str): type of initialization
+        noise_scale (float): scale of noise
+        noise_type (str): type of noise. "frame_wise" or "bin_wise"
+        padding_mode (str): padding mode
     """
 
     def __init__(
@@ -81,26 +48,21 @@ class Conv2dPostFilter(BaseModel):
         in_dim=None,
         channels=128,
         kernel_size=(5, 5),
-        use_noise=True,
-        use_tadn=False,
-        residual=True,
         init_type="kaiming_normal",
-        scale=1.0,
+        noise_scale=1.0,
         noise_type="bin_wise",
         padding_mode="zeros",
     ):
         super().__init__()
-        self.use_noise = use_noise
         self.noise_type = noise_type
-        self.residual = residual
-        self.scale = scale
+        self.noise_scale = noise_scale
         C = channels
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
         padding = (ks - 1) // 2
         self.conv1 = nn.Sequential(
             nn.Conv2d(
-                2 if use_noise else 1,
+                2,
                 C,
                 kernel_size=ks,
                 padding=padding,
@@ -123,13 +85,6 @@ class Conv2dPostFilter(BaseModel):
         self.conv4 = nn.Conv2d(
             C + 1, 1, kernel_size=ks, padding=padding, padding_mode=padding_mode
         )
-
-        if use_tadn:
-            assert in_dim is not None, "in_dim must be provided"
-            assert noise_type == "bin_wise", "tadn only works for bin_wise"
-            self.tadn = SimplifiedTADN(in_dim)
-        else:
-            self.tadn = None
 
         if self.noise_type == "frame_wise":
             # noise: (B, T, 1)
@@ -156,36 +111,21 @@ class Conv2dPostFilter(BaseModel):
         x = x.unsqueeze(1)
 
         if self.noise_type == "bin_wise":
-            z = torch.randn_like(x) * self.scale
+            z = torch.randn_like(x) * self.noise_scale
         elif self.noise_type == "frame_wise":
-            z = torch.randn(x.shape[0], 1, x.shape[2], 1).to(x.device) * self.scale
+            z = (
+                torch.randn(x.shape[0], 1, x.shape[2], 1).to(x.device)
+                * self.noise_scale
+            )
             z = self.fc(z)
-
-        if self.use_noise:
-            # adaptively scale z
-            if self.tadn is not None:
-                z = (
-                    self.tadn(
-                        z.squeeze(1).transpose(1, 2), x.squeeze(1).transpose(1, 2)
-                    )
-                    .transpose(1, 2)
-                    .unsqueeze(1)
-                )
 
         x_syn = x
 
-        if self.use_noise:
-            y = self.conv1(torch.cat([x_syn, z], dim=1))
-        else:
-            y = self.conv1(x_syn)
-
+        y = self.conv1(torch.cat([x_syn, z], dim=1))
         y = self.conv2(torch.cat([x_syn, y], dim=1))
         y = self.conv3(torch.cat([x_syn, y], dim=1))
         residual = self.conv4(torch.cat([x_syn, y], dim=1))
-        if self.residual:
-            out = x_syn + residual
-        else:
-            out = residual
+        out = x_syn + residual
 
         # (B, 1, T, C) -> (B, T, C)
         out = out.squeeze(1)
@@ -205,6 +145,7 @@ class MultistreamPostFilter(BaseModel):
         lf0_postfilter (nn.Module): post-filter for log-F0
         stream_sizes (list): sizes of each feature stream
         mgc_offset (int): offset for MGC. Defaults to 2.
+        bap_offset (int): offset for BAP. Defaults to 0.
     """
 
     def __init__(
@@ -381,13 +322,13 @@ class MultistreamConv2dPostFilter(nn.Module):
         channels=128,
         kernel_size=5,
         init_type="kaiming_normal",
-        scale=1.0,
+        noise_scale=1.0,
         stream_sizes=(8, 20, 30),
     ):
         super().__init__()
         assert len(stream_sizes) == 3
         self.padding = (kernel_size - 1) // 2
-        self.scale = scale
+        self.noise_scale = noise_scale
         self.stream_sizes = stream_sizes
 
         self.low_postfilter = _PadConv2dPostFilter(
@@ -416,7 +357,7 @@ class MultistreamConv2dPostFilter(nn.Module):
         assert x.shape[-1] == sum(self.stream_sizes)
 
         # (B, T, C)
-        z = torch.randn(x.shape[0], x.shape[1], 1).to(x.device) * self.scale
+        z = torch.randn(x.shape[0], x.shape[1], 1).to(x.device) * self.noise_scale
 
         # Process three streams separately with a overlap width of padding
         out1 = self.low_postfilter(x[:, :, : self.stream_sizes[0] + self.padding], z)

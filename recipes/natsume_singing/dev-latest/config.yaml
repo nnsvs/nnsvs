@@ -1,0 +1,139 @@
+### General settings.
+## The name of singer
+spk: "natsumeyuuri"
+
+## exp tag(for managing experiments)
+tag:
+
+## Directory of Unzipped singing voice database
+# PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
+db_root: "~/data/Natsume_Singing_DB/"
+
+## time unit of mono-phone label
+# The time unit of mono-phone label is scheduled to be changed from sec to 100ns.
+label_time_unit: "sec"
+
+## Output directory
+# All the igenerated labels, intermediate files, and segmented wav files
+# will be saved in the following directory
+out_dir: "./data"
+
+## Songs to be excluded from training.
+exclude_songs: []
+
+### Pyinsy related settings.
+## Sinsy dictionary directory
+# This singing voice database contains the unvoiced vowels "I" and "U".
+# To enable the unvoiced vowels, modified version of sinsy dictionary files
+# are needed.
+sinsy_dic: "../../_common/no2/dic"
+
+## HTS-style question used for extracting musical/linguistic context from musicxml files
+question_path: "../../_common/hed/jp_dev.hed"
+
+### Data preparation related settings.
+## Song segmentation by silence durations.
+# TODO: would be better to split songs by phrasal information in the musical scores
+# Split song by silences (in sec)
+segmentation_threshold: 0.4
+# Min duration for a segment
+# note: there could be some exceptions (e.g., the last segment of a song)
+segment_min_duration: 5.0
+# Force split segments if long silence is found regardless of min_duration
+force_split_threshold: 5.0
+# Offset correction
+# If True, offset is computed in an entire song
+# otherwise offset is computed for each segment
+global_offset_correction: False
+offset_correction_threshold: 0.01
+# Time-lag constraints to filter outliers
+timelag_allowed_range: [-20, 19]
+timelag_allowed_range_rest: [-40, 39]
+# Audio sampling rate
+# CAUTION: Changing sample_rate may affect the dimension number of acoustic features.
+# DO NOT CHANGE this unless you know the relationship between the dim of bap and sample_rate.
+sample_rate: 48000
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+
+timelag_features: defaults
+duration_features: defaults
+acoustic_features: static_deltadelta_sinevib
+
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
+
+###########################################################
+#                TRAINING SETTING                         #
+###########################################################
+
+# Models
+# To customize, put your config or change ones in
+# conf/train/{timelag,duration,acoustic}/ and
+# specify the config name below
+# NOTE: *_model: model definition, *_train: general train configs,
+# *_data: data configs (e.g., batch size)
+
+timelag_model: timelag_mdn
+timelag_train: myconfig
+timelag_data: myconfig
+
+duration_model: duration_vp_mdn
+duration_train: myconfig
+duration_data: myconfig
+
+acoustic_model: acoustic_resf0convlstm
+acoustic_train: myconfig
+acoustic_data: myconfig
+
+postfilter_model: postfilter_mgc
+postfilter_train: mgc
+postfilter_data: myconfig
+
+# Pretrained model dir (leave empty to disable)
+pretrained_expdir:
+
+# Advanced settings for hyperparameter search with Hydra and Optuna.
+# https://hydra.cc/docs/plugins/optuna_sweeper/
+# NOTE: Don't use spaces for each search space configuration.
+# OK: data.batch_size=range(1,16)
+# NG: data.batch_size=range(1, 16)
+# Example 1: data.batch_size=range(1,16) model.netG.hidden_dim=choice(32,64,128)
+# Example 2: train.optim.optimizer.params.lr=interval(0.0001,0.01)
+timelag_hydra_optuna_sweeper_args:
+timelag_hydra_optuna_sweeper_n_trials: 100
+duration_hydra_optuna_sweeper_args:
+duration_hydra_optuna_sweeper_n_trials: 100
+acoustic_hydra_optuna_sweeper_args:
+acoustic_hydra_optuna_sweeper_n_trials: 100
+
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults
+
+# latest.pth or best.pth
+timelag_eval_checkpoint: latest.pth
+duration_eval_checkpoint: latest.pth
+acoustic_eval_checkpoint: latest.pth
+postfilter_eval_checkpoint: latest.pth
+
+###########################################################
+#                VOCODER SETTING                          #
+###########################################################
+
+# NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
+vocoder_model:
+# Pretrained checkpoint path for the vocoder model
+# NOTE: if you want to try fine-tuning, please specify the path here
+pretrained_vocoder_checkpoint:
+# absolute/relative path to the checkpoint
+# NOTE: the checkpoint is used for synthesis and packing
+# This doesn't have any effect on training
+vocoder_eval_checkpoint:

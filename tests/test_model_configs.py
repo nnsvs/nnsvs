@@ -2,6 +2,8 @@ from pathlib import Path
 
 import hydra
 import nnsvs.bin.train
+import nnsvs.bin.train_postfilter
+import nnsvs.bin.train_resf0
 import pytest
 import torch
 from nnsvs.base import PredictionType
@@ -74,7 +76,7 @@ def _test_postfilter_impl(model, model_config):
     T = 100
     init_seed(B * T)
 
-    in_dim = sum(model_config.netG.stream_sizes)
+    in_dim = sum(model_config.stream_sizes)
     x = torch.rand(B, T, in_dim)
     lengths = torch.Tensor([T] * B).long()
 
@@ -99,9 +101,9 @@ def test_model_config(model_config):
 
 @pytest.mark.parametrize(
     "model_config",
-    (Path(nnsvs.bin.train.__file__).parent / "conf" / "train_resf0" / "model").glob(
-        "*.yaml"
-    ),
+    (
+        Path(nnsvs.bin.train_resf0.__file__).parent / "conf" / "train_resf0" / "model"
+    ).glob("*.yaml"),
 )
 def test_resf0_acoustic_model_config(model_config):
     model_config = OmegaConf.load(model_config)
@@ -116,6 +118,25 @@ def test_resf0_acoustic_model_config(model_config):
 
     model = hydra.utils.instantiate(model_config.netG)
     _test_resf0_model_impl(model, model_config)
+
+
+@pytest.mark.parametrize(
+    "model_config",
+    (
+        Path(nnsvs.bin.train_postfilter.__file__).parent
+        / "conf"
+        / "train_postfilter"
+        / "model"
+    ).glob("*.yaml"),
+)
+def test_postfilter_model_config(model_config):
+    model_config = OmegaConf.load(model_config)
+    if "stream_sizes" in model_config.netG:
+        model_config.netG.stream_sizes = model_config.stream_sizes
+    # Post-filter config should have netD
+    hydra.utils.instantiate(model_config.netD)
+    model = hydra.utils.instantiate(model_config.netG)
+    _test_postfilter_impl(model, model_config)
 
 
 @pytest.mark.parametrize(
@@ -168,6 +189,8 @@ def test_resf0_acoustic_model_config_recipes(model_config):
 )
 def test_postfilter_config_recipes(model_config):
     model_config = OmegaConf.load(model_config)
+    if "stream_sizes" in model_config.netG:
+        model_config.netG.stream_sizes = model_config.stream_sizes
     # Post-filter config should have netD
     hydra.utils.instantiate(model_config.netD)
     model = hydra.utils.instantiate(model_config.netG)
