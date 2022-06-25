@@ -1,6 +1,6 @@
 import pytest
 import torch
-from nnsvs.postfilters import Conv2dPostFilter, MultistreamPostFilter
+from nnsvs.postfilters import Conv2dPostFilter, MovingAverage1d, MultistreamPostFilter
 from nnsvs.util import init_seed
 
 
@@ -29,6 +29,7 @@ def test_conv2d_postfilter(noise_type):
         "padding_mode": "zeros",
         "noise_type": noise_type,
         "init_type": "none",
+        "smoothing_width": 5,
     }
     model = Conv2dPostFilter(**params)
     _test_model_impl(model, params["in_dim"])
@@ -59,3 +60,21 @@ def test_multistream_postfilter(mgc_offset, bap_offset):
         bap_offset=bap_offset,
     )
     _test_model_impl(model, sum(stream_sizes))
+
+
+@pytest.mark.parametrize("kernel_size", [1, 3, 5])
+def test_moving_average_filter(kernel_size):
+    T = 1000
+    C = 4
+    filt = MovingAverage1d(C, C, kernel_size)
+    x = torch.randn(4, 1, T).expand(4, C, T)
+    y = filt(x)
+    assert x.shape == y.shape
+    # make sure that the same filter is applied across channels
+    for idx in range(C - 1):
+        assert (y[0, idx, :] == y[0, idx + 1, :]).all()
+
+    filt = MovingAverage1d(1, 1, kernel_size)
+    x = torch.randn(4, 1, T)
+    y = filt(x)
+    assert x.shape == y.shape
