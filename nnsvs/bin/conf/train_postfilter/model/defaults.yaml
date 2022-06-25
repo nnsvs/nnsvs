@@ -17,6 +17,7 @@ netG:
     init_type: "kaiming_normal"
     noise_type: "frame_wise"
     noise_scale: 1.0
+    smoothing_width: 100
   mgc_offset: 2
   bap_postfilter:
     _target_: nnsvs.postfilters.Conv2dPostFilter
@@ -26,6 +27,7 @@ netG:
     init_type: "kaiming_normal"
     noise_type: "bin_wise"
     noise_scale: 1.0
+    smoothing_width: 5
   bap_offset: 0
   lf0_postfilter: null
 

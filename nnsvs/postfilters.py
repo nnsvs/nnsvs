@@ -29,6 +29,32 @@ def variance_scaling(gv, feats, offset=2):
     return out
 
 
+class MovingAverage1d(nn.Conv1d):
+    """Moving average filter on 1-D signals
+
+    Args:
+        in_channels (int): number of input channels
+        out_channels (int): number of output channels
+        kernel_size (int): kernel size
+        padding_mode (str): padding mode
+    """
+
+    def __init__(self, in_channels, out_channels, kernel_size, padding_mode="reflect"):
+        # NOTE: process each channel independently by setting groups=in_channels
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            groups=in_channels,
+            bias=False,
+            padding="same",
+            padding_mode=padding_mode,
+        )
+        nn.init.constant_(self.weight, 1 / kernel_size)
+        for p in self.parameters():
+            p.requires_grad = False
+
+
 class Conv2dPostFilter(BaseModel):
     """A post-filter based on Conv2d
 
@@ -41,6 +67,8 @@ class Conv2dPostFilter(BaseModel):
         noise_scale (float): scale of noise
         noise_type (str): type of noise. "frame_wise" or "bin_wise"
         padding_mode (str): padding mode
+        smoothing_width (int): Width of smoothing window.
+            The larger the smoother. Only used at inference time.
     """
 
     def __init__(
@@ -52,11 +80,14 @@ class Conv2dPostFilter(BaseModel):
         noise_scale=1.0,
         noise_type="bin_wise",
         padding_mode="zeros",
+        smoothing_width=-1,
     ):
         super().__init__()
+        self.in_dim = in_dim
         self.noise_type = noise_type
         self.noise_scale = noise_scale
         C = channels
+        self.smoothing_width = smoothing_width
         assert len(kernel_size) == 2
         ks = np.asarray(list(kernel_size))
         padding = (ks - 1) // 2
@@ -97,7 +128,7 @@ class Conv2dPostFilter(BaseModel):
 
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, is_inference=False):
         """Forward step
 
         Args:
@@ -109,14 +140,27 @@ class Conv2dPostFilter(BaseModel):
         """
         # (B, T, C) -> (B, 1, T, C):
         x = x.unsqueeze(1)
-
         if self.noise_type == "bin_wise":
-            z = torch.randn_like(x) * self.noise_scale
+            # (B, C, T)
+            z = torch.randn_like(x).squeeze(1).transpose(1, 2) * self.noise_scale
+            # Apply moving average filter at inference time only
+            if is_inference and self.smoothing_width > 0:
+                ave_filt = MovingAverage1d(
+                    self.in_dim, self.in_dim, self.smoothing_width
+                ).to(x.device)
+                z = ave_filt(z)
+            # (B, 1, T, C)
+            z = z.transpose(1, 2).unsqueeze(1)
         elif self.noise_type == "frame_wise":
-            z = (
-                torch.randn(x.shape[0], 1, x.shape[2], 1).to(x.device)
-                * self.noise_scale
-            )
+            # (B, 1, T)
+            z = torch.randn(x.shape[0], 1, x.shape[2]).to(x.device) * self.noise_scale
+            # Apply moving average filter at inference time only
+            if is_inference and self.smoothing_width > 0:
+                ave_filt = MovingAverage1d(1, 1, self.smoothing_width).to(x.device)
+                z = ave_filt(z)
+            # (B, 1, T, 1)
+            z = z.unsqueeze(-1)
+            # (B, 1, T, C)
             z = self.fc(z)
 
         x_syn = x
@@ -131,6 +175,9 @@ class Conv2dPostFilter(BaseModel):
         out = out.squeeze(1)
 
         return out
+
+    def inference(self, x, lengths=None):
+        return self(x, lengths, is_inference=True)
 
 
 class MultistreamPostFilter(BaseModel):
@@ -165,7 +212,7 @@ class MultistreamPostFilter(BaseModel):
         self.mgc_offset = mgc_offset
         self.bap_offset = bap_offset
 
-    def forward(self, x, lengths=None):
+    def forward(self, x, lengths=None, is_inference=False):
         """Forward step
 
         Each feature stream is processed independently.
@@ -191,24 +238,43 @@ class MultistreamPostFilter(BaseModel):
             if self.mgc_offset > 0:
                 # keep unchanged for the 0-to-${mgc_offset}-th dim of mgc
                 mgc0 = mgc[:, :, : self.mgc_offset]
-                mgc_pf = self.mgc_postfilter(mgc[:, :, self.mgc_offset :], lengths)
+                if is_inference:
+                    mgc_pf = self.mgc_postfilter.inference(
+                        mgc[:, :, self.mgc_offset :], lengths
+                    )
+                else:
+                    mgc_pf = self.mgc_postfilter(mgc[:, :, self.mgc_offset :], lengths)
                 mgc_pf = torch.cat([mgc0, mgc_pf], dim=-1)
             else:
-                mgc_pf = self.mgc_postfilter(mgc, lengths)
+                if is_inference:
+                    mgc_pf = self.mgc_postfilter.inference(mgc, lengths)
+                else:
+                    mgc_pf = self.mgc_postfilter(mgc, lengths)
             mgc = mgc_pf
 
         if self.bap_postfilter is not None:
             if self.bap_offset > 0:
                 # keep unchanged for the 0-to-${bap_offset}-th dim of bap
                 bap0 = bap[:, :, : self.bap_offset]
-                bap_pf = self.bap_postfilter(bap[:, :, self.bap_offset :], lengths)
+                if is_inference:
+                    bap_pf = self.bap_postfilter.inference(
+                        bap[:, :, self.bap_offset :], lengths
+                    )
+                else:
+                    bap_pf = self.bap_postfilter(bap[:, :, self.bap_offset :], lengths)
                 bap_pf = torch.cat([bap0, bap_pf], dim=-1)
             else:
-                bap_pf = self.bap_postfilter(bap, lengths)
+                if is_inference:
+                    bap_pf = self.bap_postfilter.inference(bap, lengths)
+                else:
+                    bap_pf = self.bap_postfilter(bap, lengths)
             bap = bap_pf
 
         if self.lf0_postfilter is not None:
-            lf0 = self.lf0_postfilter(lf0, lengths)
+            if is_inference:
+                lf0 = self.lf0_postfilter.inference(lf0, lengths)
+            else:
+                lf0 = self.lf0_postfilter(lf0, lengths)
 
         if len(streams) == 4:
             out = torch.cat([mgc, lf0, vuv, bap], dim=-1)
@@ -218,6 +284,9 @@ class MultistreamPostFilter(BaseModel):
             out = torch.cat([mgc, lf0, vuv, bap, vib, vib_flags], dim=-1)
 
         return out
+
+    def inference(self, x, lengths):
+        return self(x, lengths, is_inference=True)
 
 
 class _PadConv2dPostFilter(BaseModel):

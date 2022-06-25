@@ -18,6 +18,7 @@ netG:
     init_type: "kaiming_normal"
     noise_type: "bin_wise"
     noise_scale: 1.0
+    smoothing_width: 5
   mgc_offset: 2
   bap_offset: 0
   lf0_postfilter: null
