@@ -238,7 +238,7 @@ Acoustic model: {acoustic_str}
         vocoder_type = vocoder_type.lower()
         if vocoder_type not in ["world", "pwg"]:
             raise ValueError(f"Unknown vocoder type: {vocoder_type}")
-        if post_filter_type not in ["merlin", "nnsvs", "none"]:
+        if post_filter_type not in ["merlin", "nnsvs", "gv", "none"]:
             raise ValueError(f"Unknown post-filter type: {post_filter_type}")
 
         if vocoder_type == "pwg" and self.vocoder is None:
@@ -300,9 +300,8 @@ WORLD is only supported for waveform generation"""
             self.config.acoustic.force_clip_input_features,
         )
 
-        # Learned post-filter using nnsvs
-        if post_filter_type == "nnsvs" and self.postfilter_model is not None:
-            # Apply GV post-filtering as the pre-processing step
+        # Apply GV post-filtering
+        if post_filter_type in ["nnsvs", "gv"]:
             static_stream_sizes = get_static_stream_sizes(
                 self.acoustic_config.stream_sizes,
                 self.acoustic_config.has_dynamic_features,
@@ -323,7 +322,8 @@ WORLD is only supported for waveform generation"""
                 offset=0,
             )
 
-            # Apply learned post-filter
+        # Learned post-filter using nnsvs
+        if post_filter_type == "nnsvs" and self.postfilter_model is not None:
             in_feats = (
                 torch.from_numpy(acoustic_features).float().to(self.device).unsqueeze(0)
             )
