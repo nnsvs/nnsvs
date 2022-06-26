@@ -134,6 +134,7 @@ class WORLDAcousticSource(FileDataSource):
         d4c_threshold=0.85,
         trajectory_smoothing=False,
         trajectory_smoothing_cutoff=50,
+        correct_vuv=False,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -155,6 +156,7 @@ class WORLDAcousticSource(FileDataSource):
         self.d4c_threshold = d4c_threshold
         self.trajectory_smoothing = trajectory_smoothing
         self.trajectory_smoothing_cutoff = trajectory_smoothing_cutoff
+        self.correct_vuv = correct_vuv
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -205,6 +207,34 @@ class WORLDAcousticSource(FileDataSource):
         # Workaround for https://github.com/r9y9/nnsvs/issues/7
         f0 = np.maximum(f0, 0)
 
+        # Correct V/UV (and F0) based on the musical score information
+        # treat frames where musical notes are not assigned as unvoiced
+        if self.correct_vuv:
+            # Use smoothed mask so that we don't mask out overshoot or something
+            # that could happen at the start/end of notes
+            # 0.1 sec. window (could be tuned for better results)
+            win_length = int(0.1 / (self.frame_period * 0.001))
+            mask = np.convolve(f0_score, np.ones(win_length) / win_length, "same")
+            if len(f0) > len(mask):
+                mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            f0 = f0 * np.sign(mask)
+
+        spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
+        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
+
+        f0 = f0[:, None]
+        lf0 = f0.copy()
+        nonzero_indices = np.nonzero(f0)
+        lf0[nonzero_indices] = np.log(f0[nonzero_indices])
+        if self.use_harvest:
+            # https://github.com/mmorise/World/issues/35#issuecomment-306521887
+            vuv = (aperiodicity[:, 0] < 0.5).astype(np.float32)[:, None]
+        else:
+            vuv = (lf0 != 0).astype(np.float32)
+
+        # F0 -> continuous F0
+        lf0 = interp1d(lf0, kind="slinear")
+
         # Vibrato parameter extraction
         sr_f0 = int(1 / (self.frame_period * 0.001))
         if self.vibrato_mode == "sine":
@@ -250,25 +280,11 @@ class WORLDAcousticSource(FileDataSource):
         else:
             raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
 
-        spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
-        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
-
         mgc = pysptk.sp2mc(
             spectrogram, order=self.mgc_order, alpha=pysptk.util.mcepalpha(fs)
         )
-        # F0 of speech
-        f0 = f0[:, None]
-        lf0 = f0.copy()
-        nonzero_indices = np.nonzero(f0)
-        lf0[nonzero_indices] = np.log(f0[nonzero_indices])
-        if self.use_harvest:
-            # https://github.com/mmorise/World/issues/35#issuecomment-306521887
-            vuv = (aperiodicity[:, 0] < 0.5).astype(np.float32)[:, None]
-        else:
-            vuv = (lf0 != 0).astype(np.float32)
-        lf0 = interp1d(lf0, kind="slinear")
 
-        # Aperiodicy
+        # Post-processing for aperiodicy
         # ref: https://github.com/MTG/WGANSing/blob/mtg/vocoder.py
         if self.interp_unvoiced_aperiodicity:
             is_voiced = (vuv > 0).reshape(-1)
