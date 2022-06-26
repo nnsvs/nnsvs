@@ -160,6 +160,7 @@ def my_app(config: DictConfig) -> None:
         d4c_threshold=config.acoustic.d4c_threshold,
         trajectory_smoothing=config.acoustic.trajectory_smoothing,
         trajectory_smoothing_cutoff=config.acoustic.trajectory_smoothing_cutoff,
+        correct_vuv=config.acoustic.correct_vuv,
     )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)

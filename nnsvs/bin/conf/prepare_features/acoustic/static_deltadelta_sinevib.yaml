@@ -46,3 +46,7 @@ vibrato_mode: sine
 # Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
 trajectory_smoothing: false
 trajectory_smoothing_cutoff: 50
+
+# Correct V/UV based on the musical score.
+# This is to prevent unwanted F0 estimation failures on silence regions.
+correct_vuv: true
