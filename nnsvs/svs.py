@@ -23,7 +23,13 @@ from nnsvs.pitch import lowpass_filter
 from nnsvs.postfilters import variance_scaling
 from nnsvs.util import MinMaxScaler, StandardScaler
 from omegaconf import OmegaConf
-from parallel_wavegan.utils import load_model
+
+try:
+    from parallel_wavegan.utils import load_model
+
+    _pwg_available = True
+except ImportError:
+    _pwg_available = False
 
 
 class SPSVS(object):
@@ -136,17 +142,21 @@ class SPSVS(object):
 
         # Vocoder model
         if (model_dir / "vocoder_model.yaml").exists():
-            self.vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
-            self.vocoder = load_model(
-                model_dir / "vocoder_model.pth", config=self.vocoder_config
-            ).to(device)
-            self.vocoder.eval()
-            self.vocoder.remove_weight_norm()
-            self.vocoder_in_scaler = StandardScaler(
-                np.load(model_dir / "in_vocoder_scaler_mean.npy"),
-                np.load(model_dir / "in_vocoder_scaler_var.npy"),
-                np.load(model_dir / "in_vocoder_scaler_scale.npy"),
-            )
+            if not _pwg_available:
+                warn("parallel_wavegan is not installed. Vocoder model is disabled.")
+                self.vocoder = None
+            else:
+                self.vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
+                self.vocoder = load_model(
+                    model_dir / "vocoder_model.pth", config=self.vocoder_config
+                ).to(device)
+                self.vocoder.eval()
+                self.vocoder.remove_weight_norm()
+                self.vocoder_in_scaler = StandardScaler(
+                    np.load(model_dir / "in_vocoder_scaler_mean.npy"),
+                    np.load(model_dir / "in_vocoder_scaler_var.npy"),
+                    np.load(model_dir / "in_vocoder_scaler_scale.npy"),
+                )
         else:
             self.vocoder = None
 
