@@ -11,12 +11,12 @@ st.title("NNSVS Demo")
 st.markdown("Upload your .xml music file with text as input to make it sing.")
 
 models = {
-    "kiritan": "r9y9/20220321_kiritan_timelag_mdn_duration_mdn_acoustic_resf0conv",
-    "yoko": "r9y9/20220322_yoko_timelag_mdn_duration_mdn_acoustic_resf0conv",
+    "kiritan": "r9y9/kiritan_latest",
+    "yoko": "r9y9/yoko_latest",
 }
 
 voice_option = st.selectbox("Select the voice", models.keys())
-uploaded_file = st.file_uploader("Choose a .xml music file", type="xml")
+uploaded_file = st.file_uploader("Choose a .xml music file", type=["xml", "musicxml"])
 
 if st.button("synthesis") and uploaded_file:
     with st.spinner("Synthesizing to wav"):
