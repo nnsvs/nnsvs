@@ -5,7 +5,8 @@ Overview of NNSVS's SVS
    :alt: NNSVS's system overview
 
 
-The above figure shows the overview of NNSVS's singing voice synthesis (SVS) systems.
+NNSVS provides functionality to build singing voice synthesis (SVS) systems.
+The above figure shows the overview of NNSVS's SVS.
 There are five modules that can be modeled by neural networks. Brief descriptions of each module are given below.
 
 Time-lag model

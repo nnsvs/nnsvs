@@ -40,6 +40,12 @@ MDN
 
 .. autoclass:: MDN
 
+MDNv2
+-----
+
+.. autoclass:: MDNv2
+
+
 RMDN
 ----
 

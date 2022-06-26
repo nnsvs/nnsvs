@@ -1,7 +1,7 @@
 Tips
 =====
 
-This page summarizes some tips for NNSVS.
+This page summarizes tips for NNSVS.
 
 Database creation for NNSVS/ENUNU
 ----------------------------------
@@ -17,6 +17,11 @@ Here are some things to try when you see GPU out-of-memory (OOM) errors:
 - If you still see GPU OOM even if you set small batch size, try to reduce the model size by changing number of layers, number of hidden units, etc.
 - (Only if you have supported NVIDIA GPUs) Enable mixed precision training. You can save GPU RAM while accelerating training.
 - Set ``max_time_frames`` in your data config. This option forces the sequence length of every mini-batch to ``max_time_frames``.
+
+How much VRAM is required?
+-----------------------------
+
+10GB or larger is recommended in general. Note that the amount of required VRAM depends on what models you want to train.
 
 Monitoring traing progress via Tensorboard
 -------------------------------------------
