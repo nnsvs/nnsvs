@@ -49,7 +49,7 @@ How to run hyperparameter optimization
 Once the mlflow is up, you are ready to run hyperparameter optimization.
 
 Running the hyperparameter optimization is basically the same as running the training steps except for a few special arguments.
-Specially, you need to change the following optimization-related parameters in ``config.yaml``:
+Specially, you need to provide the following optimization-related parameters in ``config.yaml``:
 
 .. code-block:: yaml
 

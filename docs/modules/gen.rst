@@ -25,6 +25,7 @@ Generation helpers
     :nosignatures:
 
     postprocess_duration
+    correct_vuv_by_phone
     gen_spsvs_static_features
     gen_world_params
 

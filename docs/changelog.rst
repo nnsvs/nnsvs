@@ -5,26 +5,33 @@ v0.0.3 <2022-xx-xx>
 -------------------
 
 New features
-^^^^^^^^^^^^^
+^^^^^^^^^^^^
 
 - Recipe-level integration of hyperparameter optimization with Optuna `#43`_ :doc:`optuna`
-- Speech parameter trajectory smoothing (:cite:t:`takamichi2015naist`). Disabled by default.
-- Objective metrics (such as mel-cepstrum distortion and RMSE) are now logged to tensorboard. `#41`_
-- Spectrogram, aperiodicity, F0, and generated audio is now logged to tensorboard if ``train_resf0.py`` is used.
-- A heuristic trick is added to prevent serious V/UV prediction errors (hardcoded for Japanese for now). `#95`_
-- GAN-based post-filters (:cite:t:`Kaneko2017Interspeech`, :cite:t:`kaneko2017generative`) `#85`_
-- GV post-filter (:cite:t:`silen2012ways`)
-- Number of training iterations can be now specified by either epochs or steps.
+- GAN-based post-filters (:cite:t:`Kaneko2017Interspeech`, :cite:t:`kaneko2017generative`) `#85`_ and GV post-filter (:cite:t:`silen2012ways`)
 - Mixed precision training `#106`_
 - Added VariancePredictor (:cite:t:`ren2020fastspeech`).
+- Spectrogram, aperiodicity, F0, and generated audio is now logged to tensorboard if ``train_resf0.py`` is used.
+- Objective metrics (such as mel-cepstrum distortion and RMSE) are now logged to tensorboard. `#41`_
+- Added MDNv2 (MDN + dropout) `#118`_
+- Correct V/UV (``correct_vuv``) option is added to feature processing.
 
 Bug fixes
-~~~~~~~~~
+^^^^^^^^^
 
 - Add a heuristic trick to prevent non-negative durations at synthesis time
 
+Improvements
+^^^^^^^^^^^^
+
+- ``nnsvs.model.MDN`` now support dropout by the ``dropout`` argument. The ``dropout`` argument existed before but it was no-op for a long time.
+- Number of training iterations can be now specified by either epochs or steps.
+- A heuristic trick is added to prevent serious V/UV prediction errors . `#95`_ `#119`_
+- Speech parameter trajectory smoothing (:cite:t:`takamichi2015naist`). Disabled by default.
+- Added recipe tests on CI `#116`_
+
 Deprecations
-^^^^^^^^^^^^^
+^^^^^^^^^^^^
 
 - ``dropout`` for ``nnsvs.model.MDN`` is deprecated. Please consider removing the parameter as it has no effect.
 - ``dropout`` for ``nnsvs.model.Conv1dResnet`` is deprecated. Please consider removing the parameter as it has no effect.
@@ -48,7 +55,7 @@ Some features that are available but not yet tested or documented
 - WaveNet `#100`_
 - GAN-based acoustic models `#85`_
 
-v0.0.2 (2022-04-29)
+v0.0.2 <2022-04-29>
 -------------------
 
 A version that should work with `ENUNU v0.4.0 <https://github.com/oatsu-gh/ENUNU/releases/tag/v0.4.0>`_
@@ -83,3 +90,6 @@ PyPi release is also available. So you can install the core library by pip insta
 .. _#95: https://github.com/r9y9/nnsvs/issues/95
 .. _#100: https://github.com/r9y9/nnsvs/issues/100
 .. _#106: https://github.com/r9y9/nnsvs/issues/106
+.. _#116: https://github.com/r9y9/nnsvs/pull/116
+.. _#118: https://github.com/r9y9/nnsvs/pull/118
+.. _#119: https://github.com/r9y9/nnsvs/pull/119

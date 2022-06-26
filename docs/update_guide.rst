@@ -1,12 +1,12 @@
 Update guide
 ==============
 
-This page summarizes some guides when you want to use the updated version of NNSVS.
+This page summarizes guides when you use the updated version of NNSVS.
 
 v0.0.2 to master
 ----------------
 
-.. note::
+.. warning::
 
     The master branch is the development version of NNSVS. It is ready for developers to try out new features but use it on your own.
 
@@ -31,13 +31,13 @@ If your hed file contains the following QS features,
     QS "C-Phone_Yuuseion" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
     QS "C-Phone_Museion"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
 
-Please rename them to ``C-VUV_Voiced`` and ``C-VUV_Unvoiced``.
+please rename them to ``C-VUV_Voiced`` and ``C-VUV_Unvoiced``.
 
 Models
 ^^^^^^^
 
+- Use ``MDNv2`` (MDN + dropout) instead of ``MDN``.
 - New parameter: All models now accept new argument ``init_type`` that specifies the initialization method for model parameters. Setting ``init_type`` to ``kaiming_normal`` or ``xavier_normal`` may improve convergence a bit for deep networks. Defaults to ``none``. The implementation was taken by `junyanz/pytorch-CycleGAN-and-pix2pix <https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix>`_.
-- Deprecated: ``dropout`` for ``nnsvs.model.MDN`` is deprecated. Please consider removing the parameter as it has no effect.
 - Deprecated: ``FeedForwardNet`` is renamed to ``FFN``.
 - Deprecated: ``ResF0Conv1dResnetMDN`` is deprecated. You can use ``ResF0Conv1dMDN`` with ``use_mdn=True``.
 
