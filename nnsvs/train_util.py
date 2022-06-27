@@ -803,7 +803,8 @@ Please consider the following parameters in your model config:
 
     # Overwrite the parameters to the config
     for key in ["in_lf0_min", "in_lf0_max", "out_lf0_mean", "out_lf0_scale"]:
-        config.model.netG[key] = float(getattr(model, key))
+        if hasattr(model, key):
+            config.model.netG[key] = float(getattr(model, key))
 
 
 def note_segments(lf0_score_denorm):

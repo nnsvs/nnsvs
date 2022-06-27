@@ -15,6 +15,7 @@ New features
 - Objective metrics (such as mel-cepstrum distortion and RMSE) are now logged to tensorboard. `#41`_
 - Added MDNv2 (MDN + dropout) `#118`_
 - Correct V/UV (``correct_vuv``) option is added to feature processing.
+- Support training non-resf0 models with ``train_resf0.py`` `#125`_
 
 Bug fixes
 ^^^^^^^^^
@@ -93,3 +94,4 @@ PyPi release is also available. So you can install the core library by pip insta
 .. _#116: https://github.com/r9y9/nnsvs/pull/116
 .. _#118: https://github.com/r9y9/nnsvs/pull/118
 .. _#119: https://github.com/r9y9/nnsvs/pull/119
+.. _#125: https://github.com/r9y9/nnsvs/pull/125
