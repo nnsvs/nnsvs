@@ -6,7 +6,6 @@ from nnsvs.base import BaseModel, PredictionType
 from nnsvs.layers.conv import ResnetBlock, WNConv1d
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.model import VariancePredictor
-from nnsvs.multistream import split_streams
 from nnsvs.util import init_weights
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
