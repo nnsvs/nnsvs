@@ -6,20 +6,12 @@ num_windows: 3
 stream_weights:
 
 netG:
-  _target_: nnsvs.model.ResF0Conv1dResnet
+  _target_: nnsvs.model.Conv1dResnet
   in_dim: 341
   hidden_dim: 8
   out_dim: 206
   num_layers: 1
   init_type: "kaiming_normal"
-  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
-  # otherwise the model does't work at all
-  in_lf0_idx: 292
-  out_lf0_idx: 180
-  # Please leave the following parameters unspecified if you want to
-  # find the corresponding values automatically from in/out scalers.
-  in_lf0_min: null
-  in_lf0_max: null
-  out_lf0_mean: null
-  out_lf0_scale: null
-
+  use_mdn: true
+  num_gaussians: 2
+  dim_wise: true

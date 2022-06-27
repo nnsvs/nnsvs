@@ -66,7 +66,11 @@ def train_step(
 
     # Run forward
     with autocast(enabled=grad_scaler is not None):
-        pred_out_feats, lf0_residual = model(in_feats, lengths, out_feats)
+        outs = model(in_feats, lengths, out_feats)
+        if isinstance(outs, tuple) and len(outs) == 2:
+            pred_out_feats, lf0_residual = outs
+        else:
+            pred_out_feats, lf0_residual = outs, None
 
     # Mask (B, T, 1)
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
@@ -90,8 +94,13 @@ def train_step(
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    with autocast(enabled=grad_scaler is not None):
-        loss_pitch = (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+    if lf0_residual is not None:
+        with autocast(enabled=grad_scaler is not None):
+            loss_pitch = (
+                (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+            )
+    else:
+        loss_pitch = torch.tensor(0.0).to(in_feats.device)
 
     loss = loss_feats + pitch_reg_weight * loss_pitch
 
