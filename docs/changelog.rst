@@ -21,6 +21,7 @@ Bug fixes
 ^^^^^^^^^
 
 - Add a heuristic trick to prevent non-negative durations at synthesis time
+- Fix error when no dynamic features are used `#128`_
 
 Improvements
 ^^^^^^^^^^^^
@@ -95,3 +96,5 @@ PyPi release is also available. So you can install the core library by pip insta
 .. _#118: https://github.com/r9y9/nnsvs/pull/118
 .. _#119: https://github.com/r9y9/nnsvs/pull/119
 .. _#125: https://github.com/r9y9/nnsvs/pull/125
+.. _#128: https://github.com/r9y9/nnsvs/pull/128
+
