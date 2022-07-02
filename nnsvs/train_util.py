@@ -1197,7 +1197,9 @@ def plot_spsvs_params(
         ax=ax[0],
     )
     fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
-    pred_spectrogram = pysptk.mc2sp(pred_mgc, fftlen=fftlen, alpha=alpha).T
+    pred_spectrogram = pysptk.mc2sp(
+        np.ascontiguousarray(pred_mgc), fftlen=fftlen, alpha=alpha
+    ).T
     mesh = librosa.display.specshow(
         librosa.power_to_db(np.abs(pred_spectrogram), ref=np.max),
         sr=sr,
@@ -1230,7 +1232,7 @@ def plot_spsvs_params(
     )
     fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
     pred_aperiodicity = pyworld.decode_aperiodicity(
-        pred_bap.astype(np.float64), sr, fftlen
+        np.ascontiguousarray(pred_bap).astype(np.float64), sr, fftlen
     ).T
     mesh = librosa.display.specshow(
         20 * np.log10(pred_aperiodicity),
