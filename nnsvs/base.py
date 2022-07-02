@@ -34,7 +34,7 @@ class BaseModel(nn.Module):
         If you want to implement custom inference method such as autoregressive sampling,
         please override this method.
 
-        Defaults to call the forwrard method.
+        Defaults to call the forward method.
         """
         return self(*args, **kwargs)
 
