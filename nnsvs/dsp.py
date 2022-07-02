@@ -23,7 +23,7 @@ def lowpass_filter(x, fs, cutoff=5, N=5):
     Wn = [norm_cutoff]
 
     b, a = signal.butter(N, Wn, "lowpass")
-    if len(x) <= len(b) * (N // 2 + 1):
+    if len(x) <= max(len(a), len(b)) * (N // 2 + 1):
         # NOTE: input signal is too short
         return x
 
