@@ -87,18 +87,36 @@ def train_step(
             loss_feats = loss_feats.masked_select(mask_).mean()
     else:
         with autocast(enabled=grad_scaler is not None):
-            loss_feats = criterion(
-                pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-            ).mean()
+            # NOTE: multiple predictions
+            if isinstance(pred_out_feats, list):
+                loss_feats = 0
+                for pred_out_feats_ in pred_out_feats:
+                    loss_feats += criterion(
+                        pred_out_feats_.masked_select(mask),
+                        out_feats.masked_select(mask),
+                    ).mean()
+            else:
+                loss_feats = criterion(
+                    pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
+                ).mean()
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
     if lf0_residual is not None:
         with autocast(enabled=grad_scaler is not None):
-            loss_pitch = (
-                (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
-            )
+            if isinstance(lf0_residual, list):
+                loss_pitch = 0
+                for lf0_residual_ in lf0_residual:
+                    loss_pitch += (
+                        (pitch_reg_dyn_ws * lf0_residual_.abs())
+                        .masked_select(mask)
+                        .mean()
+                    )
+            else:
+                loss_pitch = (
+                    (pitch_reg_dyn_ws * lf0_residual.abs()).masked_select(mask).mean()
+                )
     else:
         loss_pitch = torch.tensor(0.0).to(in_feats.device)
 
@@ -108,7 +126,10 @@ def train_step(
         with torch.no_grad():
             pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
     else:
-        pred_out_feats_ = pred_out_feats
+        if isinstance(pred_out_feats, list):
+            pred_out_feats_ = pred_out_feats[-1]
+        else:
+            pred_out_feats_ = pred_out_feats
     distortions = compute_distortions(
         pred_out_feats_, out_feats, lengths, out_scaler, model_config
     )
@@ -281,7 +302,13 @@ def my_app(config: DictConfig) -> None:
             collate_fn_random_segments, max_time_frames=config.data.max_time_frames
         )
     else:
-        collate_fn = collate_fn_default
+        if "reduction_factor" in config.model.netG:
+            collate_fn = partial(
+                collate_fn_default,
+                reduction_factor=config.model.netG.reduction_factor,
+            )
+        else:
+            collate_fn = collate_fn_default
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (

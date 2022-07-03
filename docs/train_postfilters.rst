@@ -38,7 +38,7 @@ In addition to the steps described in :doc:`recipes`,  the following are the ste
 .. note::
 
     The contents in this page is based on ``recipes/conf/spsvs/run_common_steps_dev.sh``.
-    Also, before you make your custom recipes, it is recommenced to start with a test recipe ``nnsvs/recipes/nit-song070/dev-test``.
+    Also, before you make your custom recipes, it is recommenced to start with a test recipe ``recipes/nit-song070/dev-test``.
 
 Stage 7: Prepare input/output features for post-filter
 ------------------------------------------------------
@@ -160,7 +160,7 @@ To train a post-filter for ``mgc``, you can run the following command:
         --postfilter-model postfilter_mgc_test \
         --postfilter-train mgc
 
-Note that you must specify ``--postfilter-train mgc``. This tells the traninig script to only use the ``mgc`` feature stream. Other streams such as ``lf0`` and ``bap`` are ignored.
+Note that you must specify ``--postfilter-train mgc``. This tells the training script to only use the ``mgc`` feature stream. Other streams such as ``lf0`` and ``bap`` are ignored.
 
 .. warn::
 
@@ -197,7 +197,7 @@ Train post-filter for ``bap``
         --postfilter-model postfilter_bap \
         --postfilter-train bap
 
-Note that you must specify ``--postfilter-train bap``. This tells the traninig script to only use the ``bap`` feature stream.
+Note that you must specify ``--postfilter-train bap``. This tells the training script to only use the ``bap`` feature stream.
 
 
 Merge the two post-filters

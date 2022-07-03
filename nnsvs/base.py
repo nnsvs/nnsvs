@@ -11,7 +11,7 @@ class PredictionType(Enum):
 class BaseModel(nn.Module):
     """Base class for all models
 
-    If you want to implement your new model, you should inherit from this class.
+    If you want to implement your custom model, you should inherit from this class.
     You must need to implement the forward method. Other methods are optional.
     """
 
@@ -28,15 +28,22 @@ class BaseModel(nn.Module):
         """
         pass
 
-    def inference(self, *args, **kwargs):
+    def inference(self, x, lengths=None):
         """Inference method
 
         If you want to implement custom inference method such as autoregressive sampling,
         please override this method.
 
         Defaults to call the forward method.
+
+        Args:
+            x (tensor): input features
+            lengths (tensor): lengths of the input features
+
+        Returns:
+            tensor: output features
         """
-        return self(*args, **kwargs)
+        return self(x, lengths)
 
     def preprocess_target(self, y):
         """Preprocess target signals at training time
@@ -67,6 +74,9 @@ class BaseModel(nn.Module):
 
     def is_autoregressive(self):
         """Is autoregressive or not
+
+        If your custom model is an autoregressive model, please return ``True``. In that case,
+        you would need to implement autoregressive sampling in :py:meth:`inference`.
 
         Returns:
             bool: True if autoregressive. Default is False.

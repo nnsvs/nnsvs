@@ -26,15 +26,14 @@ class Encoder(nn.Module):
 
     def __init__(
         self,
-        in_dim=512,  # 文字埋め込みの次元数
-        hidden_dim=512,  # 隠れ層の次元数
-        conv_layers=3,  # 畳み込み層数
-        conv_channels=512,  # 畳み込み層のチャネル数
-        conv_kernel_size=5,  # 畳み込み層のカーネルサイズ
-        dropout=0.5,  # Dropout 率
+        in_dim=512,
+        hidden_dim=512,
+        conv_layers=3,
+        conv_channels=512,
+        conv_kernel_size=5,
+        dropout=0.5,
     ):
         super(Encoder, self).__init__()
-        # 1 次元畳み込みの重ね合わせ：局所的な時間依存関係のモデル化
         convs = nn.ModuleList()
         for layer in range(conv_layers):
             in_channels = in_dim if layer == 0 else conv_channels
@@ -44,19 +43,16 @@ class Encoder(nn.Module):
                     conv_channels,
                     conv_kernel_size,
                     padding=(conv_kernel_size - 1) // 2,
-                    bias=False,  # この bias は不要です
+                    bias=False,
                 ),
                 nn.BatchNorm1d(conv_channels),
                 nn.ReLU(),
                 nn.Dropout(dropout),
             ]
         self.convs = nn.Sequential(*convs)
-        # Bi-LSTM による長期依存関係のモデル化
         self.blstm = nn.LSTM(
             conv_channels, hidden_dim // 2, 1, batch_first=True, bidirectional=True
         )
-
-        # initialize
         self.apply(encoder_init)
 
     def forward(self, seqs, in_lens):
@@ -71,7 +67,6 @@ class Encoder(nn.Module):
         """
         out = self.convs(seqs.transpose(1, 2)).transpose(1, 2)
 
-        # Bi-LSTM の計算
         if not isinstance(in_lens, list):
             in_lens = in_lens.to("cpu")
 
