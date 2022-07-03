@@ -47,7 +47,12 @@ def _test_model_impl(model, model_config):
         assert sigma_inf.shape == (B, T, model_config.netG.out_dim)
     else:
         if lf0_residual is not None:
+            if isinstance(lf0_residual, list):
+                lf0_residual = lf0_residual[-1]
             assert lf0_residual.shape == (B, T, 1)
+        # NOTE: some models have multiple outputs (e.g. Tacotron)
+        if isinstance(y, list):
+            y = y[-1]
         assert y.shape == (B, T, model_config.netG.out_dim)
         assert y.shape == y_inf.shape
 

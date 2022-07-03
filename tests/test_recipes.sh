@@ -37,6 +37,10 @@ cd $NNSVS_ROOT/recipes/nit-song070/dev-test
     --duration-model duration_test \
     --acoustic_model acoustic_test_resf0
 
+# Check if the auto-regressive model works
+./run.sh --stage 4 --stop-stage 4 \
+    --acoustic_model acoustic_test_resf0_ar
+
 # Generate training data for post-filtering
 ./run.sh --stage 7 --stop-stage 7 \
     --timelag-model timelag_test \
