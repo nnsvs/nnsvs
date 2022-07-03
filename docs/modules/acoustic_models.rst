@@ -18,3 +18,8 @@ ResF0VariancePredictor
 -----------------------
 
 .. autoclass:: ResF0VariancePredictor
+
+ResF0NonAttentiveTacotron
+-------------------------
+
+.. autoclass:: ResF0NonAttentiveTacotron

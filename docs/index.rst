@@ -8,6 +8,8 @@ NNSVS
 
 Neural network based singing voice synthesis library
 
+https://github.com/r9y9/nnsvs
+
 Features
 --------
 

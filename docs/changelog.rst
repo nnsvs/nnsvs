@@ -16,6 +16,7 @@ New features
 - Added MDNv2 (MDN + dropout) `#118`_
 - Correct V/UV (``correct_vuv``) option is added to feature processing.
 - Support training non-resf0 models with ``train_resf0.py`` `#125`_
+- Add ``ResF0NonAttentiveTacotron`` acoustic model. `#129`_
 
 Bug fixes
 ^^^^^^^^^
@@ -97,4 +98,5 @@ PyPi release is also available. So you can install the core library by pip insta
 .. _#119: https://github.com/r9y9/nnsvs/pull/119
 .. _#125: https://github.com/r9y9/nnsvs/pull/125
 .. _#128: https://github.com/r9y9/nnsvs/pull/128
+.. _#129: https://github.com/r9y9/nnsvs/pull/129
 
