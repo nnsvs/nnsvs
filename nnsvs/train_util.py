@@ -91,13 +91,32 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.X)
 
 
-def collate_fn_default(batch):
+def ensure_divisible_by(feats, N):
+    """Ensure that the number of frames is divisible by N.
+
+    Args:
+        feats (np.ndarray): Input features.
+        N (int): Target number of frames.
+
+    Returns:
+        np.ndarray: Input features with number of frames divisible by N.
+    """
+    if N == 1:
+        return feats
+    mod = len(feats) % N
+    if mod != 0:
+        feats = feats[: len(feats) - mod]
+    return feats
+
+
+def collate_fn_default(batch, reduction_factor=1):
     """Create batch
 
     Args:
         batch(tuple): List of tuples
             - x[0] (ndarray,int) : list of (T, D_in)
             - x[1] (ndarray,int) : list of (T, D_out)
+        reduction_factor (int): Reduction factor.
 
     Returns:
         tuple: Tuple of batch
@@ -105,10 +124,24 @@ def collate_fn_default(batch):
             - y (FloatTensor)  : Network targets (B, max(T), D_out)
             - lengths (LongTensor): Input lengths
     """
-    lengths = [len(x[0]) for x in batch]
+    lengths = [len(ensure_divisible_by(x[0], reduction_factor)) for x in batch]
     max_len = max(lengths)
-    x_batch = torch.stack([torch.from_numpy(pad_2d(x[0], max_len)) for x in batch])
-    y_batch = torch.stack([torch.from_numpy(pad_2d(x[1], max_len)) for x in batch])
+    x_batch = torch.stack(
+        [
+            torch.from_numpy(
+                pad_2d(ensure_divisible_by(x[0], reduction_factor), max_len)
+            )
+            for x in batch
+        ]
+    )
+    y_batch = torch.stack(
+        [
+            torch.from_numpy(
+                pad_2d(ensure_divisible_by(x[1], reduction_factor), max_len)
+            )
+            for x in batch
+        ]
+    )
     l_batch = torch.tensor(lengths, dtype=torch.long)
     return x_batch, y_batch, l_batch
 
@@ -995,25 +1028,28 @@ def eval_spss_model(
 
         # Run forward
         if is_autoregressive:
-            pred_out_feats = netG(
+            outs = netG(
                 in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
                 [lengths[utt_idx]],
                 out_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
             )
-        elif prediction_type == PredictionType.PROBABILISTIC:
-            pred_out_feats = netG(
+        else:
+            outs = netG(
                 in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
             )
-            # NOTE: ResF0 case
-            if len(pred_out_feats) == 2:
-                pi, sigma, mu = pred_out_feats[0]
-            else:
-                pi, sigma, mu = pred_out_feats
+
+        # ResF0 case
+        if isinstance(outs, tuple) and len(outs) == 2:
+            outs, _ = outs
+
+        if prediction_type == PredictionType.PROBABILISTIC:
+            pi, sigma, mu = outs
             pred_out_feats = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
         else:
-            pred_out_feats = netG(
-                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-            )
+            pred_out_feats = outs
+        # NOTE: multiple outputs
+        if isinstance(pred_out_feats, list):
+            pred_out_feats = pred_out_feats[-1]
         if isinstance(pred_out_feats, tuple):
             pred_out_feats = pred_out_feats[0]
 
