@@ -162,7 +162,7 @@ To train a post-filter for ``mgc``, you can run the following command:
 
 Note that you must specify ``--postfilter-train mgc``. This tells the training script to only use the ``mgc`` feature stream. Other streams such as ``lf0`` and ``bap`` are ignored.
 
-.. warn::
+.. warning::
 
     Training a post-filter for ``mgc`` requires larger amount of GPU VRAM than the normal acoustic model training at the moment. Try using a smaller batch size.
 
