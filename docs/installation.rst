@@ -8,7 +8,7 @@ Supported platform
 - Mac OS X
 - Windows
 
-NNSVS is tested on all these platforms by `GitHub actions <https://github.com/r9y9/nnsvs/actions>`_.
+NNSVS is tested on all these platforms by `GitHub actions <https://github.com/nnsvs/nnsvs/actions>`_.
 It is strongly recommended to use Linux for development purposes.
 
 
@@ -45,7 +45,7 @@ For development
 
 .. code::
 
-   git clone https://github.com/r9y9/nnsvs.git && cd nnsvs
+   git clone https://github.com/nnsvs/nnsvs.git && cd nnsvs
    pip install -e ".[dev,lint,test]"
 
 Note: adding ``[dev,lint,test]`` to the end of the command above will install dev/test/lint requirements as well.
@@ -71,4 +71,4 @@ If you are on Google colab, you may want to copy the following command into a ce
    try:
       import nnsvs
    except ImportError:
-      ! pip install git+https://github.com/r9y9/nnsvs
+      ! pip install git+https://github.com/nnsvs/nnsvs

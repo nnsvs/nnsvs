@@ -4,6 +4,8 @@ Change log
 v0.0.3 <2022-xx-xx>
 -------------------
 
+Moved the repository to https://github.com/nnsvs organization.
+
 New features
 ^^^^^^^^^^^^
 
