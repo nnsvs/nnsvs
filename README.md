@@ -11,4 +11,4 @@
 
 Neural network-based singing voice synthesis library for research
 
-Documentation can be found at https://nnsvs.github.io/nnsvs.
+Documentation can be found at https://nnsvs.github.io.
