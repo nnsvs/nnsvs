@@ -192,4 +192,5 @@ class NonAttentiveDecoder(nn.Module):
         if self.reduction_factor > 1:
             outs = outs.view(outs.size(0), self.out_dim, -1)  # (B, out_dim, Lmax)
 
-        return outs
+        # (B, C, T) -> (B, T, C)
+        return outs.transpose(1, 2)
