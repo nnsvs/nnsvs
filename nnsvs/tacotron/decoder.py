@@ -6,6 +6,7 @@
 
 import torch
 import torch.nn.functional as F
+from nnsvs.base import BaseModel
 from torch import nn
 
 
@@ -77,11 +78,11 @@ class Prenet(nn.Module):
         return x
 
 
-class NonAttentiveDecoder(nn.Module):
+class NonAttentiveDecoder(BaseModel):
     """Decoder of Tacotron w/o attention mechanism
 
     Args:
-        encoder_hidden_dim (int) : dimension of encoder hidden layer
+        in_dim (int) : dimension of encoder hidden layer
         out_dim (int) : dimension of output
         layers (int) : number of LSTM layers
         hidden_dim (int) : dimension of hidden layer
@@ -97,7 +98,7 @@ class NonAttentiveDecoder(nn.Module):
 
     def __init__(
         self,
-        encoder_hidden_dim=512,
+        in_dim=512,
         out_dim=80,
         layers=2,
         hidden_dim=1024,
@@ -116,12 +117,12 @@ class NonAttentiveDecoder(nn.Module):
         self.lstm = nn.ModuleList()
         for layer in range(layers):
             lstm = nn.LSTMCell(
-                encoder_hidden_dim + prenet_hidden_dim if layer == 0 else hidden_dim,
+                in_dim + prenet_hidden_dim if layer == 0 else hidden_dim,
                 hidden_dim,
             )
             self.lstm += [ZoneOutCell(lstm, zoneout)]
 
-        proj_in_dim = encoder_hidden_dim + hidden_dim
+        proj_in_dim = in_dim + hidden_dim
         self.feat_out = nn.Linear(proj_in_dim, out_dim * reduction_factor, bias=False)
 
         self.apply(decoder_init)
@@ -129,6 +130,9 @@ class NonAttentiveDecoder(nn.Module):
     def _zero_state(self, hs):
         init_hs = hs.new_zeros(hs.size(0), self.lstm[0].hidden_size)
         return init_hs
+
+    def is_autoregressive(self):
+        return True
 
     def forward(self, encoder_outs, in_lens, decoder_targets=None):
         """Forward step
@@ -192,4 +196,5 @@ class NonAttentiveDecoder(nn.Module):
         if self.reduction_factor > 1:
             outs = outs.view(outs.size(0), self.out_dim, -1)  # (B, out_dim, Lmax)
 
-        return outs
+        # (B, C, T) -> (B, T, C)
+        return outs.transpose(1, 2)

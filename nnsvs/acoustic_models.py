@@ -666,11 +666,7 @@ class ResF0NonAttentiveTacotron(BaseModel):
         # NOTE: the decoder target `y` is only used at training for teacher-forcing
         # (B, T, C)
         outs = self.decoder(outs, lengths, y)
-        outs_fine = outs + self.postnet(outs)
-
-        # (B, C, T) -> (B, T, C)
-        outs = outs.transpose(2, 1).clone()
-        outs_fine = outs_fine.transpose(2, 1)
+        outs_fine = outs + self.postnet(outs.transpose(1, 2).clone()).transpose(1, 2)
 
         # Predict log-F0
         lf0_pred, lf0_residual = predict_lf0_with_residual(
