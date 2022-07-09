@@ -598,6 +598,7 @@ class ResF0NonAttentiveTacotron(BaseModel):
         self.out_lf0_idx = out_lf0_idx
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
+        self.reduction_factor = reduction_factor
 
         # Encoder
         self.lstm = nn.LSTM(
@@ -710,4 +711,23 @@ class ResF0NonAttentiveTacotron(BaseModel):
         Returns:
             torch.Tensor: the output features
         """
-        return self(x, lengths, None)[0][-1]
+        mod = max(lengths) % self.reduction_factor
+        pad = self.reduction_factor - mod
+
+        # Pad zeros to the end of the input features
+        # so that the lenght of the input features is a multiple of the reduction factor
+        if pad != 0:
+            x_pad = torch.nn.functional.pad(x, (0, 0, 0, pad), mode="constant")
+            if isinstance(lengths, torch.Tensor):
+                lengths = lengths.clone()
+            else:
+                lengths = lengths.copy()
+            lengths = [length + pad for length in lengths]
+        else:
+            x_pad = x
+        y = self(x_pad, lengths, None)[0][-1]
+
+        if pad != 0:
+            y = y[:, :-pad]
+
+        return y
