@@ -20,7 +20,7 @@ def get_parser():
     parser.add_argument("out_dir", type=str, help="out directory")
     parser.add_argument("--sample_rate", type=int, default=48000, help="sampling rate")
     parser.add_argument("--mgc_order", type=int, default=59, help="mgc order")
-    parser.add_argument("--num_windows", type=str, default=3, help="number of windows")
+    parser.add_argument("--num_windows", type=int, default=3, help="number of windows")
     parser.add_argument("--vibrato_mode", type=str, default="none", help="vibrato mode")
 
     return parser
