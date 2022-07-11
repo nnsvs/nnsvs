@@ -60,6 +60,11 @@ Neural vocoders
 
 - :cite:t:`wang2019neural`
 
+Database
+--------
+
+- :cite:t:`wang2022opencpop`
+
 All bibliography
 -----------------
 
