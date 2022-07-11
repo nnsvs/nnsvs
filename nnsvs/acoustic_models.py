@@ -711,7 +711,7 @@ class ResF0NonAttentiveTacotron(BaseModel):
         pad = self.reduction_factor - mod
 
         # Pad zeros to the end of the input features
-        # so that the lenght of the input features is a multiple of the reduction factor
+        # so that the length of the input features is a multiple of the reduction factor
         if pad != 0:
             x_pad = torch.nn.functional.pad(x, (0, 0, 0, pad), mode="constant")
             if isinstance(lengths, torch.Tensor):
