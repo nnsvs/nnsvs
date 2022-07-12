@@ -66,6 +66,8 @@ train.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``max_time_frames`` specifies maximum number of time frames. You can set non-negative values to limit the maximum time frames for making a mini-batch. It would be useful to workaround GPU OOM issues.
+- New parameter: ``filter_long_segments`` specifies if long segments are filtered or not. Consider to set it True when you have GPU OOM issues. Default is False.
+- New parameter: ``filter_num_frames`` specifies the threshold for filtering long segments. Default is 6000, which means segments longer than 30 sec will not be used for training.
 
 
 train_resf0.py: train config

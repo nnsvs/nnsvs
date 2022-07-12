@@ -34,6 +34,7 @@ Improvements
 - A heuristic trick is added to prevent serious V/UV prediction errors . `#95`_ `#119`_
 - Speech parameter trajectory smoothing (:cite:t:`takamichi2015naist`). Disabled by default.
 - Added recipe tests on CI `#116`_
+- Add option to allow filtering of long segments `#135`_
 
 Deprecations
 ^^^^^^^^^^^^
@@ -101,4 +102,5 @@ PyPi release is also available. So you can install the core library by pip insta
 .. _#125: https://github.com/r9y9/nnsvs/pull/125
 .. _#128: https://github.com/r9y9/nnsvs/pull/128
 .. _#129: https://github.com/r9y9/nnsvs/pull/129
+.. _#135: https://github.com/r9y9/nnsvs/pull/135
 
