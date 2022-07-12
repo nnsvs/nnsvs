@@ -13,6 +13,12 @@ num_workers: 0
 batch_size: 2
 pin_memory: true
 
+# Filter long segments that easily cause OOM error
+filter_long_segments: false
+# If a segment is longer than this value, it will not be used for training
+# 30 [sec] / 0.005 [sec] = 6000 [frames]
+filter_num_frames: 6000
+
 in_scaler_path: null
 out_scaler_path: null
 

@@ -43,7 +43,7 @@ def my_app(config: DictConfig) -> None:
 
     scaler = joblib.load(to_absolute_path(config.out_scaler_path))
 
-    in_feats = FileSourceDataset(NpyFileSource(in_dir))
+    in_feats = FileSourceDataset(NpyFileSource(in_dir, logger))
 
     with torch.no_grad():
         for idx in tqdm(range(len(in_feats))):

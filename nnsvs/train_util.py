@@ -68,11 +68,58 @@ def num_trainable_params(model):
 
 
 class NpyFileSource(FileDataSource):
-    def __init__(self, data_root):
+    """Load numpy files from a directory
+
+    Args:
+        data_root (str): Path to the directory containing the numpy files.
+        filter_long_segments (bool): Whether to filter out long segments.
+        filter_num_frames (int): Minimum number of frames to keep a segment.
+
+    """
+
+    def __init__(
+        self, data_root, logger, filter_long_segments=False, filter_num_frames=6000
+    ):
         self.data_root = data_root
+        self.logger = logger
+        self.filter_long_segments = filter_long_segments
+        self.filter_num_frames = filter_num_frames
 
     def collect_files(self):
         files = sorted(glob(join(self.data_root, "*-feats.npy")))
+
+        if self.filter_long_segments:
+            valid_files = []
+
+            num_filtered = 0
+            for path in files:
+                length = len(np.load(path))
+                if length < self.filter_num_frames:
+                    valid_files.append(path)
+                else:
+                    self.logger.warning(f"Filtered: {path} is too long: {length}")
+                    num_filtered += 1
+            self.logger.info(f"Filtered {num_filtered} files")
+
+            # Print stats of lengths
+            lengths = [len(np.load(f)) for f in files]
+            self.logger.debug(f"[before] Size of dataset: {len(files)}")
+            self.logger.debug(f"[before] maximum length: {max(lengths)}")
+            self.logger.debug(f"[before] minimum length: {min(lengths)}")
+            self.logger.debug(f"[before] mean length: {np.mean(lengths)}")
+            self.logger.debug(f"[before] std length: {np.std(lengths)}")
+            self.logger.debug(f"[before] median length: {np.median(lengths)}")
+
+            files = valid_files
+
+            lengths = [len(np.load(f)) for f in files]
+            self.logger.debug(f"[after] Size of dataset: {len(files)}")
+            self.logger.debug(f"[after] maximum length: {max(lengths)}")
+            self.logger.debug(f"[after] minimum length: {min(lengths)}")
+            self.logger.debug(f"[after] mean length: {np.mean(lengths)}")
+            self.logger.debug(f"[after] std length: {np.std(lengths)}")
+            self.logger.debug(f"[after] median length: {np.median(lengths)}")
+
         return files
 
     def collect_features(self, path):
@@ -187,23 +234,55 @@ def collate_fn_random_segments(batch, max_time_frames=256):
     return x_batch, y_batch, l_batch
 
 
-def get_data_loaders(data_config, collate_fn):
+def get_data_loaders(data_config, collate_fn, logger):
     """Get data loaders for training and validation.
 
     Args:
         data_config (dict): Data configuration.
         collate_fn (callable): Collate function.
+        logger (logging.Logger): Logger.
 
     Returns:
         dict: Data loaders.
     """
+    if "filter_long_segments" not in data_config:
+        logger.warning(
+            "filter_long_segments is not found in the data config. Consider set it explicitly."
+        )
+        logger.info("Disable filtering for long segments.")
+        filter_long_segments = False
+    else:
+        filter_long_segments = data_config.filter_long_segments
+
+    if "filter_num_frames" not in data_config:
+        logger.warning(
+            "filter_num_frames is not found in the data config. Consider set it explicitly."
+        )
+        filter_num_frames = 6000
+    else:
+        filter_num_frames = data_config.filter_num_frames
+
     data_loaders = {}
     for phase in ["train_no_dev", "dev"]:
         in_dir = to_absolute_path(data_config[phase].in_dir)
         out_dir = to_absolute_path(data_config[phase].out_dir)
         train = phase.startswith("train")
-        in_feats = FileSourceDataset(NpyFileSource(in_dir))
-        out_feats = FileSourceDataset(NpyFileSource(out_dir))
+        in_feats = FileSourceDataset(
+            NpyFileSource(
+                in_dir,
+                logger,
+                filter_long_segments=filter_long_segments,
+                filter_num_frames=filter_num_frames,
+            )
+        )
+        out_feats = FileSourceDataset(
+            NpyFileSource(
+                out_dir,
+                logger,
+                filter_long_segments=filter_long_segments,
+                filter_num_frames=filter_num_frames,
+            )
+        )
 
         in_feats = MemoryCacheDataset(in_feats, cache_size=10000)
         out_feats = MemoryCacheDataset(out_feats, cache_size=10000)
@@ -415,7 +494,7 @@ def setup(config, device, collate_fn=collate_fn_default):
     )
 
     # DataLoader
-    data_loaders = get_data_loaders(config.data, collate_fn)
+    data_loaders = get_data_loaders(config.data, collate_fn, logger)
 
     set_epochs_based_on_max_steps_(
         config.train, len(data_loaders["train_no_dev"]), logger
@@ -540,7 +619,7 @@ def setup_gan(config, device, collate_fn=collate_fn_default):
     optD, schedulerD = _instantiate_optim(config.train.optim.netD, netD)
 
     # DataLoader
-    data_loaders = get_data_loaders(config.data, collate_fn)
+    data_loaders = get_data_loaders(config.data, collate_fn, logger)
 
     set_epochs_based_on_max_steps_(
         config.train, len(data_loaders["train_no_dev"]), logger
@@ -666,7 +745,7 @@ def setup_cyclegan(config, device, collate_fn=collate_fn_default):
     )
 
     # DataLoader
-    data_loaders = get_data_loaders(config.data, collate_fn)
+    data_loaders = get_data_loaders(config.data, collate_fn, logger)
 
     set_epochs_based_on_max_steps_(
         config.train, len(data_loaders["train_no_dev"]), logger
