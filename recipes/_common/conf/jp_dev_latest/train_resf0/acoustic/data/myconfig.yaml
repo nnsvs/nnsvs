@@ -15,6 +15,12 @@ pin_memory: true
 
 sample_rate: 48000
 
+# Filter long segments that easily cause OOM error
+filter_long_segments: false
+# If a segment is longer than this value, it will not be used for training
+# 30 [sec] / 0.005 [sec] = 6000 [frames]
+filter_num_frames: 6000
+
 # mini-batch sampling
 # If max_time_frames is specified, (max_time_frames) frames are randomly sampled
 # to create a mini-batch. Otherwise, all frames are used.
