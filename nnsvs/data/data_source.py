@@ -217,6 +217,8 @@ class WORLDAcousticSource(FileDataSource):
             mask = np.convolve(f0_score, np.ones(win_length) / win_length, "same")
             if len(f0) > len(mask):
                 mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            elif len(f0) < len(mask):
+                mask = mask[: len(f0)]
             f0 = f0 * np.sign(mask)
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
