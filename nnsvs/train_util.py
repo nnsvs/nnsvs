@@ -99,7 +99,8 @@ class NpyFileSource(FileDataSource):
                 else:
                     self.logger.info(f"Filtered: {path} is too long: {length}")
                     num_filtered += 1
-            self.logger.info(f"Filtered {num_filtered} files")
+            if num_filtered > 0:
+                self.logger.info(f"Filtered {num_filtered} files")
 
             # Print stats of lengths
             lengths = [len(np.load(f)) for f in files]
