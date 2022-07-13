@@ -212,11 +212,13 @@ class WORLDAcousticSource(FileDataSource):
         if self.correct_vuv:
             # Use smoothed mask so that we don't mask out overshoot or something
             # that could happen at the start/end of notes
-            # 0.1 sec. window (could be tuned for better results)
-            win_length = int(0.1 / (self.frame_period * 0.001))
+            # 0.5 sec. window (could be tuned for better results)
+            win_length = int(0.5 / (self.frame_period * 0.001))
             mask = np.convolve(f0_score, np.ones(win_length) / win_length, "same")
             if len(f0) > len(mask):
                 mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            elif len(f0) < len(mask):
+                mask = mask[: len(f0)]
             f0 = f0 * np.sign(mask)
 
         spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
