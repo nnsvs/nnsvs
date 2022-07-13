@@ -97,7 +97,7 @@ class NpyFileSource(FileDataSource):
                 if length < self.filter_num_frames:
                     valid_files.append(path)
                 else:
-                    self.logger.warning(f"Filtered: {path} is too long: {length}")
+                    self.logger.info(f"Filtered: {path} is too long: {length}")
                     num_filtered += 1
             self.logger.info(f"Filtered {num_filtered} files")
 
