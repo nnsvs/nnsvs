@@ -187,6 +187,9 @@ class WORLDAcousticSource(FileDataSource):
         max_f0 = librosa.midi_to_hz(max(notes) + 2)
         assert max_f0 > min_f0
 
+        # Workaround segfault issues of WORLD's CheapTrick
+        min_f0 = min(min_f0, 500)
+
         fs, x = wavfile.read(wav_path)
         x = x.astype(np.float64)
         if fs != self.sample_rate:

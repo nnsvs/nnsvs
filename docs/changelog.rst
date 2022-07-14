@@ -25,6 +25,7 @@ Bug fixes
 
 - Add a heuristic trick to prevent non-negative durations at synthesis time
 - Fix error when no dynamic features are used `#128`_
+- Add a workaround for WORLD's segfaults issue when ``min_f0`` is too high.
 
 Improvements
 ^^^^^^^^^^^^
