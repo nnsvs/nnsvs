@@ -65,7 +65,7 @@ def _gen_static_features(model, model_config, in_feats, out_scaler):
                 model_config.has_dynamic_features,
             )
 
-    return out_feats
+    return out_feats.astype(np.float32)
 
 
 @hydra.main(config_path="conf/gen_static_features", config_name="config")
@@ -152,7 +152,7 @@ def my_app(config: DictConfig) -> None:
         if config.normalize:
             static_feats = static_scaler.transform(static_feats)
         out_path = join(out_dir, f"{utt_id}-feats.npy")
-        np.save(out_path, static_feats, allow_pickle=False)
+        np.save(out_path, static_feats.astype(np.float32), allow_pickle=False)
 
 
 def entry():

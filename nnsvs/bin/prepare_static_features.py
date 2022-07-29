@@ -34,7 +34,7 @@ def _extract_static_features(
 
     # remove batch-axis
     streams = list(map(lambda x: x.squeeze(0), streams))
-    static_feats = np.concatenate(streams, axis=-1)
+    static_feats = np.concatenate(streams, axis=-1).astype(np.float32)
 
     static_path = join(out_dir, utt_id + "-feats.npy")
     np.save(static_path, static_feats, allow_pickle=False)
