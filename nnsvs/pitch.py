@@ -229,7 +229,7 @@ def extract_vibrato_likelihood(
             hop_length=1,
             win_length=win_length,
             n_fft=n_fft,
-            window="hanning",
+            window="hann",
         )
     )
     X_norm = X / (X.sum(0) + 1e-7)
