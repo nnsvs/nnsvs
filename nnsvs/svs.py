@@ -334,10 +334,10 @@ WORLD is only supported for waveform generation"""
 
         # Learned post-filter using nnsvs
         if post_filter_type == "nnsvs" and self.postfilter_model is not None:
+            in_feats = torch.from_numpy(acoustic_features).float().unsqueeze(0)
             in_feats = (
-                torch.from_numpy(acoustic_features).float().unsqueeze(0)
+                self.postfilter_out_scaler.transform(in_feats).float().to(self.device)
             )
-            in_feats = self.postfilter_out_scaler.transform(in_feats).float().to(self.device)
             out_feats = self.postfilter_model.inference(in_feats, [in_feats.shape[1]])
             acoustic_features = (
                 self.postfilter_out_scaler.inverse_transform(out_feats.cpu())
