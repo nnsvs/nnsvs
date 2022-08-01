@@ -155,6 +155,10 @@ for base in tqdm(base_files):
         lab_align = lab_align[valid_note_indices]
         lab_score = lab_score[valid_note_indices]
 
+        # NOTE: before saving file, let's add a prefix
+        # 01.lab -> ${spk}_01.lab
+        name = config["spk"] + "_" + name
+
         # Save lab files
         lab_align_dst_path = join(lab_align_dst_dir, name)
         with open(lab_align_dst_path, "w") as of:
@@ -194,6 +198,10 @@ for base in tqdm(base_files):
         if len(lab_align) < 2:
             print(f"{utt_id} is excluded from training due to incomplete data.")
             black_list.append(splitext(name)[0])
+
+        # NOTE: before saving file, let's add a prefix
+        # 01.lab -> ${spk}_01.lab
+        name = config["spk"] + "_" + name
 
         # Save lab file
         lab_align_dst_path = join(lab_align_dst_dir, name)
@@ -245,6 +253,10 @@ for base in tqdm(base_files):
             break
         lab_align = hts.load(lab_align_path)
         lab_score = hts.load(lab_score_path)
+
+        # NOTE: before saving file, let's add a prefix
+        # 01.lab -> ${spk}_01.lab
+        name = config["spk"] + "_" + name
 
         # Make a slice of audio and then save it
         b, e = int(lab_align[0][0] * 1e-7 * sr), int(lab_align[-1][1] * 1e-7 * sr)
