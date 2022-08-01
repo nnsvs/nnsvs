@@ -315,7 +315,6 @@ Stage 6 generates waveforms using the trained models. To run this step, please m
 
 You can find generated wav files in ``exp/${speaker name}/synthesis_*`` directory.
 
-
 Packing models
 ---------------
 

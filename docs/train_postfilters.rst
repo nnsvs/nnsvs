@@ -4,7 +4,16 @@ How to train post-filters
 Please check :doc:`recipes` and :doc:`overview` first.
 
 NNSVS v0.0.3 and later supports an optional trainable post-filter to enhance the acoustic model's prediction.
-This page summarizes the guide to train post-filters.
+This page summarizes how to train post-filters.
+
+.. warning::
+
+    Support for post-filters is in the alpha stage. Use it at your own risk.
+
+.. note::
+
+    The contents in this page is based on ``recipes/conf/spsvs/run_common_steps_dev.sh``.
+    Also, before you make your custom recipes, it is recommenced to start with a test recipe ``recipes/nit-song070/dev-test``.
 
 Pre-requisites
 --------------
@@ -35,13 +44,8 @@ If the acoustic model's prediction is not accurate enough, the post-filter is li
 
 In addition to the steps described in :doc:`recipes`,  the following are the steps related to post-filters.
 
-.. note::
-
-    The contents in this page is based on ``recipes/conf/spsvs/run_common_steps_dev.sh``.
-    Also, before you make your custom recipes, it is recommenced to start with a test recipe ``recipes/nit-song070/dev-test``.
-
-Stage 7: Prepare input/output features for post-filter
-------------------------------------------------------
+Stage 7: Prepare features for post-filter
+-----------------------------------------
 
 Once your acoustic model is ready, you can run the stage 7 to prepare input and output features for training post-filters.
 
@@ -236,6 +240,29 @@ As the same as in :doc:`recipes`, you can pack the models into a single director
         --postfilter-model postfilter_merged
 
 The above command should make a packed model directory with your trained post-filter.
+
+How to use the packed model with the trained post-filter?
+-----------------------------------------------------
+
+Please specify ``post_filter_type="nnsvs"`` with the :doc:`modules/svs` module. An example:
+
+.. code-block::
+
+    import numpy as np
+    import pysinsy
+    from nnmnkwii.io import hts
+    from nnsvs.pretrained import retrieve_pretrained_model
+    from nnsvs.svs import SPSVS
+    from nnsvs.util import example_xml_file
+
+    model_dir = "your/packed/model_dir"
+    engine = SPSVS(model_dir)
+
+    contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
+    labels = hts.HTSLabelFile.create_from_contexts(contexts)
+
+    wav, sr = engine.svs(labels, post_filter_type="nnsvs")
+
 
 Tips for training post-filters
 ------------------------------
