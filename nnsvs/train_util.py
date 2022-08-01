@@ -939,7 +939,19 @@ def note_segments(lf0_score_denorm):
         for pos in transitions:
             note_end = int(s + pos)
             segments.append((note_start, note_end))
-            note_start = note_end
+            note_start = note_end + 1
+
+        # Handle last note
+        while (
+            note_start < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_start] <= 0
+        ):
+            note_start += 1
+        note_end = note_start + 1
+        while note_end < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_end] > 0:
+            note_end += 1
+
+        if note_end != note_start + 1:
+            segments.append((note_start, note_end))
 
     return segments
 
