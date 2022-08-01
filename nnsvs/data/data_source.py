@@ -135,6 +135,7 @@ class WORLDAcousticSource(FileDataSource):
         trajectory_smoothing=False,
         trajectory_smoothing_cutoff=50,
         correct_vuv=False,
+        dynamic_features_flags=None,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -157,6 +158,10 @@ class WORLDAcousticSource(FileDataSource):
         self.trajectory_smoothing = trajectory_smoothing
         self.trajectory_smoothing_cutoff = trajectory_smoothing_cutoff
         self.correct_vuv = correct_vuv
+        if dynamic_features_flags is None:
+            # NOTE: we have up to 6 streams: (mgc, lf0, vuv, bap, vib, vib_flags)
+            dynamic_features_flags = [True, True, False, True, True, False]
+        self.dynamic_features_flags = dynamic_features_flags
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -177,15 +182,21 @@ class WORLDAcousticSource(FileDataSource):
         notes = l_features[:, self.pitch_idx]
         notes = notes[notes > 0]
 
-        # allow 200 cent upper/lower to properly handle F0 estimation of
+        # allow 200 cent upper and 600 cent lower to properly handle F0 estimation of
         # preparation, vibrato and overshoot.
         # NOET: set the minimum f0 to 63.5 Hz (125 - 3*20.5)
         # https://acoustics.jp/qanda/answer/50.html
         # NOTE: sinsy allows 30-150 cent frequency range for vibrato (as of 2010)
         # https://staff.aist.go.jp/m.goto/PAPER/SIGMUS201007oura.pdf
-        min_f0 = max(63.5, librosa.midi_to_hz(min(notes) - 2))
+        min_f0 = max(63.5, librosa.midi_to_hz(min(notes) - 6))
         max_f0 = librosa.midi_to_hz(max(notes) + 2)
         assert max_f0 > min_f0
+
+        # Use fixed f0 range for HARVEST if specified
+        if self.f0_floor is not None:
+            min_f0 = self.f0_floor
+        if self.f0_ceil is not None:
+            max_f0 = self.f0_ceil
 
         # Workaround segfault issues of WORLD's CheapTrick
         min_f0 = min(min_f0, 500)
@@ -193,9 +204,10 @@ class WORLDAcousticSource(FileDataSource):
         fs, x = wavfile.read(wav_path)
         x = x.astype(np.float64)
         if fs != self.sample_rate:
-            raise RuntimeError(
-                "Sample rate mismatch! {} != {}".format(fs, self.sample_rate)
+            x = librosa.resample(
+                x, orig_sr=fs, target_sr=self.sample_rate, res_type="scipy"
             )
+            fs = self.sample_rate
 
         if self.use_harvest:
             f0, timeaxis = pyworld.harvest(
@@ -212,10 +224,10 @@ class WORLDAcousticSource(FileDataSource):
 
         # Correct V/UV (and F0) based on the musical score information
         # treat frames where musical notes are not assigned as unvoiced
+        # Use smoothed mask so that we don't mask out overshoot or something
+        # that could happen at the start/end of notes
+        # 0.5 sec. window (could be tuned for better results)
         if self.correct_vuv:
-            # Use smoothed mask so that we don't mask out overshoot or something
-            # that could happen at the start/end of notes
-            # 0.5 sec. window (could be tuned for better results)
             win_length = int(0.5 / (self.frame_period * 0.001))
             mask = np.convolve(f0_score, np.ones(win_length) / win_length, "same")
             if len(f0) > len(mask):
@@ -224,8 +236,15 @@ class WORLDAcousticSource(FileDataSource):
                 mask = mask[: len(f0)]
             f0 = f0 * np.sign(mask)
 
-        spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs, f0_floor=min_f0)
+        spectrogram = pyworld.cheaptrick(x, f0, timeaxis, fs)
         aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
+
+        if np.isnan(aperiodicity).any():
+            print(wav_path)
+            print(min_f0, max_f0, aperiodicity.shape, fs)
+            print(np.isnan(aperiodicity).sum())
+            print(aperiodicity)
+            raise RuntimeError("Aperiodicity has NaN")
 
         f0 = f0[:, None]
         lf0 = f0.copy()
@@ -239,6 +258,19 @@ class WORLDAcousticSource(FileDataSource):
 
         # F0 -> continuous F0
         lf0 = interp1d(lf0, kind="slinear")
+
+        # Fill continuous F0s for segments where no notes are assigned & no F0s are detected.
+        lf0_score = _midi_to_hz(l_features, self.pitch_idx, True)
+        clf0_score = interp1d(lf0_score, kind="slinear")
+        mask = np.convolve(lf0_score, np.ones(1), "same")
+        if len(f0) > len(mask):
+            mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            clf0_score = np.pad(clf0_score, (0, len(f0) - len(clf0_score)), "constant")
+        elif len(f0) < len(mask):
+            mask = mask[: len(f0)]
+            clf0_score = clf0_score[: len(f0)]
+        ind = (mask + f0.reshape(-1)) <= 0
+        lf0[ind, 0] = clf0_score[ind]
 
         # Vibrato parameter extraction
         sr_f0 = int(1 / (self.frame_period * 0.001))
@@ -348,11 +380,17 @@ class WORLDAcousticSource(FileDataSource):
         else:
             f0_target = lf0
 
-        mgc = apply_delta_windows(mgc, self.windows)
-        f0_target = apply_delta_windows(f0_target, self.windows)
-        bap = apply_delta_windows(bap, self.windows)
-        vib = apply_delta_windows(vib, self.windows) if vib is not None else None
+        # Compute delta features if necessary
+        if self.dynamic_features_flags[0]:
+            mgc = apply_delta_windows(mgc, self.windows)
+        if self.dynamic_features_flags[1]:
+            f0_target = apply_delta_windows(f0_target, self.windows)
+        if self.dynamic_features_flags[3]:
+            bap = apply_delta_windows(bap, self.windows)
+        if vib is not None and self.dynamic_features_flags[4]:
+            vib = apply_delta_windows(vib, self.windows)
 
+        # Concat features
         if vib is None and vib_flags is None:
             features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
         elif vib is not None and vib_flags is None:
@@ -379,5 +417,8 @@ class WORLDAcousticSource(FileDataSource):
             wave = np.pad(wave, (0, T - len(wave)))
         assert wave.shape[0] >= T
         wave = wave[:T]
+
+        assert np.isfinite(features).all()
+        assert np.isfinite(wave).all()
 
         return features, wave

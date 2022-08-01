@@ -23,6 +23,10 @@ mgc_order: 59
 # set 1 to disable
 num_windows: 3
 
+# Stream-wise flags to enable/disable dynamic features
+# (mgc, lf0, vuv, bap, vib, vib_flags)
+dynamic_features_flags: [True, True, False, True, True, False]
+
 # Use relative f0 modeling.
 relative_f0: false
 
