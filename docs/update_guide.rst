@@ -10,12 +10,10 @@ v0.0.2 to master
 
     The master branch is the development version of NNSVS. It is ready for developers to try out new features but use it on your own.
 
-Please check the following changes and consider changing your config files accordingly.
-
 Hed
 ~~~
 
-If your hed file does not contain QS features that specify voiced/unvoiced phones, consider adding them to tell NNSVS to generate stable V/UV sounds. For example, add the followings for a JP hed:
+If your hed file does not contain QS features that specify voiced/unvoiced phonemes, consider adding them to tell NNSVS to generate stable V/UV sounds. For example, add the followings for a JP hed:
 
 .. code-block::
 
@@ -49,11 +47,26 @@ config.yaml
 - Changed: ``sample_rate`` became mandatory parameter while it was optional.
 - New parameter: ``*_sweeper_args`` and ``*_sweeper_n_trials`` specifies configurations for hyperparameter optimization. See :doc:`optuna` for details.
 
+Consider adding the following to enable vocoder training:
+
+.. code-block::
+
+    # NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
+    vocoder_model:
+    # Pretrained checkpoint path for the vocoder model
+    # NOTE: if you want to try fine-tuning, please specify the path here
+    pretrained_vocoder_checkpoint:
+    # absolute/relative path to the checkpoint
+    # NOTE: the checkpoint is used for synthesis and packing
+    # This doesn't have any effect on training
+    vocoder_eval_checkpoint:
+
 Run.sh
 ^^^^^^^
 
-- Consider adding model packing stage 99 by following ``kiritan_singing`` recipes.
-- Consider adding post-filter related steps on your own by following ``kiritan_singing`` recipes.
+- Consider adding model packing stage 99. See :doc:`recipes` for details.
+- Consider adding post-filter related steps. See :doc:`train_postfilters` for details.
+- Consider adding vocoder related steps. See :doc:`train_vocoders` for details.
 
 train.py: train config
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -76,6 +89,7 @@ train_resf0.py: train config
 - New parameter: ``use_amp`` specifies if we use mixed precision training or not. Default is false. If you have GPUs/CUDA that supports mixed precision training, you can get performance gain by setting it to true.
 - New parameter: ``max_train_steps`` specifies maximum number of training steps (not epoch). Default is -1, which means maximum number of epochs is used to check if training is finished.
 - New parameter: ``feats_criterion`` specifies where we use MSE loss or L1 loss. You can use L1 loss if you want while it was hardcoded to use MSE loss.
+- New parameter: ``pitch_reg_decay_size`` specifies the decay size for the pitch regularization. The larger the decay size, the smoother pitch transitions between notes are allowed during training. See :cite:t:`hono2021sinsy` for details.
 
 train_resf0.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
