@@ -85,6 +85,10 @@ def nonzero_segments(f0):
             segments.append((s, e))
         else:
             pass
+
+    if started and vuv[-1] > 0:
+        segments.append((s, len(vuv) - 1))
+
     return segments
 
 
