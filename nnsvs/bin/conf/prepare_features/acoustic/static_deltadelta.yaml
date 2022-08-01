@@ -10,11 +10,11 @@ subphone_features: coarse_coding
 # kiritan
 # min 174.61411571650194
 # max 659.2551138257398
-f0_floor: 150
-f0_ceil: 700
+f0_floor: null
+f0_ceil: null
 
 use_harvest: true
-d4c_threshold: 0.85
+d4c_threshold: 0.15
 
 frame_period: 5 # ms
 mgc_order: 59
