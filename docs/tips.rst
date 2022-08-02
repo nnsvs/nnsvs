@@ -69,4 +69,4 @@ Other tips
 - The number of epochs: 50 would be enough for most cases. For training acoustic models, 100 may work better. For MDN-based acoustic models, you would try 200 or more.
 - Don't over-trust dev loss. It is well known that loss is not closely correlated to subjective quality.
 - No problem with negative loss for MDN models.
-- Use smaller ``pitch_reg_weight`` if you audio and note pitch is property aligned (or pitch-corrected). ``pitch_reg_weight=0.0`` works fine with Ritsu's database (V2).
+- Use smaller ``pitch_reg_weight`` if your audio and note pitch is property aligned (or pitch-corrected). ``pitch_reg_weight=0.0`` works fine with Ritsu's database (V2).

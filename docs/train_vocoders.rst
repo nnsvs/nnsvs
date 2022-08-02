@@ -35,13 +35,13 @@ Install a fork of parallel_wavegan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 NNSVS's neural vocoder integration is done by the external `r9y9/parallel_wavegan <https://github.com/r9y9/ParallelWaveGAN>`_ repository that provides various GAN-based neural vocoders.
-To enable the neural vocoder support for NNSVS, you must need to install the ``nnsvs`` branch of the parallel_wavegan repository in advance:
+To enable the neural vocoder support for NNSVS, you must need to install the nnsvs branch of the parallel_wavegan repository in advance:
 
 .. code::
 
     pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
 
-The ``nnsvs`` branch includes code for NSF.
+The nnsvs branch includes code for NSF.
 After installation, please make sure that you can access ``HnSincNSF`` class. The following code should throw no errors if the installtaion is property done.
 
 Jupyter:
@@ -153,7 +153,7 @@ After the pre-processing is property done, you can find the all the necessary fe
 
 Some notes:
 
-- ``norm/*/in_vocoder`` directory contains features for neural vocoders. Note that the directory contains both the input and output features. Specifically, ``*-feats.npy`` contains static features consisting of ``mgc``, ``lf0``, ``vuv`` and ``bap``; ``*-wave.npy`` contains raw waveform, respectively.
+- ``norm/${spk}/*/in_vocoder`` directory contains features for neural vocoders. Note that the directory contains both the input and output features. Specifically, ``*-feats.npy`` contains static features consisting of ``mgc``, ``lf0``, ``vuv`` and ``bap``; ``*-wave.npy`` contains raw waveform, respectively.
 - ``norm/in_vocoder_scaler_*.npy`` contains statistics used to normalize/de-normalize the input features for neural vocoders.
 
 Stage 10: Training vocoder using parallel_wavegan
@@ -186,15 +186,15 @@ Training progress can be monitored by tensorboard. During training you can check
 Stage 11: Synthesis waveforms by parallel_wavegan
 -------------------------------------------------
 
-Stage 11 generates waveforms using the trained neural vocoder.
-To run this step, please make sure to specify your model types when you train custom models.
+Stage 11 generates waveforms using the trained neural vocoder. Please make sure to specify your model type explicitly.
 
 .. code-block:: bash
 
     CUDA_VISIBLE_DEVICES=0 ./run.sh --stage 11 --stop-stage 11 \
         --vocoder-model hn-sinc-nsf_sr48k_pwgD_test
 
-You can find generated wav files in ``exp/${speaker name}/${vocoder config name}/wav`` directory.
+Generated wav files can be found in ``exp/${speaker name}/${vocoder config name}/wav`` directory.
+To generate waveforms from a specific checkpoint, please specify the checkpoint path by ``--vocoder-eval-checkpoint /path/to/checkpoint``.
 
 Packing models with neural vocoder
 ----------------------------------
@@ -226,7 +226,7 @@ Please specify ``vocder_type="pwg"`` with the :doc:`modules/svs` module. An exam
     from nnsvs.svs import SPSVS
     from nnsvs.util import example_xml_file
 
-    model_dir = "your/packed/model_dir"
+    model_dir = "/path/to/your/packed/model_dir"
     engine = SPSVS(model_dir)
 
     contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
@@ -240,3 +240,23 @@ Available neural vocoders
 
 In addition to NSF, *any* models implemented in `parallel_wavegan <https://github.com/kan-bayashi/ParallelWaveGAN>`_ can be used with NNSVS. For example, Parallel WaveGAN, HiFiGAN, MelGAN, etc.
 However, to get the best performance in singing synthesis, I'd recommend using ``HnSincNSF`` model (:cite:t:`wang2019hnsincnsf`), which is an advanced version of the original NSF (:cite:t:`wang2019neural`).
+
+How to train universal vocoders?
+--------------------------------
+
+It is possible to make an *universal* vocoder that generalizes well on unseen speaker's data by training a vocoder on a large amount of mixed databases.
+
+Training on mixed singing databases
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Suppose you have multiple singing databases to train an neural vocodder on. Steps to train an universal vocoder are like:
+
+- Run NNSVS' pre-processing for each database and combine them
+- Run vocoder training
+
+That's it. Please check the recipes in ``recipes/mixed`` for example.
+
+Training on mixed speech and singing databases
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This should be easily implemented but not yet done by myself (r9y9). I may add code and docs for this in the future.

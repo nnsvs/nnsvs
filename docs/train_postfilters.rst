@@ -255,7 +255,7 @@ Please specify ``post_filter_type="nnsvs"`` with the :doc:`modules/svs` module. 
     from nnsvs.svs import SPSVS
     from nnsvs.util import example_xml_file
 
-    model_dir = "your/packed/model_dir"
+    model_dir = "/path/to/your/packed/model_dir"
     engine = SPSVS(model_dir)
 
     contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
