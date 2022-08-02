@@ -1078,6 +1078,7 @@ def eval_spss_model(
     lf0_score_denorm=None,
     trajectory_smoothing=True,
     trajectory_smoothing_cutoff=50,
+    trajectory_smoothing_cutoff_f0=20,
 ):
     # make sure to be in eval mode
     netG.eval()
@@ -1212,6 +1213,9 @@ def eval_spss_model(
             # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
             if trajectory_smoothing:
                 modfs = int(1 / 0.005)
+                pred_lf0[:, 0] = lowpass_filter(
+                    pred_lf0[:, 0], modfs, cutoff=trajectory_smoothing_cutoff_f0
+                )
                 for d in range(pred_mgc.shape[1]):
                     pred_mgc[:, d] = lowpass_filter(
                         pred_mgc[:, d], modfs, cutoff=trajectory_smoothing_cutoff
