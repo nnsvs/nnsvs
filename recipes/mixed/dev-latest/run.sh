@@ -180,13 +180,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "stage 3: Compute statistics of vocoder's input features"
-    xrun python $NNSVS_COMMON_ROOT/scaler_joblib2npy_voc.py \
-        $dump_norm_dir/out_acoustic_scaler.joblib $dump_norm_dir/
-fi
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    echo "stage 4: Training vocoder using parallel_wavegan"
+    echo "stage 3: Training vocoder using parallel_wavegan"
     if [ ! -z ${pretrained_vocoder_checkpoint} ]; then
         extra_args="--resume $pretrained_vocoder_checkpoint"
     else
@@ -201,7 +195,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --outdir $expdir/$vocoder_model $extra_args
 fi
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 5: Synthesis waveforms by parallel_wavegan"
     if [ -z "${vocoder_eval_checkpoint}" ]; then
         vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"

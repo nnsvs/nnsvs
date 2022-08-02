@@ -286,8 +286,9 @@ def train_loop(
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
-                if (not train) and (not evaluated):
+                if not evaluated:
                     eval_spss_model(
+                        phase,
                         epoch,
                         netG,
                         in_feats,

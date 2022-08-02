@@ -9,16 +9,15 @@ Moved the repository to https://github.com/nnsvs organization.
 New features
 ^^^^^^^^^^^^
 
-- Recipe-level integration of hyperparameter optimization with Optuna `#43`_ :doc:`optuna`
-- GAN-based post-filters (:cite:t:`Kaneko2017Interspeech`, :cite:t:`kaneko2017generative`) `#85`_ and GV post-filter (:cite:t:`silen2012ways`)
 - Mixed precision training `#106`_
+- Recipe-level integration of hyperparameter optimization with Optuna `#43`_ :doc:`optuna`
 - Added VariancePredictor (:cite:t:`ren2020fastspeech`).
 - Spectrogram, aperiodicity, F0, and generated audio is now logged to tensorboard if ``train_resf0.py`` is used.
 - Objective metrics (such as mel-cepstrum distortion and RMSE) are now logged to tensorboard. `#41`_
 - Added MDNv2 (MDN + dropout) `#118`_
 - Correct V/UV (``correct_vuv``) option is added to feature processing.
 - Support training non-resf0 models with ``train_resf0.py`` `#125`_
-- Add ``ResF0NonAttentiveTacotron`` acoustic model. `#129`_
+- Global-variance (GV)-based post-filter
 
 Bug fixes
 ^^^^^^^^^
@@ -26,6 +25,8 @@ Bug fixes
 - Add a heuristic trick to prevent non-negative durations at synthesis time
 - Fix error when no dynamic features are used `#128`_
 - Add a workaround for WORLD's segfaults issue when ``min_f0`` is too high.
+- Fix bug of computing pitch regularization weights
+- Fix continuous F0 for rest
 
 Improvements
 ^^^^^^^^^^^^
@@ -36,6 +37,11 @@ Improvements
 - Speech parameter trajectory smoothing (:cite:t:`takamichi2015naist`). Disabled by default.
 - Added recipe tests on CI `#116`_
 - Add option to allow filtering of long segments `#135`_
+- Stream-wise flags to enable/disable dynamic features
+- Pre-processing: Tweaked min_f0/max_f0 threshold
+- Pre-processing: Add resampling if necessary
+- Pre-processing: Allow users to specify expliciti F0 range
+- Expose decay_size for pitch reguralization
 
 Deprecations
 ^^^^^^^^^^^^
@@ -45,6 +51,12 @@ Deprecations
 - ``FeedForwardNet`` is renamed to ``FFN`` to be consistent with other names (such as MDN)
 - ``ResF0Conv1dResnetMDN`` is deprecated. You can use ``ResF0Conv1dResnet`` with ``use_mdn=True``.
 - ``Conv1dResnetMDN`` is deprecated. You can use ``Conv1dResnet`` with ``use_mdn=True``.
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+- Update d4c threshold to prevent serious voiced -> unvoiced errors from 0.85 to 0.15. If you prefer the old default, please set `d4c_threshold` to 0.85.
+- Default values of functions in ``gen.py`` and ``svs.py`` are changed while refactoring. Please explicitly set the function arguments to avoid unexpected behavior.
 
 Documentation
 ^^^^^^^^^^^^^
@@ -56,11 +68,13 @@ Experimental features
 
 Some features that are available but not yet tested or documented
 
+- GAN-based post-filters (:cite:t:`Kaneko2017Interspeech`, :cite:t:`kaneko2017generative`) `#85`_ and GV post-filter (:cite:t:`silen2012ways`)
 - CycleGAN-based post-filter
 - Support for neural vocoders `#72`_
-- Tacotron-like autoregressive models `#15`_
+- Add ``ResF0NonAttentiveTacotron`` acoustic model. `#129`_ `#15`_
 - WaveNet `#100`_
 - GAN-based acoustic models `#85`_
+- Make :doc:`svs` to support trainable post-filters and neural vocoders.
 
 v0.0.2 <2022-04-29>
 -------------------

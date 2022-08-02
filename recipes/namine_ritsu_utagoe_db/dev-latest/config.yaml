@@ -31,7 +31,7 @@ question_path: "../../_common/hed/jp_dev.hed"
 ## Song segmentation by silence durations.
 # TODO: would be better to split songs by phrasal information in the musical scores
 # Split song by silences (in sec)
-segmentation_threshold: 0.4
+segmentation_threshold: 0.1
 # Min duration for a segment
 # note: there could be some exceptions (e.g., the last segment of a song)
 segment_min_duration: 5.0

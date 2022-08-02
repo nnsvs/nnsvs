@@ -36,6 +36,8 @@ from torch.cuda.amp import GradScaler
 from torch.utils import data as data_utils
 from torch.utils.tensorboard import SummaryWriter
 
+plt.style.use("seaborn-whitegrid")
+
 
 def log_params_from_omegaconf_dict(params):
     for param_name, element in params.items():
@@ -939,7 +941,19 @@ def note_segments(lf0_score_denorm):
         for pos in transitions:
             note_end = int(s + pos)
             segments.append((note_start, note_end))
-            note_start = note_end
+            note_start = note_end + 1
+
+        # Handle last note
+        while (
+            note_start < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_start] <= 0
+        ):
+            note_start += 1
+        note_end = note_start + 1
+        while note_end < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_end] > 0:
+            note_end += 1
+
+        if note_end != note_start + 1:
+            segments.append((note_start, note_end))
 
     return segments
 
@@ -968,7 +982,7 @@ def compute_pitch_regularization_weight(segments, N, decay_size=25, max_w=0.5):
     return w
 
 
-def compute_batch_pitch_regularization_weight(lf0_score_denorm):
+def compute_batch_pitch_regularization_weight(lf0_score_denorm, decay_size):
     """Batch version of computing pitch regularization weight
 
     Args:
@@ -981,7 +995,9 @@ def compute_batch_pitch_regularization_weight(lf0_score_denorm):
     w = torch.zeros_like(lf0_score_denorm)
     for idx in range(len(lf0_score_denorm)):
         segments = note_segments(lf0_score_denorm[idx])
-        w[idx, :] = compute_pitch_regularization_weight(segments, T).to(w.device)
+        w[idx, :] = compute_pitch_regularization_weight(
+            segments, N=T, decay_size=decay_size
+        ).to(w.device)
 
     return w.unsqueeze(-1)
 
@@ -1049,6 +1065,7 @@ def compute_distortions(pred_out_feats, out_feats, lengths, out_scaler, model_co
 
 @torch.no_grad()
 def eval_spss_model(
+    phase,
     step,
     netG,
     in_feats,
@@ -1058,8 +1075,10 @@ def eval_spss_model(
     out_scaler,
     writer,
     sr,
+    lf0_score_denorm=None,
     trajectory_smoothing=True,
     trajectory_smoothing_cutoff=50,
+    trajectory_smoothing_cutoff_f0=20,
 ):
     # make sure to be in eval mode
     netG.eval()
@@ -1099,10 +1118,16 @@ def eval_spss_model(
         lf0 = lf0.squeeze(0).cpu().numpy()
         vuv = vuv.squeeze(0).cpu().numpy()
         bap = bap.squeeze(0).cpu().numpy()
+        if lf0_score_denorm is not None:
+            lf0_score_denorm_ = (
+                lf0_score_denorm[utt_idx, : lengths[utt_idx]].cpu().numpy().reshape(-1)
+            )
+        else:
+            lf0_score_denorm_ = None
 
         f0, spectrogram, aperiodicity = gen_world_params(mgc, lf0, vuv, bap, sr)
         wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
-        group = f"utt{np.abs(utt_idx)}_reference"
+        group = f"{phase}_utt{np.abs(utt_idx)}_reference"
         wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
         writer.add_audio(group, wav, step, sr)
 
@@ -1138,48 +1163,28 @@ def eval_spss_model(
 
         # Run inference
         if prediction_type == PredictionType.PROBABILISTIC:
-            inference_out_feats, _ = netG.inference(
-                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-            )
+            if isinstance(netG, nn.DataParallel):
+                inference_out_feats, _ = netG.module.inference(
+                    in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+                    [lengths[utt_idx]],
+                )
+            else:
+                inference_out_feats, _ = netG.inference(
+                    in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+                    [lengths[utt_idx]],
+                )
         else:
-            inference_out_feats = netG.inference(
-                in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0), [lengths[utt_idx]]
-            )
+            if isinstance(netG, nn.DataParallel):
+                inference_out_feats = netG.module.inference(
+                    in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+                    [lengths[utt_idx]],
+                )
+            else:
+                inference_out_feats = netG.inference(
+                    in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
+                    [lengths[utt_idx]],
+                )
         pred_out_feats.append(inference_out_feats)
-
-        # Plot normalized input/output
-        in_feats_ = in_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
-        out_feats_ = out_feats[utt_idx, : lengths[utt_idx]].cpu().numpy()
-        fig, ax = plt.subplots(3, 1, figsize=(8, 8))
-        ax[0].set_title("Reference features")
-        ax[1].set_title("Input features")
-        ax[2].set_title("Predicted features")
-        mesh = librosa.display.specshow(
-            out_feats_.T, x_axis="frames", y_axis="frames", ax=ax[0], cmap="viridis"
-        )
-        # NOTE: assuming normalized to N(0, 1)
-        mesh.set_clim(-4, 4)
-        fig.colorbar(mesh, ax=ax[0])
-        mesh = librosa.display.specshow(
-            in_feats_.T, x_axis="frames", y_axis="frames", ax=ax[1], cmap="viridis"
-        )
-        mesh.set_clim(-4, 4)
-        fig.colorbar(mesh, ax=ax[1])
-        mesh = librosa.display.specshow(
-            inference_out_feats.squeeze(0).cpu().numpy().T,
-            x_axis="frames",
-            y_axis="frames",
-            ax=ax[2],
-            cmap="viridis",
-        )
-        mesh.set_clim(-4, 4)
-        fig.colorbar(mesh, ax=ax[2])
-        for ax_ in ax:
-            ax_.set_ylabel("Feature")
-        plt.tight_layout()
-        group = f"utt{np.abs(utt_idx)}_inference"
-        writer.add_figure(f"{group}/Input-Output", fig, step)
-        plt.close()
 
         assert len(pred_out_feats) == 2
         for idx, pred_out_feats_ in enumerate(pred_out_feats):
@@ -1208,6 +1213,9 @@ def eval_spss_model(
             # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
             if trajectory_smoothing:
                 modfs = int(1 / 0.005)
+                pred_lf0[:, 0] = lowpass_filter(
+                    pred_lf0[:, 0], modfs, cutoff=trajectory_smoothing_cutoff_f0
+                )
                 for d in range(pred_mgc.shape[1]):
                     pred_mgc[:, d] = lowpass_filter(
                         pred_mgc[:, d], modfs, cutoff=trajectory_smoothing_cutoff
@@ -1224,9 +1232,9 @@ def eval_spss_model(
             wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
             wav = wav / np.abs(wav).max() if np.max(wav) > 1.0 else wav
             if idx == 1:
-                group = f"utt{np.abs(utt_idx)}_inference"
+                group = f"{phase}_utt{np.abs(utt_idx)}_inference"
             else:
-                group = f"utt{np.abs(utt_idx)}_forward"
+                group = f"{phase}_utt{np.abs(utt_idx)}_forward"
             writer.add_audio(group, wav, step, sr)
             plot_spsvs_params(
                 step,
@@ -1239,6 +1247,7 @@ def eval_spss_model(
                 pred_lf0,
                 pred_vuv,
                 pred_bap,
+                lf0_score=lf0_score_denorm_,
                 group=group,
                 sr=sr,
             )
@@ -1246,7 +1255,19 @@ def eval_spss_model(
 
 @torch.no_grad()
 def plot_spsvs_params(
-    step, writer, mgc, lf0, vuv, bap, pred_mgc, pred_lf0, pred_vuv, pred_bap, group, sr
+    step,
+    writer,
+    mgc,
+    lf0,
+    vuv,
+    bap,
+    pred_mgc,
+    pred_lf0,
+    pred_vuv,
+    pred_bap,
+    lf0_score,
+    group,
+    sr,
 ):
     """Plot acoustic parameters of parametric SVS
 
@@ -1261,6 +1282,7 @@ def plot_spsvs_params(
         pred_lf0 (np.ndarray): predicted lf0
         pred_vuv (np.ndarray): predicted vuv
         pred_bap (np.ndarray): predicted bap
+        f0_score (np.ndarray): lf0 score
         group (str): group name
         sr (int): sampling rate
     """
@@ -1268,22 +1290,76 @@ def plot_spsvs_params(
     alpha = pysptk.util.mcepalpha(sr)
     hop_length = int(sr * 0.005)
 
-    # F0
-    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
-    timeaxis = np.arange(len(lf0)) * 0.005
-    f0 = np.exp(lf0)
-    f0[vuv < 0.5] = 0
-    pred_f0 = np.exp(pred_lf0)
-    pred_f0[pred_vuv < 0.5] = 0
-    ax.plot(timeaxis, f0, linewidth=2, label="F0 of natural speech")
-    ax.plot(timeaxis, pred_f0, "--", linewidth=2, label="F0 of generated speech")
-    ax.set_xlabel("Time [sec]")
-    ax.set_ylabel("Frequency [Hz]")
-    ax.set_xlim(timeaxis[0], timeaxis[-1])
-    plt.legend()
-    plt.tight_layout()
-    writer.add_figure(f"{group}/F0", fig, step)
-    plt.close()
+    # Log-F0
+    if lf0_score is not None:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+        timeaxis = np.arange(len(lf0)) * 0.005
+        ax.plot(timeaxis, lf0, linewidth=1.5, color="tab:blue", label="Target log-F0")
+        ax.plot(
+            timeaxis,
+            pred_lf0,
+            linewidth=1.5,
+            color="tab:orange",
+            label="Predicted log-F0",
+        )
+        ax.plot(
+            timeaxis,
+            lf0_score,
+            "--",
+            color="gray",
+            linewidth=1.3,
+            label="Note log-F0",
+        )
+        ax.set_xlabel("Time [sec]")
+        ax.set_ylabel("Log-frequency [Hz]")
+        ax.set_xlim(timeaxis[0], timeaxis[-1])
+        ax.set_ylim(
+            min(min(lf0_score[lf0_score > 0]), min(lf0), min(pred_lf0)) - 0.1,
+            max(max(lf0_score), max(lf0), max(pred_lf0)) + 0.1,
+        )
+        plt.legend(loc="upper right", borderaxespad=0, ncol=3)
+        plt.tight_layout()
+        writer.add_figure(f"{group}/ContinuousLogF0", fig, step)
+        plt.close()
+
+        f0_score = lf0_score.copy()
+        note_indices = f0_score > 0
+        f0_score[note_indices] = np.exp(lf0_score[note_indices])
+
+        # F0
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+        timeaxis = np.arange(len(lf0)) * 0.005
+        f0 = np.exp(lf0)
+        f0[vuv < 0.5] = 0
+        pred_f0 = np.exp(pred_lf0)
+        pred_f0[pred_vuv < 0.5] = 0
+        ax.plot(
+            timeaxis,
+            f0,
+            linewidth=1.5,
+            color="tab:blue",
+            label="Target F0",
+        )
+        ax.plot(
+            timeaxis,
+            pred_f0,
+            linewidth=1.5,
+            color="tab:orange",
+            label="Predicted F0",
+        )
+        ax.plot(timeaxis, f0_score, "--", linewidth=1.3, color="gray", label="Note F0")
+        ax.set_xlabel("Time [sec]")
+        ax.set_ylabel("Frequency [Hz]")
+        ax.set_xlim(timeaxis[0], timeaxis[-1])
+        ax.set_ylim(
+            min(min(f0_score[f0_score > 0]), min(np.exp(lf0)), min(np.exp(pred_lf0)))
+            - 10,
+            max(max(f0_score), max(np.exp(lf0)), max(np.exp(pred_lf0))) + 10,
+        )
+        plt.legend(loc="upper right", borderaxespad=0, ncol=3)
+        plt.tight_layout()
+        writer.add_figure(f"{group}/F0", fig, step)
+        plt.close()
 
     # V/UV
     fig, ax = plt.subplots(1, 1, figsize=(8, 3))
@@ -1293,7 +1369,7 @@ def plot_spsvs_params(
     ax.set_xlabel("Time [sec]")
     ax.set_ylabel("V/UV")
     ax.set_xlim(timeaxis[0], timeaxis[-1])
-    plt.legend()
+    plt.legend(loc="upper right", borderaxespad=0, ncol=2)
     plt.tight_layout()
     writer.add_figure(f"{group}/VUV", fig, step)
     plt.close()

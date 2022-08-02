@@ -63,15 +63,10 @@ Debugging NNSVS
 
 If you want to debug NNSVS's core library, it is recommended to use debugging tools such as `ipdb <https://github.com/gotcha/ipdb>`_ or `pdb <https://docs.python.org/3/library/pdb.html>`_. I prefer to use ``ipdb`` for general purpose debugging of Python code.
 
-Run training on Google Colab
-------------------------------
-
-If you don't have machines with GPUs, you can use Google Colab. There's a community-developed notebook (`enunu-nnsvs-training-notebook.ipynb <https://colab.research.google.com/drive/18OxNsVmGpiu5rf6zhxzXktB376rZpH74>`_) you can start from. Note that it is generally better to use your own machine with GPUs.
-Google colab offers us limited access especially for free users.
-
 Other tips
 -----------
 
 - The number of epochs: 50 would be enough for most cases. For training acoustic models, 100 may work better. For MDN-based acoustic models, you would try 200 or more.
 - Don't over-trust dev loss. It is well known that loss is not closely correlated to subjective quality.
 - No problem with negative loss for MDN models.
+- Use smaller ``pitch_reg_weight`` if your audio and note pitch is property aligned (or pitch-corrected). ``pitch_reg_weight=0.0`` works fine with Ritsu's database (V2).

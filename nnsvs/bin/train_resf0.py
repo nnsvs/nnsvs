@@ -208,8 +208,24 @@ def train_loop(
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
-                if (not train) and (not evaluated):
+
+                # Compute denormalized log-F0 in the musical scores
+                with torch.no_grad():
+                    lf0_score_denorm = (
+                        in_feats[:, :, in_lf0_idx] - in_scaler.min_[in_lf0_idx]
+                    ) / in_scaler.scale_[in_lf0_idx]
+                    # Fill zeros for rest and padded frames
+                    lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
+                    for idx, length in enumerate(lengths):
+                        lf0_score_denorm[idx, length:] = 0
+                    # Compute time-variant pitch regularization weight vector
+                    pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
+                        lf0_score_denorm, decay_size=config.train.pitch_reg_decay_size
+                    )
+
+                if not evaluated:
                     eval_spss_model(
+                        phase,
                         epoch,
                         model,
                         in_feats,
@@ -219,21 +235,9 @@ def train_loop(
                         out_scaler,
                         writer,
                         sr=sr,
+                        lf0_score_denorm=lf0_score_denorm,
                     )
                     evaluated = True
-
-                # Compute denormalized log-F0 in the musical scores
-                lf0_score_denorm = (
-                    in_feats[:, :, in_lf0_idx] - in_scaler.min_[in_lf0_idx]
-                ) / in_scaler.scale_[in_lf0_idx]
-                # Fill zeros for rest and padded frames
-                lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
-                for idx, length in enumerate(lengths):
-                    lf0_score_denorm[idx, length:] = 0
-                # Compute time-variant pitch regularization weight vector
-                pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
-                    lf0_score_denorm
-                )
 
                 loss, log_metrics = train_step(
                     model=model,

@@ -30,7 +30,7 @@ question_path: "../../_common/hed/jp_dev.hed"
 
 timelag_features: defaults
 duration_features: defaults
-acoustic_features: static_deltadelta_sinevib
+acoustic_features: static_only
 
 # Parameter trajectory smoothing
 # Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015

@@ -161,6 +161,7 @@ def my_app(config: DictConfig) -> None:
         trajectory_smoothing=config.acoustic.trajectory_smoothing,
         trajectory_smoothing_cutoff=config.acoustic.trajectory_smoothing_cutoff,
         correct_vuv=config.acoustic.correct_vuv,
+        dynamic_features_flags=config.acoustic.dynamic_features_flags,
     )
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)

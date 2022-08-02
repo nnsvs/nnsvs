@@ -84,7 +84,7 @@ Vocoder
 
 The vocoder is a model that generates waveform from acoustic features. NNSVS adopts WORLD (:cite:t:`morise2016world`) as the primiary vocoder.
 We have plans to support neural vocoders but its support is currently limited.
-Neural source-filter models (cite:t:`wang2019neural`) will be available in the near future.
+Neural source-filter models (:cite:t:`wang2019neural`) will be available in the near future.
 
 Difference with Sinsy
 ---------------------

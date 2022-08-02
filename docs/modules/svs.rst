@@ -5,4 +5,3 @@ nnsvs.svs
 
 .. autoclass:: SPSVS
     :members:
-
