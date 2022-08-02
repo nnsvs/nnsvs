@@ -14,7 +14,6 @@ Custom language support
 Training kit
 ------------
 
-- `enunu-nnsvs-training-notebook.ipynb <https://colab.research.google.com/drive/18OxNsVmGpiu5rf6zhxzXktB376rZpH74>`_
 - `NNSVSのモデルをUTAUで使えるようにするツール (UTAU plugin software powered by NNSVS): <https://github.com/oatsu-gh/ENUNU>`_
 
 Other tools
