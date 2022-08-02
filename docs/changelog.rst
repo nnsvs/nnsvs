@@ -74,7 +74,7 @@ Some features that are available but not yet tested or documented
 - Add ``ResF0NonAttentiveTacotron`` acoustic model. `#129`_ `#15`_
 - WaveNet `#100`_
 - GAN-based acoustic models `#85`_
-- Make :doc:`svs` to support trainable post-filters and neural vocoders.
+- Make :doc:`modules/svs` to support trainable post-filters and neural vocoders.
 
 v0.0.2 <2022-04-29>
 -------------------
