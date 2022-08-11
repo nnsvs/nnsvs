@@ -246,10 +246,9 @@ class WORLDAcousticSource(FileDataSource):
             print(aperiodicity)
             raise RuntimeError("Aperiodicity has NaN")
 
-        f0 = f0[:, None]
-        lf0 = f0.copy()
-        nonzero_indices = np.nonzero(f0)
-        lf0[nonzero_indices] = np.log(f0[nonzero_indices])
+        lf0 = f0[:, np.newaxis].copy()
+        nonzero_indices = np.nonzero(lf0)
+        lf0[nonzero_indices] = np.log(f0[:, np.newaxis][nonzero_indices])
         if self.use_harvest:
             # https://github.com/mmorise/World/issues/35#issuecomment-306521887
             vuv = (aperiodicity[:, 0] < 0.5).astype(np.float32)[:, None]
@@ -310,6 +309,7 @@ class WORLDAcousticSource(FileDataSource):
             # NOTE: vibrato is known to have 3 ~ 8 Hz range (in general)
             # remove higher frequency than 3 to separate vibrato from the original F0
             f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=3)
+            assert len(f0.shape) == 1 and len(f0_smooth.shape) == 1
             vib = (f0 - f0_smooth)[:, np.newaxis]
             vib_flags = None
         elif self.vibrato_mode == "none":
