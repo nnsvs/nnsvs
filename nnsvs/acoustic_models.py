@@ -187,7 +187,7 @@ class ResF0Conv1dResnet(BaseModel):
 
         # Inject the predicted lf0 into the output features
         if self.use_mdn:
-            mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+            mu[:, :, :, self.out_lf0_idx] = lf0_pred
         else:
             mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
@@ -376,7 +376,7 @@ class ResSkipF0FFConvLSTM(BaseModel):
 
         # Inject the predicted lf0 into the output features
         if self.use_mdn:
-            mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+            mu[:, :, :, self.out_lf0_idx] = lf0_pred
         else:
             mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 
@@ -494,7 +494,7 @@ class ResF0VariancePredictor(VariancePredictor):
 
         # Inject the predicted lf0 into the output features
         if self.use_mdn:
-            mu[:, :, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
+            mu[:, :, :, self.out_lf0_idx] = lf0_pred
         else:
             mu[:, :, self.out_lf0_idx] = lf0_pred.squeeze(-1)
 

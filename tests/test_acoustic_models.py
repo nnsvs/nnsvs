@@ -55,13 +55,14 @@ def _test_model_impl(model, in_dim, out_dim):
         assert y.shape == y_inf.shape
 
 
-def test_resf0_conv1d_resnet():
+@pytest.mark.parametrize("num_gaussians", [1, 2, 4])
+def test_resf0_conv1d_resnet(num_gaussians):
     params = {
         "in_dim": 300,
         "hidden_dim": 8,
         "out_dim": 200,
         "num_layers": 2,
-        "num_gaussians": 2,
+        "num_gaussians": num_gaussians,
         "dim_wise": True,
         "init_type": "none",
         # dummy
@@ -86,7 +87,8 @@ def test_resf0_conv1d_resnet():
     _test_model_impl(model, params["in_dim"], params["out_dim"])
 
 
-def test_reskipf0_ff_conv_lstm():
+@pytest.mark.parametrize("num_gaussians", [1, 2, 4])
+def test_reskipf0_ff_conv_lstm(num_gaussians):
     params = {
         "in_dim": 300,
         "ff_hidden_dim": 8,
@@ -96,7 +98,7 @@ def test_reskipf0_ff_conv_lstm():
         "num_lstm_layers": 2,
         "bidirectional": True,
         "out_dim": 200,
-        "num_gaussians": 2,
+        "num_gaussians": num_gaussians,
         "dim_wise": True,
         "init_type": "none",
         # dummy
@@ -116,7 +118,8 @@ def test_reskipf0_ff_conv_lstm():
     _test_model_impl(model, params["in_dim"], params["out_dim"])
 
 
-def test_resf0_variance_predictor():
+@pytest.mark.parametrize("num_gaussians", [1, 2, 4])
+def test_resf0_variance_predictor(num_gaussians):
     params = {
         "in_dim": 300,
         "out_dim": 200,
@@ -124,7 +127,7 @@ def test_resf0_variance_predictor():
         "hidden_dim": 8,
         "kernel_size": 5,
         "dropout": 0.5,
-        "num_gaussians": 2,
+        "num_gaussians": num_gaussians,
         "dim_wise": True,
         "init_type": "none",
         # dummy
