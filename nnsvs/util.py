@@ -71,7 +71,7 @@ def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
         (mgc_order + 1) * num_windows,
         num_windows,
         1,
-        pyworld.get_num_aperiodicities(sr) * 3,
+        pyworld.get_num_aperiodicities(sr) * num_windows,
     ]
     has_dynamic_features = [True, True, False, True]
     if vibrato_mode == "diff":
