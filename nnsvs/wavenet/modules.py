@@ -47,9 +47,9 @@ class ResSkipBlock(nn.Module):
             residual_channels,
             gate_channels,
             kernel_size,
+            *args,
             padding=self.padding,
             dilation=dilation,
-            *args,
             **kwargs,
         )
 
