@@ -1,0 +1,7 @@
+ignore:
+  - setup.py
+  - docs
+  - recipes
+  - utils
+  - nnsvs/bin
+  - nnsvs/experimental
