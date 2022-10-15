@@ -6,7 +6,9 @@
 
 import torch
 import torch.nn.functional as F
-from nnsvs.base import BaseModel
+from nnsvs.base import BaseModel, PredictionType
+from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu, mdn_get_sample
+from nnsvs.util import init_weights
 from torch import nn
 
 
@@ -52,9 +54,12 @@ class Prenet(nn.Module):
         dropout (float) : dropout rate
     """
 
-    def __init__(self, in_dim, layers=2, hidden_dim=256, dropout=0.5):
+    def __init__(
+        self, in_dim, layers=2, hidden_dim=256, dropout=0.5, eval_dropout=True
+    ):
         super().__init__()
         self.dropout = dropout
+        self.eval_dropout = eval_dropout
         prenet = nn.ModuleList()
         for layer in range(layers):
             prenet += [
@@ -73,8 +78,10 @@ class Prenet(nn.Module):
             torch.Tensor : output tensor
         """
         for layer in self.prenet:
-            # 学習時、推論時の両方で Dropout を適用します」
-            x = F.dropout(layer(x), self.dropout, training=True)
+            if self.eval_dropout:
+                x = F.dropout(layer(x), self.dropout, training=True)
+            else:
+                x = F.dropout(layer(x), self.dropout, training=self.training)
         return x
 
 
@@ -94,6 +101,7 @@ class NonAttentiveDecoder(BaseModel):
         attention_hidden_dim (int) : dimension of attention hidden layer
         attention_conv_channel (int) : number of attention convolution channels
         attention_conv_kernel_size (int) : kernel size of attention convolution
+        downsample_by_conv (bool) : if True, downsample by convolution
     """
 
     def __init__(
@@ -107,17 +115,35 @@ class NonAttentiveDecoder(BaseModel):
         prenet_dropout=0.5,
         zoneout=0.1,
         reduction_factor=1,
+        downsample_by_conv=False,
+        init_type="none",
+        eval_dropout=True,
+        prenet_noise_std=0.0,
     ):
         super().__init__()
         self.out_dim = out_dim
         self.reduction_factor = reduction_factor
+        self.prenet_dropout = prenet_dropout
+        self.prenet_noise_std = prenet_noise_std
 
-        self.prenet = Prenet(out_dim, prenet_layers, prenet_hidden_dim, prenet_dropout)
+        if prenet_layers > 0:
+            self.prenet = Prenet(
+                out_dim,
+                prenet_layers,
+                prenet_hidden_dim,
+                prenet_dropout,
+                eval_dropout=eval_dropout,
+            )
+            lstm_in_dim = in_dim + prenet_hidden_dim
+        else:
+            self.prenet = None
+            prenet_hidden_dim = 0
+            lstm_in_dim = in_dim + out_dim
 
         self.lstm = nn.ModuleList()
         for layer in range(layers):
             lstm = nn.LSTMCell(
-                in_dim + prenet_hidden_dim if layer == 0 else hidden_dim,
+                lstm_in_dim if layer == 0 else hidden_dim,
                 hidden_dim,
             )
             self.lstm += [ZoneOutCell(lstm, zoneout)]
@@ -125,7 +151,18 @@ class NonAttentiveDecoder(BaseModel):
         proj_in_dim = in_dim + hidden_dim
         self.feat_out = nn.Linear(proj_in_dim, out_dim * reduction_factor, bias=False)
 
-        self.apply(decoder_init)
+        if reduction_factor > 1 and downsample_by_conv:
+            self.conv_downsample = nn.Conv1d(
+                in_dim,
+                in_dim,
+                kernel_size=reduction_factor,
+                stride=reduction_factor,
+                groups=in_dim,
+            )
+        else:
+            self.conv_downsample = None
+
+        init_weights(self, init_type)
 
     def _zero_state(self, hs):
         init_hs = hs.new_zeros(hs.size(0), self.lstm[0].hidden_size)
@@ -156,9 +193,14 @@ class NonAttentiveDecoder(BaseModel):
                 :, self.reduction_factor - 1 :: self.reduction_factor
             ]
         if self.reduction_factor > 1:
-            encoder_outs = encoder_outs[
-                :, self.reduction_factor - 1 :: self.reduction_factor
-            ]
+            if self.conv_downsample is not None:
+                encoder_outs = self.conv_downsample(
+                    encoder_outs.transpose(1, 2)
+                ).transpose(1, 2)
+            else:
+                encoder_outs = encoder_outs[
+                    :, self.reduction_factor - 1 :: self.reduction_factor
+                ]
 
         h_list, c_list = [], []
         for _ in range(len(self.lstm)):
@@ -168,10 +210,23 @@ class NonAttentiveDecoder(BaseModel):
         go_frame = encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
         prev_out = go_frame
 
+        if not is_inference and self.prenet is not None:
+            prenet_outs = self.prenet(decoder_targets)
+
         outs = []
         for t in range(encoder_outs.shape[1]):
             # Pre-Net
-            prenet_out = self.prenet(prev_out)
+            if self.prenet is not None:
+                if is_inference:
+                    prenet_out = self.prenet(prev_out)
+                else:
+                    prenet_out = prenet_outs[:, t, :]
+            elif self.prenet_noise_std > 0:
+                prenet_out = (
+                    prev_out + torch.randn_like(prev_out) * self.prenet_noise_std
+                )
+            else:
+                prenet_out = F.dropout(prev_out, self.prenet_dropout, training=True)
 
             # LSTM
             xs = torch.cat([encoder_outs[:, t], prenet_out], dim=1)
@@ -198,3 +253,197 @@ class NonAttentiveDecoder(BaseModel):
 
         # (B, C, T) -> (B, T, C)
         return outs.transpose(1, 2)
+
+
+class MDNNonAttentiveDecoder(BaseModel):
+    def __init__(
+        self,
+        in_dim=512,
+        out_dim=80,
+        layers=2,
+        hidden_dim=1024,
+        prenet_layers=2,
+        prenet_hidden_dim=256,
+        prenet_dropout=0.5,
+        zoneout=0.1,
+        reduction_factor=1,
+        downsample_by_conv=False,
+        num_gaussians=8,
+        sampling_mode="mean",
+        init_type="none",
+        eval_dropout=True,
+        prenet_noise_std=0.0,
+    ):
+        super().__init__()
+        self.out_dim = out_dim
+        self.reduction_factor = reduction_factor
+        self.prenet_dropout = prenet_dropout
+        self.prenet_noise_std = prenet_noise_std
+        self.num_gaussians = num_gaussians
+        self.sampling_mode = sampling_mode
+        assert sampling_mode in ["mean", "random"]
+
+        if prenet_layers > 0:
+            self.prenet = Prenet(
+                out_dim,
+                prenet_layers,
+                prenet_hidden_dim,
+                prenet_dropout,
+                eval_dropout=eval_dropout,
+            )
+            lstm_in_dim = in_dim + prenet_hidden_dim
+        else:
+            self.prenet = None
+            prenet_hidden_dim = 0
+            lstm_in_dim = in_dim + out_dim
+
+        self.lstm = nn.ModuleList()
+        for layer in range(layers):
+            lstm = nn.LSTMCell(
+                lstm_in_dim if layer == 0 else hidden_dim,
+                hidden_dim,
+            )
+            self.lstm += [ZoneOutCell(lstm, zoneout)]
+
+        proj_in_dim = in_dim + hidden_dim
+        self.feat_out = MDNLayer(
+            proj_in_dim,
+            out_dim * reduction_factor,
+            num_gaussians=num_gaussians,
+            dim_wise=True,
+        )
+
+        if reduction_factor > 1 and downsample_by_conv:
+            self.conv_downsample = nn.Conv1d(
+                in_dim,
+                in_dim,
+                kernel_size=reduction_factor,
+                stride=reduction_factor,
+                groups=in_dim,
+            )
+        else:
+            self.conv_downsample = None
+
+        init_weights(self, init_type)
+
+    def _zero_state(self, hs):
+        init_hs = hs.new_zeros(hs.size(0), self.lstm[0].hidden_size)
+        return init_hs
+
+    def is_autoregressive(self):
+        return True
+
+    def prediction_type(self):
+        return PredictionType.PROBABILISTIC
+
+    def forward(self, encoder_outs, in_lens, decoder_targets=None):
+        is_inference = decoder_targets is None
+        if not is_inference:
+            assert encoder_outs.shape[1] == decoder_targets.shape[1]
+
+        # Adjust number of frames according to the reduction factor
+        # (B, Lmax, out_dim) ->  (B, Lmax/r, out_dim)
+        if self.reduction_factor > 1 and not is_inference:
+            decoder_targets = decoder_targets[
+                :, self.reduction_factor - 1 :: self.reduction_factor
+            ]
+        if self.reduction_factor > 1:
+            if self.conv_downsample is not None:
+                encoder_outs = self.conv_downsample(
+                    encoder_outs.transpose(1, 2)
+                ).transpose(1, 2)
+            else:
+                encoder_outs = encoder_outs[
+                    :, self.reduction_factor - 1 :: self.reduction_factor
+                ]
+
+        h_list, c_list = [], []
+        for _ in range(len(self.lstm)):
+            h_list.append(self._zero_state(encoder_outs))
+            c_list.append(self._zero_state(encoder_outs))
+
+        go_frame = encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
+        prev_out = go_frame
+
+        if not is_inference and self.prenet is not None:
+            prenet_outs = self.prenet(decoder_targets)
+
+        mus = []
+        log_pis = []
+        log_sigmas = []
+        # NOTE: only used for inference
+        mus_inf = []
+
+        for t in range(encoder_outs.shape[1]):
+            # Pre-Net
+            if self.prenet is not None:
+                if is_inference:
+                    prenet_out = self.prenet(prev_out)
+                else:
+                    prenet_out = prenet_outs[:, t, :]
+            elif self.prenet_noise_std > 0:
+                prenet_out = (
+                    prev_out + torch.randn_like(prev_out) * self.prenet_noise_std
+                )
+            else:
+                prenet_out = F.dropout(prev_out, self.prenet_dropout, training=True)
+
+            # LSTM
+            xs = torch.cat([encoder_outs[:, t], prenet_out], dim=1)
+            h_list[0], c_list[0] = self.lstm[0](xs, (h_list[0], c_list[0]))
+            for i in range(1, len(self.lstm)):
+                h_list[i], c_list[i] = self.lstm[i](
+                    h_list[i - 1], (h_list[i], c_list[i])
+                )
+            # Output
+            hcs = torch.cat([h_list[-1], encoder_outs[:, t]], dim=1)
+            log_pi, log_sigma, mu = self.feat_out(hcs.unsqueeze(1))
+
+            # (B, 1, num_gaussians, out_dim*reduction_factor)
+            # -> (B, reduction_factor, num_gaussians, out_dim)
+            log_pi = (
+                log_pi.transpose(1, 2)
+                .view(encoder_outs.size(0), self.num_gaussians, -1, self.out_dim)
+                .transpose(1, 2)
+            )
+            log_sigma = (
+                log_sigma.transpose(1, 2)
+                .view(encoder_outs.size(0), self.num_gaussians, -1, self.out_dim)
+                .transpose(1, 2)
+            )
+            mu = (
+                mu.transpose(1, 2)
+                .view(encoder_outs.size(0), self.num_gaussians, -1, self.out_dim)
+                .transpose(1, 2)
+            )
+
+            mus.append(mu)
+            log_pis.append(log_pi)
+            log_sigmas.append(log_sigma)
+
+            # Update decoder input for the next time step
+            if is_inference:
+                # (B, reduction_factor, out_dim)
+                if self.sampling_mode == "mean":
+                    _, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+                elif self.sampling_mode == "random":
+                    mu = mdn_get_sample(log_pi, log_sigma, mu)
+
+                # Feed last sample for the feedback loop
+                prev_out = mu[:, -1]
+
+                mus_inf.append(mu)
+            else:
+                # Teacher forcing
+                prev_out = decoder_targets[:, t, :]
+
+        mus = torch.cat(mus, dim=1)  # (B, out_dim, Lmax)
+        log_pis = torch.cat(log_pis, dim=1)  # (B, out_dim, Lmax)
+        log_sigmas = torch.cat(log_sigmas, dim=1)  # (B, out_dim, Lmax)
+
+        if is_inference:
+            mu = torch.cat(mus_inf, dim=1)
+            # TODO: may need to track sigma. For now we only use mu
+            return mu, mu
+        else:
+            return log_pis, log_sigmas, mus
