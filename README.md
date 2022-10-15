@@ -4,7 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/nnsvs.svg)](https://pypi.python.org/pypi/nnsvs)
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE)
 ![Python CI](https://github.com/nnsvs/nnsvs/workflows/Python%20CI/badge.svg)
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/r9y9/nnsvs/streamlit_demo/app.py)
+[![codecov](https://codecov.io/gh/nnsvs/nnsvs/branch/master/graph/badge.svg?token=Z66FDOQGH7)](https://codecov.io/gh/nnsvs/nnsvs)
 
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
 [docs-latest-url]: https://nnsvs.github.io/nnsvs/
