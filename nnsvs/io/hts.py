@@ -1,6 +1,34 @@
-# coding: utf-8
 import numpy as np
 from nnmnkwii.io import hts
+
+
+def get_pitch_index(binary_dict, numeric_dict):
+    idx = 0
+    pitch_idx = len(binary_dict)
+    while idx < len(numeric_dict):
+        if numeric_dict[idx][1].pattern.startswith("/E"):
+            pitch_idx = pitch_idx + idx
+            break
+        idx += 1
+    return pitch_idx
+
+
+def get_pitch_indices(binary_dict, numeric_dict):
+    idx = 0
+    pitch_idx = len(binary_dict)
+    assert np.any(
+        [numeric_dict[idx][1].pattern.startswith(p) for p in ["/D", "/E", "/F"]]
+    )
+    pitch_indices = [pitch_idx]
+    while True:
+        idx += 1
+        if np.any(
+            [numeric_dict[idx][1].pattern.startswith(p) for p in ["/D", "/E", "/F"]]
+        ):
+            pitch_indices.append(pitch_idx + idx)
+        else:
+            break
+    return pitch_indices
 
 
 def get_note_indices(labels):
