@@ -11,7 +11,7 @@ from nnsvs.util import example_xml_file
 @pytest.mark.parametrize("post_filter_type", ["merlin", "gv", "nnsvs"])
 @pytest.mark.parametrize("vocoder_type", ["world"])
 def test_svs(segmented_synthesis, post_filter_type, vocoder_type):
-    model_dir = retrieve_pretrained_model("r9y9/kiritan_latest")
+    model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
     engine = SPSVS(model_dir)
 
     contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))

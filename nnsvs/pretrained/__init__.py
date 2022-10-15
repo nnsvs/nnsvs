@@ -12,18 +12,6 @@ DEFAULT_CACHE_DIR = join(os.path.expanduser("~"), ".cache", "nnsvs")
 CACHE_DIR = os.environ.get("NNSVS_CACHE_DIR", DEFAULT_CACHE_DIR)
 
 model_registry = {
-    # kiritan
-    "r9y9/kiritan_latest": {
-        "url": "https://www.dropbox.com/s/3cteq2rdnkn2ape/"
-        "kiritan_latest.tar.gz?dl=1",
-        "_target_": "nnsvs.svs:SPSVS",
-    },
-    "r9y9/20220321_kiritan_timelag_mdn_duration_mdn_acoustic_resf0conv": {
-        "url": "https://www.dropbox.com/s/di5vp4gox9d8dvn/"
-        "20220321_kiritan_timelag_mdn_duration_mdn_acoustic_resf0conv.tar.gz?dl=1",
-        "_target_": "nnsvs.svs:SPSVS",
-    },
-    # yoko
     "r9y9/yoko_latest": {
         "url": "https://www.dropbox.com/s/k8mya65yt52m0ps/yoko_latest.tar.gz?dl=1",
         "_target_": "nnsvs.svs:SPSVS",
@@ -31,16 +19,6 @@ model_registry = {
     "r9y9/20220322_yoko_timelag_mdn_duration_mdn_acoustic_resf0conv": {
         "url": "https://www.dropbox.com/s/olsfyqol9ryk5kx/"
         "20220322_yoko_timelag_mdn_duration_mdn_acoustic_resf0conv.tar.gz?dl=1",
-        "_target_": "nnsvs.svs:SPSVS",
-    },
-    # oniku_kurumi
-    "r9y9/oniku_kurumi_latest": {
-        "url": "https://www.dropbox.com/s/qkctk86tec8gpbf/oniku_kurumi_latest.tar.gz?dl=1",
-        "_target_": "nnsvs.svs:SPSVS",
-    },
-    # JSUT
-    "r9y9/jsut_latest": {
-        "url": "https://www.dropbox.com/s/xj5vdnfmw8k2yxq/jsut_latest.tar.gz?dl=1",
         "_target_": "nnsvs.svs:SPSVS",
     },
 }
