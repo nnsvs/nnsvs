@@ -6,7 +6,7 @@ label_dir: data/acoustic/label_phone_align
 sample_rate: 48000
 
 # world or melf0
-feature_type: world
+feature_type: melf0
 
 # Resample type
 res_type: kaiser_best
@@ -76,8 +76,8 @@ correct_vuv: false
 correct_f0: false
 
 # NOTE: the following parameters are only used for computing mel-spectrogram
-# For 24kHz sampling rate
-fft_size: 512
-hop_size: 120
-win_length: 480
+# For 48kHz sampling rate
+fft_size: 1024
+hop_size: 240
+win_length: 960
 eps: 1e-10

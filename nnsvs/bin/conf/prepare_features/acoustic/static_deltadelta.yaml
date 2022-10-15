@@ -5,19 +5,31 @@ label_dir: data/acoustic/label_phone_align
 
 sample_rate: 48000
 
+# world or melf0
+feature_type: world
+
+# Resample type
+res_type: kaiser_best
+
 subphone_features: coarse_coding
 
 # kiritan
 # min 174.61411571650194
 # max 659.2551138257398
-f0_floor: null
+# If specified, use the values for F0 estimation.
+# Or, these are calculated from min/max notes in the musical score.
+f0_floor: 71
 f0_ceil: null
 
-use_harvest: true
-d4c_threshold: 0.15
+# (1) harvest (2) dio (3) parselmouth
+f0_extractor: harvest
+d4c_threshold: 0.5
 
 frame_period: 5 # ms
 mgc_order: 59
+
+# Use WORLD-based coding for spectral envelope or not
+use_world_codec: true
 
 # windows to compute delta and delta-delta features
 # set 1 to disable
@@ -28,7 +40,7 @@ num_windows: 3
 dynamic_features_flags: [True, True, False, True]
 
 # Use relative f0 modeling.
-relative_f0: true
+relative_f0: false
 
 interp_unvoiced_aperiodicity: true
 
@@ -51,6 +63,21 @@ vibrato_mode: none
 trajectory_smoothing: false
 trajectory_smoothing_cutoff: 50
 
+# Special handling for F0 smoothing
+trajectory_smoothing_f0: true
+trajectory_smoothing_cutoff_f0: 20
+
 # Correct V/UV based on the musical score.
 # This is to prevent unwanted F0 estimation failures on silence regions.
 correct_vuv: false
+
+# Correct F0 based on the musical score.
+# NOTE: it is better to manually correct f0 or adjust UST/musicxml in advance.
+correct_f0: false
+
+# NOTE: the following parameters are only used for computing mel-spectrogram
+# For 24kHz sampling rate
+fft_size: 512
+hop_size: 120
+win_length: 480
+eps: 1e-10
