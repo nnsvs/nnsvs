@@ -6,6 +6,7 @@ from torch import nn
 class PredictionType(Enum):
     DETERMINISTIC = 1
     PROBABILISTIC = 2
+    MULTISTREAM_HYBRID = 3
 
 
 class BaseModel(nn.Module):
