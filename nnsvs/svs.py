@@ -19,7 +19,7 @@ from nnsvs.gen import (
     predict_timelag,
 )
 from nnsvs.io.hts import segment_labels
-from nnsvs.multistream import get_static_stream_sizes
+from nnsvs.multistream import get_static_features, get_static_stream_sizes
 from nnsvs.pitch import lowpass_filter
 from nnsvs.postfilters import variance_scaling
 from nnsvs.util import MinMaxScaler, StandardScaler
@@ -31,6 +31,32 @@ try:
     _pwg_available = True
 except ImportError:
     _pwg_available = False
+
+
+def extract_static_scaler(out_scaler, model_config):
+    mean_ = get_static_features(
+        out_scaler.mean_.reshape(1, 1, out_scaler.mean_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    mean_ = np.concatenate(mean_, -1).reshape(1, -1)
+    var_ = get_static_features(
+        out_scaler.var_.reshape(1, 1, out_scaler.var_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    var_ = np.concatenate(var_, -1).reshape(1, -1)
+    scale_ = get_static_features(
+        out_scaler.scale_.reshape(1, 1, out_scaler.scale_.shape[-1]),
+        model_config.num_windows,
+        model_config.stream_sizes,
+        model_config.has_dynamic_features,
+    )
+    scale_ = np.concatenate(scale_, -1).reshape(1, -1)
+    static_scaler = StandardScaler(mean_, var_, scale_)
+    return static_scaler
 
 
 class SPSVS(object):
@@ -163,6 +189,11 @@ class SPSVS(object):
             np.load(model_dir / "out_acoustic_scaler_var.npy"),
             np.load(model_dir / "out_acoustic_scaler_scale.npy"),
         )
+        # NOTE: this is used for GV post-filtering
+        self.acoustic_out_static_scaler = extract_static_scaler(
+            self.acoustic_out_scaler, self.acoustic_config
+        )
+
         self.acoustic_model.eval()
 
         # Post-filter
@@ -202,6 +233,8 @@ class SPSVS(object):
                 )
         else:
             self.vocoder = None
+            self.vocoder_config = None
+            self.vocoder_in_scaler = None
 
     def __repr__(self):
         timelag_str = json.dumps(
@@ -381,11 +414,7 @@ Acoustic model: {acoustic_str}
                     self.acoustic_config.num_windows,
                 )
                 mgc_end_dim = static_stream_sizes[0]
-                scaler = (
-                    self.postfilter_out_scaler
-                    if self.postfilter_model is not None
-                    else self.vocoder_in_scaler
-                )
+                scaler = self.acoustic_out_static_scaler
                 acoustic_features[:, :mgc_end_dim] = variance_scaling(
                     scaler.var_.reshape(-1)[:mgc_end_dim],
                     acoustic_features[:, :mgc_end_dim],
