@@ -85,7 +85,7 @@ class SPSVS(object):
         from nnsvs.util import example_xml_file
         import matplotlib.pyplot as plt
 
-        model_dir = retrieve_pretrained_model("r9y9/kiritan_latest")
+        model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
         engine = SPSVS(model_dir)
 
         contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
