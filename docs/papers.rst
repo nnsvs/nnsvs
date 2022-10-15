@@ -8,6 +8,7 @@ Parametric SVS
 - :cite:t:`hono2021sinsy`
 - :cite:t:`zhuang2021litesing`
 - :cite:t:`hono2018recent`
+- :cite:t:`bonada2018recent`
 - :cite:t:`blaauw2017neural`
 - :cite:t:`oura2010recent`
 - :cite:t:`lu2020xiaoicesing`
@@ -17,6 +18,7 @@ Towards end-to-end SVS
 -----------------------
 
 - :cite:t:`zhang2022visinger`
+- :cite:t:`liu2021diffsinger`
 - :cite:t:`gu2021bytesing`
 - :cite:t:`chen2020hifisinger`
 
@@ -46,13 +48,15 @@ TTS
 - :cite:t:`okamoto2019tacotron`
 - :cite:t:`wang2018comparison`
 - :cite:t:`wu2016merlin`
-- :cite:t:`zen2009statistical`
 - :cite:t:`takamichi2015naist`
+- :cite:t:`zen2014deep`
+- :cite:t:`zen2009statistical`
 
 Vocoder
 -------
 
 - :cite:t:`kumar2019melgan`
+- :cite:t:`morise17_interspeech`
 - :cite:t:`morise2016world`
 
 Neural vocoders
