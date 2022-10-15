@@ -1,7 +1,7 @@
 Change log
 ==========
 
-v0.0.3 <2022-xx-xx>
+v0.0.3 <2022-10-15>
 -------------------
 
 Moved the repository to https://github.com/nnsvs organization.
@@ -42,6 +42,7 @@ Improvements
 - Pre-processing: Add resampling if necessary
 - Pre-processing: Allow users to specify expliciti F0 range
 - Expose decay_size for pitch reguralization
+- Support Codecov
 
 Deprecations
 ^^^^^^^^^^^^

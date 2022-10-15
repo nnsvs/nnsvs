@@ -26,11 +26,6 @@ Audio samples
 
 Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
 
-Online demo
------------
-
-https://share.streamlit.io/r9y9/nnsvs/streamlit_demo/app.py
-
 Selected videos
 ---------------
 
@@ -48,7 +43,6 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    :caption: Demos
 
    notebooks/Demos
-   notebooks/NNSVS_vs_Sinsy
 
 .. toctree::
    :maxdepth: 1
@@ -65,8 +59,8 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    :caption: Advanced guides
 
    optuna
-   train_postfilters
    train_vocoders
+   train_postfilters
 
 
 .. toctree::

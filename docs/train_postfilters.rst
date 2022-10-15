@@ -8,7 +8,8 @@ This page summarizes how to train post-filters.
 
 .. warning::
 
-    Support for post-filters is in the alpha stage. Use it at your own risk.
+    As of 2022/10/15, I concluded that GV-post filter works better than trainalbe post-filters in most cases.
+    Please consider using GV-post filter insteaad.
 
 .. note::
 
@@ -242,7 +243,7 @@ As the same as in :doc:`recipes`, you can pack the models into a single director
 The above command should make a packed model directory with your trained post-filter.
 
 How to use the packed model with the trained post-filter?
------------------------------------------------------
+----------------------------------------------------------
 
 Please specify ``post_filter_type="nnsvs"`` with the :doc:`modules/svs` module. An example:
 
