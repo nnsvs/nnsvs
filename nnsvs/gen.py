@@ -50,6 +50,7 @@ def predict_timelag(
     allowed_range=None,
     allowed_range_rest=None,
     force_clip_input_features=False,
+    frame_period=5,
 ):
     """Predict time-lag from HTS labels
 
@@ -71,6 +72,10 @@ def predict_timelag(
     Returns;
         ndarray: time-lag predictions
     """
+    hts_frame_shift = int(frame_period * 1e4)
+    # make sure to set frame shift properly before calling round_ method
+    labels.frame_shift = hts_frame_shift
+
     if allowed_range is None:
         allowed_range = [-20, 20]
     if allowed_range_rest is None:
@@ -89,6 +94,7 @@ def predict_timelag(
         numeric_dict,
         add_frame_features=False,
         subphone_features=None,
+        frame_shift=hts_frame_shift,
     ).astype(np.float32)
 
     # Adjust input features if we use log-f0 conditioning
@@ -180,7 +186,7 @@ def predict_timelag(
             )
 
     # frames -> 100 ns
-    pred_timelag *= 50000
+    pred_timelag *= hts_frame_shift
 
     return pred_timelag
 
@@ -197,6 +203,7 @@ def predict_duration(
     pitch_indices=None,
     log_f0_conditioning=True,
     force_clip_input_features=False,
+    frame_period=5,
 ):
     """Predict phoneme durations from HTS labels
 
@@ -216,6 +223,8 @@ def predict_duration(
     Returns:
         np.ndarray: predicted durations
     """
+    hts_frame_shift = int(frame_period * 1e4)
+
     # Extract musical/linguistic features
     duration_linguistic_features = fe.linguistic_features(
         labels,
@@ -223,6 +232,7 @@ def predict_duration(
         numeric_dict,
         add_frame_features=False,
         subphone_features=None,
+        frame_shift=hts_frame_shift,
     ).astype(np.float32)
 
     if log_f0_conditioning:
@@ -293,7 +303,7 @@ def predict_duration(
     return pred_durations
 
 
-def postprocess_duration(labels, pred_durations, lag):
+def postprocess_duration(labels, pred_durations, lag, frame_period=5):
     """Post-process durations based on predicted time-lag
 
     Ref : https://arxiv.org/abs/2108.02776
@@ -307,6 +317,8 @@ def postprocess_duration(labels, pred_durations, lag):
     Returns:
         HTSLabelFile: labels with adjusted durations
     """
+    hts_frame_shift = int(frame_period * 1e4)
+
     note_indices = get_note_indices(labels)
     # append the end of note
     note_indices.append(len(labels))
@@ -322,9 +334,9 @@ def postprocess_duration(labels, pred_durations, lag):
         # eq (11)
         L = int(fe.duration_features(p)[0])
         if i < len(note_indices) - 1:
-            L_hat = L - (lag[i - 1] - lag[i]) / 50000
+            L_hat = L - (lag[i - 1] - lag[i]) / hts_frame_shift
         else:
-            L_hat = L - (lag[i - 1]) / 50000
+            L_hat = L - (lag[i - 1]) / hts_frame_shift
 
         # Prevent negative duration
         L_hat = max(L_hat, 1)
@@ -332,12 +344,12 @@ def postprocess_duration(labels, pred_durations, lag):
         # adjust the start time of the note
         p.start_times = np.minimum(
             np.asarray(p.start_times) + lag[i - 1].reshape(-1),
-            np.asarray(p.end_times) - 50000 * len(p),
+            np.asarray(p.end_times) - hts_frame_shift * len(p),
         )
         p.start_times = np.maximum(p.start_times, 0)
         if len(output_labels) > 0:
             p.start_times = np.maximum(
-                p.start_times, output_labels.start_times[-1] + 50000
+                p.start_times, output_labels.start_times[-1] + hts_frame_shift
             )
 
         # Compute normalized phoneme durations
@@ -351,10 +363,11 @@ def postprocess_duration(labels, pred_durations, lag):
 
             if np.any(d_norm <= 0):
                 # eq (12) (using mu as d_hat)
+                s = frame_period * 0.001
                 print(
                     f"Negative phoneme durations are predicted at {i}-th note. "
                     "The note duration: ",
-                    f"{round(float(L)*0.005,3)} sec -> {round(float(L_hat)*0.005,3)} sec",
+                    f"{round(float(L)*s,3)} sec -> {round(float(L_hat)*s,3)} sec",
                 )
                 print(
                     "It's likely that the model couldn't predict correct durations "
@@ -398,6 +411,8 @@ def predict_acoustic(
     pitch_indices=None,
     log_f0_conditioning=True,
     force_clip_input_features=False,
+    frame_period=5,
+    f0_shift_in_cent=0,
 ):
     """Predict acoustic features from HTS labels
 
@@ -421,6 +436,8 @@ def predict_acoustic(
     Returns:
         ndarray: predicted acoustic features
     """
+    hts_frame_shift = int(frame_period * 1e4)
+
     # Musical/linguistic features
     linguistic_features = fe.linguistic_features(
         labels,
@@ -428,6 +445,7 @@ def predict_acoustic(
         numeric_dict,
         add_frame_features=True,
         subphone_features=subphone_features,
+        frame_shift=hts_frame_shift,
     )
 
     if log_f0_conditioning:
@@ -436,6 +454,9 @@ def predict_acoustic(
                 _midi_to_hz(linguistic_features, idx, log_f0_conditioning),
                 kind="slinear",
             )
+            if f0_shift_in_cent != 0:
+                lf0_offset = f0_shift_in_cent * np.log(2) / 1200
+                linguistic_features[:, idx] += lf0_offset
 
     # Apply normalization
     linguistic_features = acoustic_in_scaler.transform(linguistic_features)
@@ -456,7 +477,10 @@ def predict_acoustic(
     x = torch.from_numpy(linguistic_features).float().to(device)
     x = x.view(1, -1, x.size(-1))
 
-    if acoustic_model.prediction_type() == PredictionType.PROBABILISTIC:
+    if acoustic_model.prediction_type() in [
+        PredictionType.PROBABILISTIC,
+        PredictionType.MULTISTREAM_HYBRID,
+    ]:
         # (B, T, D_out)
         max_mu, max_sigma = acoustic_model.inference(x, [x.shape[1]])
         if np.any(acoustic_config.has_dynamic_features):
@@ -596,6 +620,8 @@ def gen_spsvs_static_features(
     Returns:
         tuple: tuple of mgc, lf0, vuv and bap.
     """
+    hts_frame_shift = int(frame_period * 1e4)
+
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
             stream_sizes, has_dynamic_features, num_windows
@@ -628,6 +654,7 @@ def gen_spsvs_static_features(
         numeric_dict,
         add_frame_features=True,
         subphone_features=subphone_features,
+        frame_shift=hts_frame_shift,
     )
 
     # Correct V/UV based on special phone flags
@@ -680,7 +707,9 @@ def gen_spsvs_static_features(
     return mgc, lf0, vuv, bap
 
 
-def gen_world_params(mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3):
+def gen_world_params(
+    mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3, use_world_codec=False
+):
     """Generate WORLD parameters from mgc, lf0, vuv and bap.
 
     Args:
@@ -690,19 +719,27 @@ def gen_world_params(mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3):
         bap (ndarray): bap
         sample_rate (int): sample rate
         vuv_threshold (float): threshold for VUV
+        use_world_codec (bool): whether to use WORLD codec for spectral envelope
 
     Returns:
         tuple: tuple of f0, spectrogram and aperiodicity
     """
     fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
     alpha = pysptk.util.mcepalpha(sample_rate)
-    spectrogram = pysptk.mc2sp(np.ascontiguousarray(mgc), fftlen=fftlen, alpha=alpha)
+    if use_world_codec:
+        spectrogram = pyworld.decode_spectral_envelope(
+            np.ascontiguousarray(mgc).astype(np.float64), sample_rate, fftlen
+        )
+    else:
+        spectrogram = pysptk.mc2sp(
+            np.ascontiguousarray(mgc), fftlen=fftlen, alpha=alpha
+        )
     aperiodicity = pyworld.decode_aperiodicity(
         np.ascontiguousarray(bap).astype(np.float64), sample_rate, fftlen
     )
 
     # fill aperiodicity with ones for unvoiced regions
-    aperiodicity[vuv.reshape(-1) < vuv_threshold, :] = 1.0
+    aperiodicity[vuv.reshape(-1) < vuv_threshold, 0] = 1.0
     # WORLD fails catastrophically for out of range aperiodicity
     aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
