@@ -5,6 +5,9 @@ log_dir: tensorboard/exp
 # only works on supported GPUs
 use_amp: false
 
+# Use distributed training or not. If true, uses distributed data parallel.
+use_ddp: false
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 50
