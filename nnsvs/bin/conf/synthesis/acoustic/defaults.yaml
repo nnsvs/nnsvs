@@ -1,11 +1,7 @@
-question_path:
 checkpoint:
 in_scaler_path:
 out_scaler_path:
 model_yaml:
-subphone_features: coarse_coding
-relative_f0: true
-post_filter: true
 
 # Clip input context features to the range in the training data.
 # NOTE: While this would prevent unstable behaviors for test data,

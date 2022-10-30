@@ -1,0 +1,22 @@
+sample_rate: 48000
+frame_period: 5
+qst: path/to/qst.hed
+log_f0_conditioning: true
+feature_type: melf0
+use_world_codec: true
+# Use ground truth duration or not
+# if true, time-lag and duration models will not be used.
+ground_truth_duration: false
+post_filter_type: gv
+# world, pwg or usfgan
+vocoder_type: pwg
+trajectory_smoothing: true
+trajectory_smoothing_cutoff: 50
+trajectory_smoothing_cutoff_f0: 20
+vuv_threshold: 0.3
+pre_f0_shift_in_cent: 0
+post_f0_shift_in_cent: 0
+vibrato_scale: 1.0
+force_fix_vuv: false
+subphone_features: coarse_coding
+relative_f0: false
