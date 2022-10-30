@@ -5,24 +5,25 @@ import hydra
 import mlflow
 import numpy as np
 import torch
+import torch.distributed as dist
 from hydra.utils import to_absolute_path
 from nnsvs.multistream import select_streams
+from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from nnsvs.train_util import (
     collate_fn_default,
     collate_fn_random_segments,
     compute_distortions,
-    eval_spss_model,
+    eval_model,
+    load_vocoder,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,
     setup_gan,
 )
-from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
 from torch.cuda.amp import autocast
 from torch.nn import functional as F
-from tqdm import tqdm
 
 
 def train_step(
@@ -261,9 +262,12 @@ def train_loop(
     schedulerD,
     grad_scaler,
     data_loaders,
+    samplers,
     writer,
     out_scaler,
     use_mlflow,
+    vocoder,
+    vocoder_in_scaler,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
     best_dev_loss = torch.finfo(torch.float32).max
@@ -273,21 +277,35 @@ def train_loop(
     if len(adv_streams) != len(config.model.stream_sizes):
         raise ValueError("adv_streams must be specified for all streams")
 
+    if dist.is_initialized() and dist.get_rank() != 0:
+
+        def tqdm(x, **kwargs):
+            return x
+
+    else:
+        from tqdm import tqdm
+
+    train_iter = 1
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
         for phase in data_loaders.keys():
             train = phase.startswith("train")
+            # https://pytorch.org/docs/stable/data.html#torch.utils.data.distributed.DistributedSampler
+            if dist.is_initialized() and train and samplers[phase] is not None:
+                samplers[phase].set_epoch(epoch)
             running_loss = 0
             running_metrics = {}
             evaluated = False
-            for in_feats, out_feats, lengths in data_loaders[phase]:
+            for in_feats, out_feats, lengths in tqdm(
+                data_loaders[phase], desc=f"{phase} iter", leave=False
+            ):
                 # NOTE: This is needed for pytorch's PackedSequence
                 lengths, indices = torch.sort(lengths, dim=0, descending=True)
                 in_feats, out_feats = (
                     in_feats[indices].to(device),
                     out_feats[indices].to(device),
                 )
-                if not evaluated:
-                    eval_spss_model(
+                if (not train) and (not evaluated):
+                    eval_model(
                         phase,
                         epoch,
                         netG,
@@ -298,6 +316,10 @@ def train_loop(
                         out_scaler,
                         writer,
                         sr=config.data.sample_rate,
+                        use_world_codec=config.data.use_world_codec,
+                        vocoder=vocoder,
+                        vocoder_in_scaler=vocoder_in_scaler,
+                        max_num_eval_utts=config.train.max_num_eval_utts,
                     )
                     evaluated = True
 
@@ -322,6 +344,13 @@ def train_loop(
                     gan_type=config.train.gan_type,
                     vuv_mask=config.train.vuv_mask,
                 )
+
+                if train:
+                    if writer is not None:
+                        for key, val in log_metrics.items():
+                            writer.add_scalar(f"{key}_Step/{phase}", val, train_iter)
+                    train_iter += 1
+
                 running_loss += loss.item()
                 for k, v in log_metrics.items():
                     try:
@@ -331,11 +360,15 @@ def train_loop(
 
             ave_loss = running_loss / len(data_loaders[phase])
             logger.info("[%s] [Epoch %s]: loss %s", phase, epoch, ave_loss)
+            if writer is not None:
+                writer.add_scalar(f"Loss_Epoch/{phase}", ave_loss, epoch)
+            if use_mlflow:
+                mlflow.log_metric(f"{phase}_loss", ave_loss, step=epoch)
 
             for k, v in running_metrics.items():
                 ave_v = v / len(data_loaders[phase])
                 if writer is not None:
-                    writer.add_scalar(f"{k}/{phase}", ave_v, epoch)
+                    writer.add_scalar(f"{k}_Epoch/{phase}", ave_v, epoch)
                 if use_mlflow:
                     mlflow.log_metric(f"{phase}_{k}", ave_v, step=epoch)
 
@@ -417,17 +450,31 @@ def my_app(config: DictConfig) -> None:
     else:
         collate_fn = collate_fn_default
 
+    if config.train.use_ddp:
+        dist.init_process_group("nccl")
+        rank = dist.get_rank()
+        device_id = rank % torch.cuda.device_count()
+        torch.cuda.set_device(device_id)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     (
         (netG, optG, schedulerG),
         (netD, optD, schedulerD),
         grad_scaler,
         data_loaders,
+        samplers,
         writer,
         logger,
         _,
         out_scaler,
     ) = setup_gan(config, device, collate_fn)
+
+    path = config.train.pretrained_vocoder_checkpoint
+    if path is not None and len(path) > 0:
+        logger.info(f"Loading pretrained vocoder checkpoint from {path}")
+        vocoder, vocoder_in_scaler = load_vocoder(path, device)
+    else:
+        vocoder, vocoder_in_scaler = None, None
 
     out_scaler = PyTorchStandardScaler(
         torch.from_numpy(out_scaler.mean_), torch.from_numpy(out_scaler.scale_)
@@ -452,9 +499,12 @@ def my_app(config: DictConfig) -> None:
                 schedulerD,
                 grad_scaler,
                 data_loaders,
+                samplers,
                 writer,
                 out_scaler,
                 use_mlflow,
+                vocoder,
+                vocoder_in_scaler,
             )
     else:
         save_configs(config)
@@ -470,9 +520,12 @@ def my_app(config: DictConfig) -> None:
             schedulerD,
             grad_scaler,
             data_loaders,
+            samplers,
             writer,
             out_scaler,
             use_mlflow,
+            vocoder,
+            vocoder_in_scaler,
         )
 
     return last_dev_loss
