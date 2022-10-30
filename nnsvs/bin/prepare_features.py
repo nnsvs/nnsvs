@@ -1,3 +1,4 @@
+# coding: utf-8
 import os
 from concurrent.futures import ProcessPoolExecutor
 from os.path import basename, join, splitext
@@ -6,6 +7,7 @@ import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
+from nnsvs.logger import getLogger
 from nnsvs.data import (
     DurationFeatureSource,
     MelF0AcousticSource,
@@ -13,7 +15,6 @@ from nnsvs.data import (
     TimeLagFeatureSource,
     WORLDAcousticSource,
 )
-from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
