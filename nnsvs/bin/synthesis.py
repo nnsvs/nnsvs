@@ -10,9 +10,9 @@ from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features, get_static_stream_sizes
-from nnsvs.util import StandardScaler, init_seed, load_utt_list
 from nnsvs.svs import post_process, predict_timings, synthesis_from_timings
 from nnsvs.usfgan import USFGANWrapper
+from nnsvs.util import StandardScaler, init_seed, load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from parallel_wavegan.utils import load_model
 from scipy.io import wavfile

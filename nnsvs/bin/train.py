@@ -11,7 +11,6 @@ from nnmnkwii import metrics
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
 from nnsvs.multistream import split_streams
-from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from nnsvs.train_util import (
     collate_fn_default,
     collate_fn_random_segments,
@@ -21,6 +20,7 @@ from nnsvs.train_util import (
     save_configs,
     setup,
 )
+from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
 from torch.cuda.amp import autocast
