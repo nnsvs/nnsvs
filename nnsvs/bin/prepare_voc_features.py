@@ -9,8 +9,7 @@ import numpy as np
 from hydra.utils import to_absolute_path
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features
-from nnsvs.util import load_utt_list
-from nnsvs_contrib.util import get_world_stream_info
+from nnsvs.util import get_world_stream_info, load_utt_list
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 

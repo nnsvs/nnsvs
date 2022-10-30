@@ -18,7 +18,7 @@ from logging import getLogger
 
 import torch
 import torch.nn as nn
-from nnsvs_contrib.usfgan.utils import pd_indexing
+from nnsvs.usfgan.utils import pd_indexing
 
 # A logger for this file
 logger = getLogger(__name__)

@@ -9,9 +9,9 @@ from logging import getLogger
 
 import torch
 import torch.nn as nn
-from nnsvs_contrib.usfgan.layers import Conv1d1x1, ResidualBlocks, upsample
-from nnsvs_contrib.usfgan.layers.residual_block import PeriodicityEstimator
-from nnsvs_contrib.usfgan.utils import index_initial
+from nnsvs.usfgan.layers import Conv1d1x1, ResidualBlocks, upsample
+from nnsvs.usfgan.layers.residual_block import PeriodicityEstimator
+from nnsvs.usfgan.utils import index_initial
 
 # A logger for this file
 logger = getLogger(__name__)

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from nnsvs_contrib.usfgan.utils import SignalGenerator, dilated_factor
+from nnsvs.usfgan.utils import SignalGenerator, dilated_factor
 from torch import nn
 
 

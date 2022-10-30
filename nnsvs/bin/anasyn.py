@@ -8,11 +8,11 @@ import pyworld
 import torch
 from hydra.utils import to_absolute_path
 from nnsvs.dsp import bandpass_filter
+from nnsvs.gen import gen_world_params
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_stream_sizes, split_streams
+from nnsvs.usfgan import USFGANWrapper
 from nnsvs.util import StandardScaler, init_seed, load_utt_list
-from nnsvs_contrib.gen import gen_world_params
-from nnsvs_contrib.usfgan import USFGANWrapper
 from omegaconf import DictConfig, OmegaConf
 from parallel_wavegan.utils import load_model
 from scipy.io import wavfile

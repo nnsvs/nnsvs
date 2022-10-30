@@ -21,7 +21,7 @@ logger = getLogger(__name__)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from nnsvs_contrib.usfgan.layers import Conv1d, Conv2d
+from nnsvs.usfgan.layers import Conv1d, Conv2d
 from torchaudio.functional import spectrogram
 
 

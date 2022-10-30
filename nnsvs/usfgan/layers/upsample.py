@@ -9,7 +9,7 @@ This code is modified from https://github.com/r9y9/wavenet_vocoder.
 import numpy as np
 import torch
 import torch.nn.functional as F
-from nnsvs_contrib.usfgan.layers import Conv1d
+from nnsvs.usfgan.layers import Conv1d
 
 
 class Stretch2d(torch.nn.Module):
