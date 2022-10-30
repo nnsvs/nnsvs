@@ -12,7 +12,7 @@ from nnsvs.acoustic_models.multistream import (
 from nnsvs.acoustic_models.util import pad_inference, predict_lf0_with_residual
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.layers.conv import ResnetBlock, WNConv1d
-from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
+from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 from nnsvs.model import TransformerEncoder, VariancePredictor
 from nnsvs.tacotron.decoder import MDNNonAttentiveDecoder
 from nnsvs.tacotron.decoder import NonAttentiveDecoder as TacotronNonAttentiveDecoder
