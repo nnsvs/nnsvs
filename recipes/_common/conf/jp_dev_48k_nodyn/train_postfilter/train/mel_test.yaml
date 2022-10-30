@@ -1,0 +1,79 @@
+out_dir: exp
+log_dir: tensorboard/exp
+
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: true
+
+# Use distributed training or not. If true, uses distributed data parallel.
+use_ddp: false
+
+# PWG checkpoint for synthesizing waveforms
+pretrained_vocoder_checkpoint: null
+
+# steps can either be specified by steps or epochs
+max_train_steps: -1
+nepochs: 2
+checkpoint_epoch_interval: 2
+
+# GAN type (lsgan or vanilla-gan)
+gan_type: lsgan
+# MSE loss weight
+mse_weight: 0.0
+# Adversarial loss weight
+adv_weight: 1.0
+# [mel, lf0, vuv]
+adv_streams: [true, false, false]
+# Feature matching loss weight
+fm_weight: 10.0
+# Don't set the value > 0 unless you are sure what you are doing
+# mask 0 to n-th mgc for adversarial loss
+# e.g, for n=2, 0-th and 1-th mgc coefficients will be masked
+mask_nth_mgc_for_adv_loss: 0
+# Mask out unvoiced frames in the adversarial loss
+vuv_mask: false
+
+max_num_eval_utts: 10
+
+stream_wise_loss: false
+use_detect_anomaly: false
+
+optim:
+  netG:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 50
+        gamma: 0.5
+    clip_norm: 1.0
+  netD:
+    optimizer:
+      name: Adam
+      params:
+        lr: 0.0001
+        betas: [0.5, 0.9]
+        weight_decay: 0.0
+    lr_scheduler:
+      name: StepLR
+      params:
+        step_size: 50
+        gamma: 0.5
+    clip_norm: 1.0
+
+resume:
+  netG:
+    checkpoint:
+    load_optimizer: false
+  netD:
+    checkpoint:
+    load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: true
