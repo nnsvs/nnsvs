@@ -3,17 +3,19 @@ from functools import partial
 import numpy as np
 import torch
 from nnsvs.acoustic_models.multistream import (
-    HybridMultistreamSeparateF0MelModel, MultistreamSeparateF0MelModel,
-    MultistreamSeparateF0ParametricModel, NPSSMDNMultistreamParametricModel,
-    NPSSMultistreamParametricModel)
+    HybridMultistreamSeparateF0MelModel,
+    MultistreamSeparateF0MelModel,
+    MultistreamSeparateF0ParametricModel,
+    NPSSMDNMultistreamParametricModel,
+    NPSSMultistreamParametricModel,
+)
 from nnsvs.acoustic_models.util import pad_inference, predict_lf0_with_residual
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.layers.conv import ResnetBlock, WNConv1d
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.model import TransformerEncoder, VariancePredictor
 from nnsvs.tacotron.decoder import MDNNonAttentiveDecoder
-from nnsvs.tacotron.decoder import \
-    NonAttentiveDecoder as TacotronNonAttentiveDecoder
+from nnsvs.tacotron.decoder import NonAttentiveDecoder as TacotronNonAttentiveDecoder
 from nnsvs.tacotron.decoder import Prenet, ZoneOutCell
 from nnsvs.tacotron.postnet import Postnet as TacotronPostnet
 from nnsvs.util import init_weights
@@ -492,11 +494,9 @@ class ResF0VariancePredictor(VariancePredictor):
             return self(x, lengths)[0]
 
 
-
-
 class ResF0TransformerEncoder(BaseModel):
-    """Transformer encoder with residual f0 prediction
-    """
+    """Transformer encoder with residual f0 prediction"""
+
     def __init__(
         self,
         in_dim,
@@ -572,8 +572,8 @@ class ResF0TransformerEncoder(BaseModel):
 
 
 class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
-    """Non-attentive autoregressive decoder based on the duration-informed Tacotron.
-    """
+    """Non-attentive autoregressive decoder based on the duration-informed Tacotron."""
+
     def __init__(
         self,
         in_dim=512,
@@ -639,8 +639,8 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
 
 
 class BiLSTMNonAttentiveDecoder(BaseModel):
-    """NonAttentiveDecoder + BiLSTM
-    """
+    """NonAttentiveDecoder + BiLSTM"""
+
     def __init__(
         self,
         in_dim=512,
@@ -795,8 +795,8 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
 
 
 class BiLSTMMDNNonAttentiveDecoder(BaseModel):
-    """NonAttentiveDecoder + BiLSTM (MDN version)
-    """
+    """NonAttentiveDecoder + BiLSTM (MDN version)"""
+
     def __init__(
         self,
         in_dim=512,
@@ -1604,4 +1604,5 @@ class BiLSTMResF0NonAttentiveDecoder(BaseModel):
 
 def LSTMEncoder(*args, **kwargs):
     from nnsvs.model import LSTMEncoder
+
     return LSTMEncoder(*args, **kwargs)

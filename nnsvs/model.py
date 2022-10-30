@@ -1,9 +1,6 @@
 from warnings import warn
 
 import torch
-from torch import nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.layers.conv import ResnetBlock, WNConv1d
@@ -13,6 +10,8 @@ from nnsvs.multistream import split_streams
 from nnsvs.transformer.attentions import sequence_mask
 from nnsvs.transformer.encoder import Encoder as _TransformerEncoder
 from nnsvs.util import init_weights
+from torch import nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 __all__ = [
     "FFN",
@@ -743,6 +742,7 @@ class FFConvLSTM(BaseModel):
         in_ph_end_idx (int): the end index of phoneme identity in a hed file
         embed_dim (int): the dimension of the phoneme embedding
     """
+
     def __init__(
         self,
         in_dim,
@@ -867,6 +867,7 @@ class FFConvLSTM(BaseModel):
         else:
             return self(x, lengths)
 
+
 class VariancePredictor(BaseModel):
     """Variance predictor in :cite:t:`ren2020fastspeech`.
 
@@ -973,6 +974,7 @@ class VariancePredictor(BaseModel):
         else:
             return self(x, lengths)
 
+
 class LSTMEncoder(BaseModel):
     def __init__(
         self,
@@ -1039,9 +1041,10 @@ class LSTMEncoder(BaseModel):
         out = self.hidden2out(out)
         return out
 
+
 class TransformerEncoder(BaseModel):
-    """Transformer encoder
-    """
+    """Transformer encoder"""
+
     def __init__(
         self,
         in_dim,
@@ -1149,7 +1152,6 @@ class TransformerEncoder(BaseModel):
         x = self.fc_out(x.transpose(1, 2)).view(x.shape[0], -1, self.out_dim)
 
         return x
-
 
 
 # For backward compatibility

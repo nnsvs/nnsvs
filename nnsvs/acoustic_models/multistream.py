@@ -477,6 +477,7 @@ class NPSSMultistreamParametricModel(BaseModel):
             mdn=False,
         )
 
+
 class MultistreamSeparateF0MelModel(BaseModel):
     def __init__(
         self,
