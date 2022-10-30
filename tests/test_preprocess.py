@@ -6,7 +6,8 @@ from nnsvs.data import MelF0AcousticSource, WORLDAcousticSource
 
 
 @pytest.mark.skipif(
-    not (Path(__file__).parent / "data").exists(), reason="test data not found"
+    not (Path(__file__).parent / "data" / "utt_list.txt").exists(),
+    reason="test data not found",
 )
 @pytest.mark.parametrize("f0_extractor", ["dio", "harvest", "parselmouth"])
 def test_world(f0_extractor):
@@ -35,7 +36,8 @@ def test_world(f0_extractor):
 
 
 @pytest.mark.skipif(
-    not (Path(__file__).parent / "data").exists(), reason="test data not found"
+    not (Path(__file__).parent / "data" / "utt_list.txt").exists(),
+    reason="test data not found",
 )
 @pytest.mark.parametrize("f0_extractor", ["dio", "harvest", "parselmouth"])
 def test_melf0(f0_extractor):
