@@ -46,7 +46,7 @@ rm -rf dump exp outputs tensorboard packed_models
 ###########################################################
 
 # Use nit-song070 public dataset for testing on CI
-cd $NNSVS_ROOT/recipes/nit-song070/test-48k-nodyn
+cd $NNSVS_ROOT/recipes/nit-song070/test-48k-world
 rm -rf dump exp outputs tensorboard packed_models
 
 # Normal setup
@@ -94,21 +94,3 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_test \
     --postfilter_model postfilter_merged \
     --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
-
-
-###########################################################
-#                Dev (w/ dyn feats, 24k)                  #
-###########################################################
-
-# # Use nit-song070 public dataset for testing on CI
-# cd $NNSVS_ROOT/recipes/nit-song070/test-24k-nodyn
-# rm -rf dump exp outputs tensorboard packed_models
-
-# # Normal setup
-# ./run.sh --stage -1 --stop-stage 6 \
-#     --timelag-model timelag_test \
-#     --duration-model duration_test \
-#     --acoustic_model acoustic_test
-
-# # Multi-stream model
-# ./run.sh --stage 4 --stop-stage 4 --acoustic_model acoustic_multistream_test
