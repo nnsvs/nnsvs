@@ -6,11 +6,11 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs_contrib.postfilters.MultistreamPostFilter
+  _target_: nnsvs.postfilters.MultistreamPostFilter
   # If stream_sizes here is not specified, it will be set automatically.
   stream_sizes: null
   mgc_postfilter:
-    _target_: nnsvs_contrib.postfilters.Conv2dPostFilter
+    _target_: nnsvs.postfilters.Conv2dPostFilter
     in_dim: 58
     channels: 64
     kernel_size: [5, 5]

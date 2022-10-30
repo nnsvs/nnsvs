@@ -6,7 +6,7 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs_contrib.acoustic_models.NPSSMultistreamParametricModel
+  _target_: nnsvs.acoustic_models.NPSSMultistreamParametricModel
   in_dim: 86
   out_dim: 67
 
@@ -27,7 +27,7 @@ netG:
 
   # A separate model for modeling continuous log-F0
   lf0_model:
-    _target_: nnsvs_contrib.acoustic_models.BiLSTMResF0NonAttentiveDecoder
+    _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
     in_dim: 86
     in_ph_start_idx: 3
     in_ph_end_idx: 50
@@ -78,7 +78,7 @@ netG:
 
   # Spectral parameter prediction model
   mgc_model:
-    _target_: nnsvs_contrib.acoustic_models.BiLSTMNonAttentiveDecoder
+    _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
     in_dim: 87
     out_dim: 60
     in_ph_start_idx: 3
@@ -99,7 +99,7 @@ netG:
 
   # Aperiodic parameter prediction model
   bap_model:
-    _target_: nnsvs_contrib.acoustic_models.BiLSTMNonAttentiveDecoder
+    _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
     in_dim: 87
     out_dim: 3
     in_ph_start_idx: 3
@@ -120,7 +120,7 @@ netG:
 
   # V/UV prediction model
   vuv_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.acoustic_models.FFConvLSTM
     in_dim: 90
     out_dim: 1
     in_ph_start_idx: 3
