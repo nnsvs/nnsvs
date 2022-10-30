@@ -23,7 +23,7 @@ else
     post_args=""
 fi
 
-xrun nnsvs-train $ext $hydra_opt \
+xrun python $NNSVS_ROOT/nnsvs/bin/train.py $ext $hydra_opt \
     model=$timelag_model train=$timelag_train data=$timelag_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_timelag/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_timelag/ \

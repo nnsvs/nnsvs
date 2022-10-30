@@ -10,7 +10,7 @@ do
         else
             ext=""
         fi
-        xrun nnsvs-prepare-features $ext \
+        xrun python $NNSVS_ROOT/nnsvs/bin/prepare_features.py $ext \
             utt_list=data/$dbname/list/$s.list out_dir=$dump_org_dir/$s/  \
             question_path=$question_path \
             timelag=$timelag_features duration=$duration_features acoustic=$acoustic_features \

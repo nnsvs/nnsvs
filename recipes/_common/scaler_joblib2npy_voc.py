@@ -10,7 +10,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 from nnsvs.multistream import get_static_features
-from nnsvs.util import get_world_stream_info
+from nnsvs_contrib.util import get_world_stream_info
 from sklearn.preprocessing import StandardScaler
 
 
@@ -46,11 +46,17 @@ if __name__ == "__main__":
     scale = scaler.scale_
     var = scaler.var_
 
+    # TODO:
+    if len(mean) == 82:
+        stream_sizes = [80, 1, 1]
+    else:
+        stream_sizes = get_world_stream_info(
+            args.sample_rate, args.mgc_order, args.num_windows, args.vibrato_mode
+        )
+    has_dynamic_features = [False] * len(stream_sizes)
+
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    stream_sizes, has_dynamic_features = get_world_stream_info(
-        args.sample_rate, args.mgc_order, args.num_windows, args.vibrato_mode
-    )
 
     print(f"Converting {input_file} mean/scale npy files")
     lf0_params = {}

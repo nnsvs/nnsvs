@@ -28,6 +28,18 @@ do
         acoustic.trajectory_smoothing_cutoff=${trajectory_smoothing_cutoff}
 done
 
+# Pitch-shift data augmentation
+for s in ${datasets[@]}; do
+    for typ in in "in" "out"; do
+        for shift_in_cent in -100 100; do
+            python $NNSVS_ROOT/utils/pitch_augmentation.py data/list/$s.list \
+                $dump_org_dir/$s/${typ}_acoustic $dump_org_dir/$s/${typ}_acoustic_aug \
+                $question_path $typ $shift_in_cent
+        done
+        cp $dump_org_dir/$s/${typ}_acoustic/*.npy $dump_org_dir/$s/${typ}_acoustic_aug/
+    done
+done
+
 # Compute normalization stats for each input/output
 mkdir -p $dump_norm_dir
 for inout in "in" "out"; do
@@ -65,6 +77,11 @@ for s in ${datasets[@]}; do
                 xrun nnsvs-preprocess-normalize in_dir=$dump_org_dir/$s/${inout}_${typ}/ \
                     scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib \
                     out_dir=$dump_norm_dir/$s/${inout}_${typ}/
+                if [ -d $dump_org_dir/$s/${inout}_${typ}_aug ]; then
+                    xrun nnsvs-preprocess-normalize in_dir=$dump_org_dir/$s/${inout}_${typ}_aug/ \
+                        scaler_path=$dump_org_dir/${inout}_${typ}_scaler.joblib \
+                        out_dir=$dump_norm_dir/$s/${inout}_${typ}_aug/
+                fi
             fi
         done
     done

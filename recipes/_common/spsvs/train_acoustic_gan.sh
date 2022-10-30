@@ -2,15 +2,22 @@
 # Please don't try to run the shell script directory.
 
 if [ -d conf/train_acoustic ]; then
-    ext="--config-dir conf/train_acoustic"
+    ext="--config-dir conf/train_acoustic_gan"
 else
     ext=""
 fi
 
+
 if [ ! -z "${pretrained_expdir}" ]; then
-    resume_checkpoint=$pretrained_expdir/${acoustic_model}/latest.pth
+    resume_checkpoint_g=$pretrained_expdir/${acoustic_model}/latest.pth
+    if [ -e $pretrained_expdir/${acoustic_model}/latest_D.pth ]; then
+        resume_checkpoint_d=$pretrained_expdir/${acoustic_model}/latest_D.pth
+    else
+        resume_checkpoint_d=
+    fi
 else
-    resume_checkpoint=
+    resume_checkpoint_g=
+    resume_checkpoint_d=
 fi
 
 # Hyperparameter search with Hydra + optuna
@@ -23,7 +30,7 @@ else
     post_args=""
 fi
 
-xrun python $NNSVS_ROOT/nnsvs/bin/train_acoustic.py $ext $hydra_opt \
+xrun python $NNSVS_ROOT/nnsvs/bin/train_acoustic_gan.py $ext $hydra_opt \
     model=$acoustic_model train=$acoustic_train data=$acoustic_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_acoustic/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_acoustic/ \
@@ -31,8 +38,9 @@ xrun python $NNSVS_ROOT/nnsvs/bin/train_acoustic.py $ext $hydra_opt \
     data.dev.out_dir=$dump_norm_dir/$dev_set/out_acoustic/ \
     data.in_scaler_path=$dump_norm_dir/in_acoustic_scaler.joblib \
     data.out_scaler_path=$dump_norm_dir/out_acoustic_scaler.joblib \
-    ++data.sample_rate=$sample_rate \
+    data.sample_rate=$sample_rate \
     train.out_dir=$expdir/${acoustic_model} \
     train.log_dir=tensorboard/${expname}_${acoustic_model} \
-    train.resume.checkpoint=$resume_checkpoint $post_args \
-    train.pretrained_vocoder_checkpoint=$pretrained_vocoder_checkpoint
+    train.pretrained_vocoder_checkpoint=$pretrained_vocoder_checkpoint \
+    train.resume.netG.checkpoint=$resume_checkpoint_g \
+    train.resume.netD.checkpoint=$resume_checkpoint_d $post_args
