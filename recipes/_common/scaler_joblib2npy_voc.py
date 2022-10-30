@@ -10,7 +10,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 from nnsvs.multistream import get_static_features
-from nnsvs_contrib.util import get_world_stream_info
+from nnsvs.util import get_world_stream_info
 from sklearn.preprocessing import StandardScaler
 
 
