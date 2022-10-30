@@ -31,7 +31,7 @@ if __name__ == "__main__":
     mgc_model = OmegaConf.load(Path(args.mgc_checkpoint).parent / "model.yaml")
     bap_model = OmegaConf.load(Path(args.bap_checkpoint).parent / "model.yaml")
 
-    if mgc_model.netG._target_ != "nnsvs.postfilters.MultistreamPostFilter":
+    if "postfilters.MultistreamPostFilter" not in mgc_model.netG._target_:
         raise ValueError("Only MultistreamPostFilter is supported for now")
 
     checkpoint = mgc_checkpoint
