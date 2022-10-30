@@ -22,3 +22,10 @@ py_version = "py38"
 
 [[tool.pysen.lint.mypy_targets]]
 paths = ["nnsvs", "tests"]
+
+[tool.pysen.lint.source]
+excludes = [
+    "nnsvs/usfgan/layers",
+    "nnsvs/usfgan/models",
+    "nnsvs/usfgan/utils"
+]
