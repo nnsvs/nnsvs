@@ -616,22 +616,6 @@ def _instantiate_optim(optim_config, model):
     return optimizer, lr_scheduler
 
 
-def _instantiate_optim_cyclegan(optim_config, netG_A2B, netG_B2A):
-    # Optimizer
-    optimizer_class = getattr(optim, optim_config.optimizer.name)
-
-    optimizer = optimizer_class(
-        itertools.chain(netG_A2B.parameters(), netG_B2A.parameters()),
-        **optim_config.optimizer.params,
-    )
-
-    # Scheduler
-    lr_scheduler_class = getattr(optim.lr_scheduler, optim_config.lr_scheduler.name)
-    lr_scheduler = lr_scheduler_class(optimizer, **optim_config.lr_scheduler.params)
-
-    return optimizer, lr_scheduler
-
-
 def _resume(logger, resume_config, model, optimizer, lr_scheduler):
     if resume_config.checkpoint is not None and len(resume_config.checkpoint) > 0:
         logger.info("Load weights from %s", resume_config.checkpoint)
