@@ -21,11 +21,11 @@ out_dir: "./data"
 ###########################################################
 
 # HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "../../_common/hed/jp_dev.hed"
+question_path: "../../_common/hed/jp_dev_latest.hed"
 
 timelag_features: defaults
 duration_features: defaults
-acoustic_features: static_deltadelta_sinevib
+acoustic_features: nnsvs_contrib_static_only
 
 # Parameter trajectory smoothing
 # Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
