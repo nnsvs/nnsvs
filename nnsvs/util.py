@@ -54,7 +54,9 @@ def init_weights(net, init_type="normal", init_gain=0.02):
     net.apply(init_func)
 
 
-def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
+def get_world_stream_info(
+    sr: int, mgc_order: int, num_windows: int = 3, vibrato_mode: str = "none"
+):
     """Get stream sizes for WORLD-based acoustic features
 
     Args:
@@ -64,7 +66,7 @@ def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
         vibrato_mode (str): vibrato analysis mode
 
     Returns:
-        tuple: stream sizes and flags for dynamic features
+        list: stream sizes
     """
     # [mgc, lf0, vuv, bap]
     stream_sizes = [

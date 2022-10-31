@@ -976,6 +976,23 @@ class VariancePredictor(BaseModel):
 
 
 class LSTMEncoder(BaseModel):
+    """LSTM encoder
+
+    A simple LSTM-based encoder
+
+    Args:
+        in_dim (int): the input dimension
+        hidden_dim (int): the hidden dimension
+        out_dim (int): the output dimension
+        num_layers (int): the number of layers
+        bidirectional (bool): whether to use bidirectional or not
+        dropout (float): the dropout rate
+        init_type (str): the initialization type
+        in_ph_start_idx (int): the start index of phonetic context in a hed file
+        in_ph_end_idx (int): the end index of phonetic context in a hed file
+        embed_dim (int): the embedding dimension
+    """
+
     def __init__(
         self,
         in_dim: int,
@@ -1043,7 +1060,29 @@ class LSTMEncoder(BaseModel):
 
 
 class TransformerEncoder(BaseModel):
-    """Transformer encoder"""
+    """Transformer encoder
+
+
+    .. warning::
+
+        So far this is not well tested. Maybe be removed in the future.
+
+    Args:
+        in_dim (int): the input dimension
+        out_dim (int): the output dimension
+        hidden_dim (int): the hidden dimension
+        attention_dim (int): the attention dimension
+        num_heads (int): the number of heads
+        num_layers (int): the number of layers
+        kernel_size (int): the kernel size
+        dropout (float): the dropout rate
+        reduction_factor (int): the reduction factor
+        init_type (str): the initialization type
+        downsample_by_conv (bool): whether to use convolutional downsampling or not
+        in_ph_start_idx (int): the start index of phonetic context in a hed file
+        in_ph_end_idx (int): the end index of phonetic context in a hed file
+        embed_dim (int): the embedding dimension
+    """
 
     def __init__(
         self,
