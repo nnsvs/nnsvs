@@ -2,7 +2,7 @@
 """
 import os
 from concurrent.futures import ProcessPoolExecutor
-from os.path import exists, join
+from os.path import exists, islink, join
 
 import hydra
 import numpy as np
@@ -51,7 +51,7 @@ def _prepare_voc_features(
     # NOTE: To train vocoders with https://github.com/kan-bayashi/ParallelWaveGAN
     # target waveform needs to be created in the same directory as the vocoder input features.
     save_wave_path = join(out_dir, utt_id + "-wave.npy")
-    if not exists(save_wave_path):
+    if (not exists(save_wave_path)) and (not islink(save_wave_path)):
         os.symlink(join(in_dir, utt_id + "-wave.npy"), save_wave_path)
 
 

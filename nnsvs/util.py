@@ -73,23 +73,19 @@ def get_world_stream_info(sr, mgc_order, num_windows=3, vibrato_mode="none"):
         1,
         pyworld.get_num_aperiodicities(sr) * num_windows,
     ]
-    has_dynamic_features = [True, True, False, True]
     if vibrato_mode == "diff":
         # vib
         stream_sizes.append(num_windows)
-        has_dynamic_features.append(True)
     elif vibrato_mode == "sine":
         # vib + vib_flags
         stream_sizes.append(3 * num_windows)
-        has_dynamic_features.append(True)
         stream_sizes.append(1)
-        has_dynamic_features.append(False)
     elif vibrato_mode == "none":
         pass
     else:
         raise RuntimeError("Unknown vibrato mode: {}".format(vibrato_mode))
 
-    return stream_sizes, has_dynamic_features
+    return stream_sizes
 
 
 def load_utt_list(utt_list):
