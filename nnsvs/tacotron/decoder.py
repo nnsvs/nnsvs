@@ -256,6 +256,27 @@ class NonAttentiveDecoder(BaseModel):
 
 
 class MDNNonAttentiveDecoder(BaseModel):
+    """Non-atteive decoder with MDN
+
+    Each decoder step outputs the parameters of MDN.
+
+    Args:
+        in_dim (int): input dimension
+        out_dim (int): output dimension
+        layers (int): number of LSTM layers
+        hidden_dim (int): hidden dimension
+        prenet_layers (int): number of prenet layers
+        prenet_hidden_dim (int): prenet hidden dimension
+        prenet_dropout (float): prenet dropout rate
+        zoneout (float): zoneout rate
+        reduction_factor (int): reduction factor
+        downsample_by_conv (bool): if True, use conv1d to downsample the input
+        num_gaussians (int): number of Gaussians
+        sampling_mode (str): sampling mode
+        init_type (str): initialization type
+        eval_dropout (bool): if True, use dropout in evaluation
+    """
+
     def __init__(
         self,
         in_dim=512,

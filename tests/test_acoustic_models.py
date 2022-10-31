@@ -4,7 +4,7 @@ from nnsvs.acoustic_models import (
     BiLSTMMDNNonAttentiveDecoder,
     BiLSTMNonAttentiveDecoder,
     BiLSTMResF0NonAttentiveDecoder,
-    HybridMultistreamSeparateF0MelModel,
+    MDNMultistreamSeparateF0MelModel,
     MDNNonAttentiveDecoder,
     MDNResF0NonAttentiveDecoder,
     MultistreamSeparateF0MelModel,
@@ -201,7 +201,7 @@ def test_hybrid_multistream_mel_model_vuv_pred_from_mel(
         "out_lf0_mean": 5.953093881972361,
         "out_lf0_scale": 0.23435173188961034,
     }
-    model = HybridMultistreamSeparateF0MelModel(**params)
+    model = MDNMultistreamSeparateF0MelModel(**params)
     assert model.prediction_type() == PredictionType.MULTISTREAM_HYBRID
     assert not model.is_autoregressive()
     _test_model_impl(model, params["in_dim"], params["out_dim"])

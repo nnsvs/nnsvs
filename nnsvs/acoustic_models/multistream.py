@@ -9,11 +9,42 @@ __all__ = [
     "NPSSMultistreamParametricModel",
     "NPSSMDNMultistreamParametricModel",
     "MultistreamSeparateF0MelModel",
-    "HybridMultistreamSeparateF0MelModel",
+    "MDNMultistreamSeparateF0MelModel",
 ]
 
 
 class MultistreamSeparateF0ParametricModel(BaseModel):
+    """Multi-stream model with a separate F0 prediction model
+
+    acoustic features: [MGC, LF0, VUV, BAP]
+
+    vib_model and vib_flags_model are optional and will be likely to be removed.
+
+    Conditional dependency:
+    p(MGC, LF0, VUV, BAP |C) = p(LF0|C) p(MGC|LF0, C) p(BAP|LF0, C) p(VUV|LF0, C)
+
+    Args:
+        in_dim (int): Input dimension.
+        out_dim (int): Output dimension.
+        stream_sizes (list): List of stream sizes.
+        reduction_factor (int): Reduction factor.
+        encoder (nn.Module): A shared encoder.
+        mgc_model (nn.Module): MGC prediction model.
+        lf0_model (nn.Module): log-F0 prediction model.
+        vuv_model (nn.Module): V/UV prediction model.
+        bap_model (nn.Module): BAP prediction model.
+        vib_model (nn.Module): VIB prediction model.
+        vib_flags_model (nn.Module): VIB flags prediction model.
+        in_rest_idx (int): Index of the rest symbol in the input features.
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+        lf0_teacher_forcing (bool): Whether to use teacher forcing for F0 prediction.
+    """
+
     def __init__(
         self,
         in_dim: int,
@@ -179,8 +210,10 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         )
 
 
-class NPSSMDNMultistreamParametricModel(BaseModel):
-    """NPSS-like cascaded multi-stream parametric model with mixture density networks.
+class NPSSMultistreamParametricModel(BaseModel):
+    """NPSS-like cascaded multi-stream model with no mixture density networks.
+
+    NPSS: :cite:t:`blaauw2017neural`
 
     Different from the original NPSS, we don't use spectral parameters
     for the inputs of aperiodicity and V/UV prediction models.
@@ -191,141 +224,25 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
 
     Empirically, we found the above configuration works better than the original one.
 
-    Inputs:
-        lf0_model: musical context
-        mgc_model: musical context + lf0
-        bap_model: musical context + lf0
-        vuv_model: musical context + lf0 + bap
-    """
+    Conditional dependency:
+    p(MGC, LF0, VUV, BAP |C) = p(LF0|C) p(MGC|LF0, C) p(BAP|LF0, C) p(VUV|LF0, BAP, C)
 
-    def __init__(
-        self,
-        in_dim: int,
-        out_dim: int,
-        stream_sizes: list,
-        reduction_factor: int,
-        lf0_model: nn.Module,
-        mgc_model: nn.Module,
-        bap_model: nn.Module,
-        vuv_model: nn.Module,
-        # NOTE: you must carefully set the following parameters
-        in_rest_idx=0,
-        in_lf0_idx=51,
-        in_lf0_min=5.3936276,
-        in_lf0_max=6.491111,
-        out_lf0_idx=60,
-        out_lf0_mean=5.953093881972361,
-        out_lf0_scale=0.23435173188961034,
-    ):
-        super().__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.stream_sizes = stream_sizes
-        self.reduction_factor = reduction_factor
+    Args:
+        in_dim (int): Input dimension.
+        out_dim (int): Output dimension.
+        stream_sizes (list): List of stream sizes.
+        lf0_model (BaseModel): Model for predicting log-F0.
+        mgc_model (BaseModel): Model for predicting MGC.
+        bap_model (BaseModel): Model for predicting BAP.
+        vuv_model (BaseModel): Model for predicting V/UV.
+        in_rest_idx (int): Index of the rest symbol in the input features.
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
 
-        assert len(stream_sizes) in [4]
-
-        self.lf0_model = lf0_model
-        self.mgc_model = mgc_model
-        self.bap_model = bap_model
-        self.vuv_model = vuv_model
-        self.in_rest_idx = in_rest_idx
-        self.in_lf0_idx = in_lf0_idx
-        self.in_lf0_min = in_lf0_min
-        self.in_lf0_max = in_lf0_max
-        self.out_lf0_idx = out_lf0_idx
-        self.out_lf0_mean = out_lf0_mean
-        self.out_lf0_scale = out_lf0_scale
-
-    def _set_lf0_params(self):
-        # Special care for residual F0 prediction models
-        # NOTE: don't overwrite out_lf0_idx and in_lf0_idx
-        if hasattr(self.lf0_model, "out_lf0_mean"):
-            self.lf0_model.in_lf0_min = self.in_lf0_min
-            self.lf0_model.in_lf0_max = self.in_lf0_max
-            self.lf0_model.out_lf0_mean = self.out_lf0_mean
-            self.lf0_model.out_lf0_scale = self.out_lf0_scale
-
-    def prediction_type(self):
-        return PredictionType.MULTISTREAM_HYBRID
-
-    def is_autoregressive(self):
-        return (
-            self.mgc_model.is_autoregressive()
-            or self.lf0_model.is_autoregressive()
-            or self.vuv_model.is_autoregressive()
-            or self.bap_model.is_autoregressive()
-        )
-
-    def forward(self, x, lengths=None, y=None):
-        self._set_lf0_params()
-        assert x.shape[-1] == self.in_dim
-        is_inference = y is None
-
-        if is_inference:
-            y_mgc, y_lf0, y_vuv, y_bap = (
-                None,
-                None,
-                None,
-                None,
-            )
-        else:
-            # Teacher-forcing
-            outs = split_streams(y, self.stream_sizes)
-            y_mgc, y_lf0, y_vuv, y_bap = outs
-
-        # Predict continuous log-F0 first
-        if is_inference:
-            lf0, lf0_residual = self.lf0_model.inference(x, lengths), None
-        else:
-            lf0, lf0_residual = self.lf0_model(x, lengths, y_lf0)
-
-        # Predict spectral parameters
-        if is_inference:
-            mgc_inp = torch.cat([x, lf0], dim=-1)
-            mgc = self.mgc_model.inference(mgc_inp, lengths)
-        else:
-            mgc_inp = torch.cat([x, y_lf0], dim=-1)
-            mgc = self.mgc_model(mgc_inp, lengths, y_mgc)
-
-        # Predict aperiodic parameters
-        if is_inference:
-            bap_inp = torch.cat([x, lf0], dim=-1)
-            bap = self.bap_model.inference(bap_inp, lengths)
-        else:
-            bap_inp = torch.cat([x, y_lf0], dim=-1)
-            bap = self.bap_model(bap_inp, lengths, y_bap)
-
-        # Predict V/UV
-        if is_inference:
-            vuv_inp = torch.cat([x, lf0, bap[1]], dim=-1)
-            vuv = self.vuv_model.inference(vuv_inp, lengths)
-        else:
-            vuv_inp = torch.cat([x, lf0, y_bap], dim=-1)
-            vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
-
-        if is_inference:
-            out = torch.cat([mgc[0], lf0, vuv, bap[0]], dim=-1)
-            assert out.shape[-1] == self.out_dim
-            # TODO: better design
-            return out, out
-        else:
-            return (mgc, lf0, vuv, bap), lf0_residual
-
-    def inference(self, x, lengths=None):
-        return pad_inference(
-            model=self,
-            x=x,
-            lengths=lengths,
-            reduction_factor=self.reduction_factor,
-            mdn=True,
-        )
-
-
-class NPSSMultistreamParametricModel(BaseModel):
-    """NPSS-like cascaded multi-stream parametric model with no mixture density networks.
-
-    Non-MDN version
     """
 
     def __init__(
@@ -478,7 +395,181 @@ class NPSSMultistreamParametricModel(BaseModel):
         )
 
 
+class NPSSMDNMultistreamParametricModel(BaseModel):
+    """NPSS-like cascaded multi-stream parametric model with mixture density networks.
+
+    NPSS: :cite:t:`blaauw2017neural`
+
+    acoustic features: [MGC, LF0, VUV, BAP]
+
+    Conditional dependency:
+    p(MGC, LF0, VUV, BAP |C) = p(LF0|C) p(MGC|LF0, C) p(BAP|LF0, C) p(VUV|LF0, BAP, C)
+
+    Args:
+        in_dim (int): Input dimension.
+        out_dim (int): Output dimension.
+        stream_sizes (list): List of stream sizes.
+        lf0_model (BaseModel): Model for predicting log-F0.
+        mgc_model (BaseModel): Model for predicting MGC.
+        bap_model (BaseModel): Model for predicting BAP.
+        vuv_model (BaseModel): Model for predicting V/UV.
+        in_rest_idx (int): Index of the rest symbol in the input features.
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        stream_sizes: list,
+        reduction_factor: int,
+        lf0_model: nn.Module,
+        mgc_model: nn.Module,
+        bap_model: nn.Module,
+        vuv_model: nn.Module,
+        # NOTE: you must carefully set the following parameters
+        in_rest_idx=0,
+        in_lf0_idx=51,
+        in_lf0_min=5.3936276,
+        in_lf0_max=6.491111,
+        out_lf0_idx=60,
+        out_lf0_mean=5.953093881972361,
+        out_lf0_scale=0.23435173188961034,
+    ):
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.stream_sizes = stream_sizes
+        self.reduction_factor = reduction_factor
+
+        assert len(stream_sizes) in [4]
+
+        self.lf0_model = lf0_model
+        self.mgc_model = mgc_model
+        self.bap_model = bap_model
+        self.vuv_model = vuv_model
+        self.in_rest_idx = in_rest_idx
+        self.in_lf0_idx = in_lf0_idx
+        self.in_lf0_min = in_lf0_min
+        self.in_lf0_max = in_lf0_max
+        self.out_lf0_idx = out_lf0_idx
+        self.out_lf0_mean = out_lf0_mean
+        self.out_lf0_scale = out_lf0_scale
+
+    def _set_lf0_params(self):
+        # Special care for residual F0 prediction models
+        # NOTE: don't overwrite out_lf0_idx and in_lf0_idx
+        if hasattr(self.lf0_model, "out_lf0_mean"):
+            self.lf0_model.in_lf0_min = self.in_lf0_min
+            self.lf0_model.in_lf0_max = self.in_lf0_max
+            self.lf0_model.out_lf0_mean = self.out_lf0_mean
+            self.lf0_model.out_lf0_scale = self.out_lf0_scale
+
+    def prediction_type(self):
+        return PredictionType.MULTISTREAM_HYBRID
+
+    def is_autoregressive(self):
+        return (
+            self.mgc_model.is_autoregressive()
+            or self.lf0_model.is_autoregressive()
+            or self.vuv_model.is_autoregressive()
+            or self.bap_model.is_autoregressive()
+        )
+
+    def forward(self, x, lengths=None, y=None):
+        self._set_lf0_params()
+        assert x.shape[-1] == self.in_dim
+        is_inference = y is None
+
+        if is_inference:
+            y_mgc, y_lf0, y_vuv, y_bap = (
+                None,
+                None,
+                None,
+                None,
+            )
+        else:
+            # Teacher-forcing
+            outs = split_streams(y, self.stream_sizes)
+            y_mgc, y_lf0, y_vuv, y_bap = outs
+
+        # Predict continuous log-F0 first
+        if is_inference:
+            lf0, lf0_residual = self.lf0_model.inference(x, lengths), None
+        else:
+            lf0, lf0_residual = self.lf0_model(x, lengths, y_lf0)
+
+        # Predict spectral parameters
+        if is_inference:
+            mgc_inp = torch.cat([x, lf0], dim=-1)
+            mgc = self.mgc_model.inference(mgc_inp, lengths)
+        else:
+            mgc_inp = torch.cat([x, y_lf0], dim=-1)
+            mgc = self.mgc_model(mgc_inp, lengths, y_mgc)
+
+        # Predict aperiodic parameters
+        if is_inference:
+            bap_inp = torch.cat([x, lf0], dim=-1)
+            bap = self.bap_model.inference(bap_inp, lengths)
+        else:
+            bap_inp = torch.cat([x, y_lf0], dim=-1)
+            bap = self.bap_model(bap_inp, lengths, y_bap)
+
+        # Predict V/UV
+        if is_inference:
+            vuv_inp = torch.cat([x, lf0, bap[1]], dim=-1)
+            vuv = self.vuv_model.inference(vuv_inp, lengths)
+        else:
+            vuv_inp = torch.cat([x, lf0, y_bap], dim=-1)
+            vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
+
+        if is_inference:
+            out = torch.cat([mgc[0], lf0, vuv, bap[0]], dim=-1)
+            assert out.shape[-1] == self.out_dim
+            # TODO: better design
+            return out, out
+        else:
+            return (mgc, lf0, vuv, bap), lf0_residual
+
+    def inference(self, x, lengths=None):
+        return pad_inference(
+            model=self,
+            x=x,
+            lengths=lengths,
+            reduction_factor=self.reduction_factor,
+            mdn=True,
+        )
+
+
 class MultistreamSeparateF0MelModel(BaseModel):
+    """Multi-stream model with a separate F0 prediction model (mel-version)
+
+    Conditional dependency:
+    p(MEL, LF0, VUV|C) = p(LF0|C) p(MEL|LF0, C) p(VUV|LF0, C)
+
+    Args:
+        in_dim (int): Input dimension.
+        out_dim (int): Output dimension.
+        stream_sizes (list): List of stream sizes.
+        reduction_factor (int): Reduction factor.
+        encoder (nn.Module): A shared encoder.
+        mel_model (nn.Module): MEL prediction model.
+        lf0_model (nn.Module): log-F0 prediction model.
+        vuv_model (nn.Module): V/UV prediction model.
+        in_rest_idx (int): Index of the rest symbol in the input features.
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+    """
+
     def __init__(
         self,
         in_dim: int,
@@ -604,8 +695,31 @@ class MultistreamSeparateF0MelModel(BaseModel):
         )
 
 
-class HybridMultistreamSeparateF0MelModel(BaseModel):
-    """V/UV prediction from mel-spectrogram"""
+class MDNMultistreamSeparateF0MelModel(BaseModel):
+    """Multi-stream model with a separate F0 model (mel-version) and mDN
+
+    V/UV prediction is performed given a mel-spectrogram.
+
+    Conditional dependency:
+    p(MEL, LF0, VUV|C) = p(LF0|C) p(MEL|LF0, C) p(VUV|LF0, MEL, C)
+
+    Args:
+        in_dim (int): Input dimension.
+        out_dim (int): Output dimension.
+        stream_sizes (list): List of stream sizes.
+        reduction_factor (int): Reduction factor.
+        encoder (nn.Module): A shared encoder.
+        mel_model (nn.Module): MEL prediction model.
+        lf0_model (nn.Module): log-F0 prediction model.
+        vuv_model (nn.Module): V/UV prediction model.
+        in_rest_idx (int): Index of the rest symbol in the input features.
+        in_lf0_idx (int): index of lf0 in input features
+        in_lf0_min (float): minimum value of lf0 in the training data of input features
+        in_lf0_max (float): maximum value of lf0 in the training data of input features
+        out_lf0_idx (int): index of lf0 in output features. Typically 180.
+        out_lf0_mean (float): mean of lf0 in the training data of output features
+        out_lf0_scale (float): scale of lf0 in the training data of output features
+    """
 
     def __init__(
         self,
