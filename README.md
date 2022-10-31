@@ -12,3 +12,7 @@
 Neural network-based singing voice synthesis library for research
 
 Documentation can be found at https://nnsvs.github.io.
+
+## Acknowledgements
+
+- uSFGAN was adapted from [chomeyama/HN-UnifiedSourceFilterGAN](https://github.com/chomeyama/HN-UnifiedSourceFilter)
