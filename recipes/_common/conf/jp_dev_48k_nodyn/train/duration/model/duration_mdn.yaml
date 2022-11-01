@@ -1,0 +1,13 @@
+stream_sizes: [1]
+has_dynamic_features: [false]
+stream_weights: [1]
+
+netG:
+  _target_: nnsvs.model.MDNv2
+  in_dim: 82
+  out_dim: 1
+  hidden_dim: 256
+  dropout: 0.5
+  num_layers: 3
+  num_gaussians: 1
+  init_type: "kaiming_normal"

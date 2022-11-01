@@ -1,0 +1,27 @@
+# (logmel, lf0, vuv)
+stream_sizes: [80, 1, 1]
+has_dynamic_features: [false, false, false]
+num_windows: 1
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.model.ResF0Conv1dResnet
+  in_dim: 86
+  out_dim: 82
+  hidden_dim: 8
+  num_layers: 1
+  init_type: "kaiming_normal"
+  use_mdn: false
+  num_gaussians: 2
+  dim_wise: true
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_lf0_idx: 51
+  out_lf0_idx: 80
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null

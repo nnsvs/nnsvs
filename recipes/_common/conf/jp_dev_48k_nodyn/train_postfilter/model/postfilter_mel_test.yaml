@@ -1,0 +1,32 @@
+# (mel, lf0, vuv)
+stream_sizes: [80, 1, 1]
+has_dynamic_features: [false, false, false]
+num_windows: 1
+stream_weights:
+
+netG:
+  _target_: nnsvs.postfilters.MelF0MultistreamPostFilter
+  # If stream_sizes here is not specified, it will be set automatically.
+  stream_sizes: null
+  mel_postfilter:
+    _target_: nnsvs.postfilters.Conv2dPostFilter
+    in_dim: 80
+    channels: 2
+    kernel_size: [3, 3]
+    init_type: "kaiming_normal"
+    noise_type: "frame_wise"
+    noise_scale: 1.0
+    smoothing_width: 0
+  mel_offset: 0
+  lf0_postfilter: null
+
+netD:
+  _target_: nnsvs.discriminators.Conv2dD
+  # If in_dim is not specified, it will be automatically set based on adv_streams
+  in_dim: null
+  channels: 2
+  kernel_size: [3, 3]
+  padding: [0, 0]
+  padding_mode: "zeros"
+  last_sigmoid: false
+  init_type: "kaiming_normal"

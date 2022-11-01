@@ -47,6 +47,7 @@ TTS
 - :cite:t:`ren2020fastspeech`
 - :cite:t:`okamoto2019tacotron`
 - :cite:t:`wang2018comparison`
+- :cite:t:`shen2018natural`
 - :cite:t:`wu2016merlin`
 - :cite:t:`takamichi2015naist`
 - :cite:t:`zen2014deep`

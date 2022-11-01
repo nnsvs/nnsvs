@@ -1,0 +1,119 @@
+# This config is for 48kHz sampling audio with 5ms shift.
+# Generator: hn-sinc-nsf
+# Discriminator: PWG's discriminator
+# conditional features: [mgc, lf0, vuv, bap]
+# stream sizes: [60, 1, 1, 5]
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+sampling_rate: 48000     # Sampling rate.
+fft_size: 2048           # FFT size.
+hop_size: 240            # Hop size.
+win_length: 2400         # Window length.
+                         # If set to null, it will be the same as fft_size.
+window: "hann"           # Window function.
+num_mels: 180            # Number of mel basis.
+fmin: 0                  # Minimum freq in mel basis calculation.
+fmax: 24000              # Maximum frequency in mel basis calculation.
+global_gain_scale: 1.0   # Will be multiplied to all of waveform.
+trim_silence: false      # Whether to trim the start and end of silence.
+trim_threshold_in_db: 60 # Need to tune carefully if the recording is not good.
+trim_frame_size: 2048    # Frame size in trimming.
+trim_hop_size: 512       # Hop size in trimming.
+format: "npy"            # Feature file format. "npy" or "hdf5" is supported.
+
+###########################################################
+#         GENERATOR NETWORK ARCHITECTURE SETTING          #
+###########################################################
+generator_type: HnSincHifiGanGenerator
+generator_params:
+    sample_rate: 48000
+    out_channels: 1
+    cin_channels: 67
+    out_lf0_idx: 60
+    out_lf0_mean: 5.885598413281433
+    out_lf0_scale: 0.23067350503371858
+    # upsample_rate: 240: 30*2*2*2
+    resblock: "1"
+    resblock_kernel_sizes: [3, 7, 11]
+    upsample_rates: [30, 2, 2, 2]
+    upsample_kernel_sizes: [60, 4, 4, 4]
+    upsample_initial_channel: 512
+    resblock_dilation_sizes: [[1, 3, 5], [1, 3, 5], [1, 3, 5]]
+
+###########################################################
+#       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
+###########################################################
+discriminator_params:
+    in_channels: 1        # Number of input channels.
+    out_channels: 1       # Number of output channels.
+    kernel_size: 3        # Number of output channels.
+    layers: 10            # Number of conv layers.
+    conv_channels: 64     # Number of chnn layers.
+    bias: true            # Whether to use bias parameter in conv.
+    use_weight_norm: true # Whether to use weight norm.
+                          # If set to true, it will be applied to all of the conv layers.
+    nonlinear_activation: "LeakyReLU" # Nonlinear function after each conv.
+    nonlinear_activation_params:      # Nonlinear function parameters
+        negative_slope: 0.2           # Alpha in LeakyReLU.
+
+###########################################################
+#                   STFT LOSS SETTING                     #
+###########################################################
+stft_loss_params:
+    fft_sizes: [2048, 4096, 512]   # List of FFT size for STFT-based loss.
+    hop_sizes: [240, 480, 100]     # List of hop size for STFT-based loss
+    win_lengths: [1200, 2400, 480] # List of window length for STFT-based loss.
+    window: "hann_window"          # Window function for STFT-based loss
+
+###########################################################
+#               ADVERSARIAL LOSS SETTING                  #
+###########################################################
+lambda_adv: 4.0  # Loss balancing coefficient.
+
+###########################################################
+#                  DATA LOADER SETTING                    #
+###########################################################
+batch_size: 2              # Batch size.
+batch_max_steps: 2400      # Length of each audio in batch. Make sure dividable by hop_size.
+pin_memory: true           # Whether to pin memory in Pytorch DataLoader.
+num_workers: 0             # Number of workers in Pytorch DataLoader.
+remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
+
+###########################################################
+#             OPTIMIZER & SCHEDULER SETTING               #
+###########################################################
+generator_optimizer_params:
+    lr: 0.0001             # Generator's learning rate.
+    eps: 1.0e-6            # Generator's epsilon.
+    weight_decay: 0.0      # Generator's weight decay coefficient.
+generator_scheduler_params:
+    step_size: 200000      # Generator's scheduler step size.
+    gamma: 0.5             # Generator's scheduler gamma.
+                           # At each step size, lr will be multiplied by this parameter.
+generator_grad_norm: 10    # Generator's gradient norm.
+discriminator_optimizer_params:
+    lr: 0.0001             # Discriminator's learning rate.
+    eps: 1.0e-6            # Discriminator's epsilon.
+    weight_decay: 0.0      # Discriminator's weight decay coefficient.
+discriminator_scheduler_params:
+    step_size: 200000      # Discriminator's scheduler step size.
+    gamma: 0.5             # Discriminator's scheduler gamma.
+                           # At each step size, lr will be multiplied by this parameter.
+discriminator_grad_norm: 1 # Discriminator's gradient norm.
+
+###########################################################
+#                    INTERVAL SETTING                     #
+###########################################################
+discriminator_train_start_steps: 100000 # Number of steps to start to train discriminator.
+train_max_steps: 10                     # Number of training steps.
+save_interval_steps: 10                 # Interval steps to save checkpoint.
+eval_interval_steps: 10                 # Interval steps to evaluate the network.
+log_interval_steps: 10                  # Interval steps to record the training log.
+
+###########################################################
+#                     OTHER SETTING                       #
+###########################################################
+num_save_intermediate_results: 2  # Number of results to be saved as intermediate results.

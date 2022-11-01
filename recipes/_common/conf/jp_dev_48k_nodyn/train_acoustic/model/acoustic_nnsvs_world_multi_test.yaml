@@ -1,0 +1,65 @@
+# (mgc, lf0, vuv, bap)
+stream_sizes: [60, 1, 1, 5]
+has_dynamic_features: [false, false, false, false]
+num_windows: 1
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.acoustic_models.MultistreamSeparateF0ParametricModel
+  in_dim: 86
+  out_dim: 67
+
+  stream_sizes: [60, 1, 1, 5]
+  reduction_factor: 2
+
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_rest_idx: 0
+  in_lf0_idx: 51
+  out_lf0_idx: 60
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null
+
+  lf0_model:
+    _target_: nnsvs.acoustic_models.ResF0VariancePredictor
+    in_dim: 86
+    hidden_dim: 4
+    out_dim: 1
+    in_lf0_idx: 51
+    out_lf0_idx: 0
+    in_lf0_min: null
+    in_lf0_max: null
+    out_lf0_mean: null
+    out_lf0_scale: null
+
+  encoder:
+    _target_: nnsvs.acoustic_models.LSTMEncoder
+    in_dim: 86
+    hidden_dim: 4
+    out_dim: 7
+
+  mgc_model:
+    _target_: nnsvs.model.FFN
+    in_dim: 9
+    hidden_dim: 8
+    out_dim: 60
+
+  vuv_model:
+    _target_: nnsvs.model.FFN
+    in_dim: 9
+    hidden_dim: 8
+    out_dim: 1
+
+  bap_model:
+    _target_: nnsvs.model.FFN
+    in_dim: 9
+    hidden_dim: 8
+    out_dim: 5
+
+  vib_model: null
+  vib_flags_model: null

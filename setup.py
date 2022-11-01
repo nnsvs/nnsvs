@@ -43,6 +43,7 @@ setup(
             "optuna",
             "hydra-optuna-sweeper",
             "protobuf <= 3.20.1",
+            "praat-parselmouth",
         ],
         "docs": [
             "sphinx",

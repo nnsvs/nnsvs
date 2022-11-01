@@ -8,7 +8,7 @@ do
     else
         ext=""
     fi
-    xrun nnsvs-prepare-voc-features $ext acoustic=$acoustic_features \
+    xrun python $NNSVS_ROOT/nnsvs/bin/prepare_voc_features.py $ext acoustic=$acoustic_features \
         in_dir=$dump_norm_dir/$s/out_acoustic/ \
         out_dir=$dump_norm_dir/$s/in_vocoder \
         utt_list=data/list/$s.list

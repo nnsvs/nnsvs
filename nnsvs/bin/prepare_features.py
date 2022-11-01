@@ -9,6 +9,7 @@ from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
 from nnsvs.data import (
     DurationFeatureSource,
+    MelF0AcousticSource,
     MusicalLinguisticSource,
     TimeLagFeatureSource,
     WORLDAcousticSource,
@@ -55,19 +56,25 @@ def _prepare_duration_feature(
 def _prepare_acoustic_feature(
     in_acoustic_root,
     out_acoustic_root,
+    out_postfilter_root,
     in_acoustic: FileSourceDataset,
     out_acoustic: FileSourceDataset,
     idx: int,
 ) -> None:
     """prepare acoustic feature for one item of in_acoustic"""
-    x, (y, wave) = in_acoustic[idx], out_acoustic[idx]
+    x, (y, wave, y_pf) = in_acoustic[idx], out_acoustic[idx]
     name = splitext(basename(in_acoustic.collected_files[idx][0]))[0]
+    if y is None:
+        print(f"{name} is skipped")
+        return
     xpath = join(in_acoustic_root, name + "-feats.npy")
     ypath = join(out_acoustic_root, name + "-feats.npy")
     wpath = join(out_acoustic_root, name + "-wave.npy")
+    pfpath = join(out_postfilter_root, name + "-feats.npy")
     np.save(xpath, x, allow_pickle=False)
     np.save(ypath, y, allow_pickle=False)
     np.save(wpath, wave, allow_pickle=False)
+    np.save(pfpath, y_pf, allow_pickle=False)
 
 
 @hydra.main(config_path="conf/prepare_features", config_name="config")
@@ -142,27 +149,63 @@ def my_app(config: DictConfig) -> None:
         add_frame_features=True,
         subphone_features=config.acoustic.subphone_features,
         log_f0_conditioning=config.log_f0_conditioning,
-    )
-    out_acoustic_source = WORLDAcousticSource(
-        utt_list,
-        to_absolute_path(config.acoustic.wav_dir),
-        to_absolute_path(config.acoustic.label_dir),
-        question_path,
-        use_harvest=config.acoustic.use_harvest,
-        f0_ceil=config.acoustic.f0_ceil,
-        f0_floor=config.acoustic.f0_floor,
         frame_period=config.acoustic.frame_period,
-        mgc_order=config.acoustic.mgc_order,
-        num_windows=config.acoustic.num_windows,
-        relative_f0=config.acoustic.relative_f0,
-        vibrato_mode=config.acoustic.vibrato_mode,
-        sample_rate=config.acoustic.sample_rate,
-        d4c_threshold=config.acoustic.d4c_threshold,
-        trajectory_smoothing=config.acoustic.trajectory_smoothing,
-        trajectory_smoothing_cutoff=config.acoustic.trajectory_smoothing_cutoff,
-        correct_vuv=config.acoustic.correct_vuv,
-        dynamic_features_flags=config.acoustic.dynamic_features_flags,
     )
+    if config.acoustic.feature_type == "world":
+        out_acoustic_source = WORLDAcousticSource(
+            utt_list,
+            to_absolute_path(config.acoustic.wav_dir),
+            to_absolute_path(config.acoustic.label_dir),
+            question_path,
+            f0_extractor=config.acoustic.f0_extractor,
+            f0_ceil=config.acoustic.f0_ceil,
+            f0_floor=config.acoustic.f0_floor,
+            frame_period=config.acoustic.frame_period,
+            mgc_order=config.acoustic.mgc_order,
+            num_windows=config.acoustic.num_windows,
+            relative_f0=config.acoustic.relative_f0,
+            vibrato_mode=config.acoustic.vibrato_mode,
+            sample_rate=config.acoustic.sample_rate,
+            d4c_threshold=config.acoustic.d4c_threshold,
+            trajectory_smoothing=config.acoustic.trajectory_smoothing,
+            trajectory_smoothing_cutoff=config.acoustic.trajectory_smoothing_cutoff,
+            trajectory_smoothing_f0=config.acoustic.trajectory_smoothing_f0,
+            trajectory_smoothing_cutoff_f0=config.acoustic.trajectory_smoothing_cutoff_f0,
+            correct_vuv=config.acoustic.correct_vuv,
+            correct_f0=config.acoustic.correct_f0,
+            dynamic_features_flags=config.acoustic.dynamic_features_flags,
+            use_world_codec=config.acoustic.use_world_codec,
+            res_type=config.acoustic.res_type,
+        )
+    elif config.acoustic.feature_type == "melf0":
+        out_acoustic_source = MelF0AcousticSource(
+            utt_list,
+            to_absolute_path(config.acoustic.wav_dir),
+            to_absolute_path(config.acoustic.label_dir),
+            question_path,
+            f0_extractor=config.acoustic.f0_extractor,
+            f0_ceil=config.acoustic.f0_ceil,
+            f0_floor=config.acoustic.f0_floor,
+            frame_period=config.acoustic.frame_period,
+            sample_rate=config.acoustic.sample_rate,
+            d4c_threshold=config.acoustic.d4c_threshold,
+            trajectory_smoothing_f0=config.acoustic.trajectory_smoothing_f0,
+            trajectory_smoothing_cutoff_f0=config.acoustic.trajectory_smoothing_cutoff_f0,
+            correct_vuv=config.acoustic.correct_vuv,
+            correct_f0=config.acoustic.correct_f0,
+            res_type=config.acoustic.res_type,
+            fft_size=config.acoustic.fft_size,
+            win_length=config.acoustic.win_length,
+            hop_size=config.acoustic.hop_size,
+            fmin=config.acoustic.fmin,
+            fmax=config.acoustic.fmax,
+            eps=config.acoustic.eps,
+        )
+    else:
+        raise ValueError(
+            "Unknown feature type: {}".format(config.acoustic.feature_type)
+        )
+
     in_acoustic = FileSourceDataset(in_acoustic_source)
     out_acoustic = FileSourceDataset(out_acoustic_source)
 
@@ -173,6 +216,7 @@ def my_app(config: DictConfig) -> None:
     out_duration_root = join(out_dir, "out_duration")
     in_acoustic_root = join(out_dir, "in_acoustic")
     out_acoustic_root = join(out_dir, "out_acoustic")
+    out_postfilter_root = join(out_dir, "out_postfilter")
 
     for d in [
         in_timelag_root,
@@ -181,6 +225,7 @@ def my_app(config: DictConfig) -> None:
         out_duration_root,
         in_acoustic_root,
         out_acoustic_root,
+        out_postfilter_root,
     ]:
         if not os.path.exists(d):
             logger.info("mkdirs: %s", format(d))
@@ -234,6 +279,7 @@ def my_app(config: DictConfig) -> None:
                     _prepare_acoustic_feature,
                     in_acoustic_root,
                     out_acoustic_root,
+                    out_postfilter_root,
                     in_acoustic,
                     out_acoustic,
                     idx,

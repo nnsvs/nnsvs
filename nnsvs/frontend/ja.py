@@ -1,32 +1,71 @@
-import pysinsy
-from nnmnkwii.io import hts
+phonemes = [
+    "A",
+    "E",
+    "I",
+    "N",
+    "O",
+    "U",
+    "a",
+    "b",
+    "br",
+    "by",
+    "ch",
+    "cl",
+    "d",
+    "dy",
+    "e",
+    "f",
+    "g",
+    "gy",
+    "h",
+    "hy",
+    "i",
+    "j",
+    "k",
+    "ky",
+    "m",
+    "my",
+    "n",
+    "ny",
+    "o",
+    "p",
+    "py",
+    "r",
+    "ry",
+    "s",
+    "sh",
+    "t",
+    "ts",
+    "ty",
+    "u",
+    "v",
+    "w",
+    "y",
+    "z",
+    "pau",
+    "sil",
+    "fy",
+    "vy",
+    "GlottalStop",
+    "Edge",
+]
 
-# TODO: consider replacing pysinsy to pure python implementation
+_pad = "~"
 
-_global_sinsy = None
-
-
-def _lazy_init(dic_dir=None):
-    if dic_dir is None:
-        dic_dir = pysinsy.get_default_dic_dir()
-    global _global_sinsy
-    if _global_sinsy is None:
-        _global_sinsy = pysinsy.sinsy.Sinsy()
-        assert _global_sinsy.setLanguages("j", dic_dir)
+symbols = [_pad] + phonemes
 
 
-def xml2lab(xml):
-    """Convert musicxml to HTS full context labels
+_symbol_to_id = {s: i for i, s in enumerate(symbols)}
+_id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
-    Args:
-        xml (str): Path to musicxml file.
 
-    Returns:
-        HTS full context labels
-    """
-    _lazy_init()
-    _global_sinsy.loadScoreFromMusicXML(xml)
-    label = _global_sinsy.createLabelData(False, 1, 1)
-    label = hts.load(lines=label.getData())
-    _global_sinsy.clearScore()
-    return label
+def num_vocab():
+    return len(symbols)
+
+
+def text_to_sequence(text):
+    return [_symbol_to_id[s] for s in text]
+
+
+def sequence_to_text(seq):
+    return [_id_to_symbol[s] for s in seq]

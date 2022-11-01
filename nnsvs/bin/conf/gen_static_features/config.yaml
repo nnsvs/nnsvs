@@ -5,9 +5,15 @@ defaults:
 
 verbose: 100
 
+sample_rate: 48000
+
 utt_list:
 in_dir:
+gt_dir:
 out_dir:
+
+# Use ground-truth aligned (GTA) features for generatioin
+gta: false
 
 # GV post-filter
 gv_postfilter: true
@@ -18,6 +24,9 @@ bap_offset: 0
 
 # Normalize the output static features or not
 normalize: false
+
+# Convert mgc to spectrum
+mgc2sp: true
 
 out_scaler_path:
 

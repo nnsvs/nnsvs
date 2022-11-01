@@ -151,6 +151,8 @@ def get_static_features(
     for start_idx, size, v, enabled in zip(
         start_indices, stream_sizes, has_dynamic_features, streams
     ):
+        start_idx = int(start_idx)
+        size = int(size)
         if not enabled:
             continue
         if v:

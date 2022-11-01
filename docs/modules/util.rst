@@ -5,7 +5,6 @@ General utility
 
 .. automodule:: nnsvs.util
 
-
 Example files
 --------------
 
@@ -24,6 +23,16 @@ Initialization
 
     init_weights
     init_seed
+
+
+Multi-stream helper
+-------------------
+
+.. autosummary::
+    :toctree: generated/
+    :nosignatures:
+
+    get_world_stream_info
 
 Mask
 ----
@@ -76,3 +85,4 @@ Misc
     :nosignatures:
 
     dynamic_import
+

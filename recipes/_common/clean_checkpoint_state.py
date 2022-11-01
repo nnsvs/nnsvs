@@ -28,7 +28,7 @@ if __name__ == "__main__":
             del checkpoint[k]
 
     # For https://github.com/kan-bayashi/ParallelWaveGAN
-    for k in ["optimizer", "lr_scheduler"]:
+    for k in ["optimizer", "lr_scheduler", "scheduler"]:
         if k in checkpoint.keys():
             del checkpoint[k]
     if "model" in checkpoint and "discriminator" in checkpoint["model"]:

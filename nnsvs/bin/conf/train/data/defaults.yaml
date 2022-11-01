@@ -12,6 +12,10 @@ dev:
 num_workers: 2
 batch_size: 8
 pin_memory: true
+# Number of maximum frames to be loaded in a single mini-batch
+# If specified, batch sizes are dynamically adjusted based on the number of frames
+# NOTE: `batch_size` will be ignored if ``batch_max_frames`` is specified
+batch_max_frames: -1
 
 # Filter long segments that easily cause OOM error
 filter_long_segments: false

@@ -4,20 +4,25 @@ import librosa
 import numpy as np
 import pysptk
 import pyworld
+import soundfile as sf
 from nnmnkwii.datasets import FileDataSource
 from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
+from nnsvs.io.hts import get_pitch_index, get_pitch_indices
 from nnsvs.multistream import get_windows
 from nnsvs.pitch import (
+    compute_f0_correction_ratio,
+    extract_smoothed_continuous_f0,
     extract_smoothed_f0,
     extract_vibrato_likelihood,
     extract_vibrato_parameters,
     hz_to_cent_based_c4,
     lowpass_filter,
 )
-from scipy.io import wavfile
+from parallel_wavegan.bin.preprocess import logmelfilterbank
+from scipy.signal import firwin, lfilter
 
 
 def _collect_files(data_root, utt_list, ext):
@@ -38,6 +43,26 @@ def _midi_to_hz(x, idx, log_f0=False):
     return z
 
 
+def low_cut_filter(x, fs, cutoff=70):
+    """Low cut filter
+
+    Args:
+        x (ndarray): Waveform sequence
+        fs (int): Sampling frequency
+        cutoff (float): Cutoff frequency of low cut filter
+
+    Return:
+        (ndarray): Low cut filtered waveform sequence
+
+    """
+    nyquist = fs // 2
+    norm_cutoff = cutoff / nyquist
+    fil = firwin(255, norm_cutoff, pass_zero=False)
+    lcf_x = lfilter(fil, 1, x)
+
+    return lcf_x
+
+
 class MusicalLinguisticSource(FileDataSource):
     def __init__(
         self,
@@ -47,34 +72,39 @@ class MusicalLinguisticSource(FileDataSource):
         add_frame_features=False,
         subphone_features=None,
         log_f0_conditioning=True,
+        frame_period=5,
     ):
         self.data_root = data_root
         self.utt_list = utt_list
         self.add_frame_features = add_frame_features
         self.subphone_features = subphone_features
-        self.binary_dict, self.continuous_dict = hts.load_question_set(
+        self.binary_dict, self.numeric_dict = hts.load_question_set(
             question_path, append_hat_for_LL=False
         )
         self.log_f0_conditioning = log_f0_conditioning
-        self.pitch_idx = np.arange(len(self.binary_dict), len(self.binary_dict) + 3)
+        self.frame_period = frame_period
+        self.pitch_indices = get_pitch_indices(self.binary_dict, self.numeric_dict)
 
     def collect_files(self):
         return _collect_files(self.data_root, self.utt_list, ".lab")
 
     def collect_features(self, path):
         labels = hts.load(path)
+        hts_frame_shift = int(self.frame_period * 1e4)
+        labels.frame_shift = hts_frame_shift
         features = fe.linguistic_features(
             labels,
             self.binary_dict,
-            self.continuous_dict,
+            self.numeric_dict,
             add_frame_features=self.add_frame_features,
             subphone_features=self.subphone_features,
+            frame_shift=hts_frame_shift,
         )
         if self.log_f0_conditioning:
-            for idx in self.pitch_idx:
-                features[:, idx] = interp1d(
-                    _midi_to_hz(features, idx, True), kind="slinear"
-                )
+            for idx in self.pitch_indices:
+                lf0_score = _midi_to_hz(features, idx, True)
+                features[:, idx] = interp1d(lf0_score, kind="slinear")
+
         return features.astype(np.float32)
 
 
@@ -121,7 +151,7 @@ class WORLDAcousticSource(FileDataSource):
         wav_root,
         label_root,
         question_path,
-        use_harvest=True,
+        f0_extractor="harvest",
         f0_floor=150,
         f0_ceil=700,
         frame_period=5,
@@ -134,17 +164,22 @@ class WORLDAcousticSource(FileDataSource):
         d4c_threshold=0.85,
         trajectory_smoothing=False,
         trajectory_smoothing_cutoff=50,
+        trajectory_smoothing_f0=True,
+        trajectory_smoothing_cutoff_f0=20,
         correct_vuv=False,
+        correct_f0=False,
         dynamic_features_flags=None,
+        use_world_codec=False,
+        res_type="scipy",
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
         self.label_root = label_root
-        self.binary_dict, self.continuous_dict = hts.load_question_set(
+        self.binary_dict, self.numeric_dict = hts.load_question_set(
             question_path, append_hat_for_LL=False
         )
-        self.pitch_idx = len(self.binary_dict) + 1
-        self.use_harvest = use_harvest
+        self.pitch_idx = get_pitch_index(self.binary_dict, self.numeric_dict)
+        self.f0_extractor = f0_extractor
         self.f0_floor = f0_floor
         self.f0_ceil = f0_ceil
         self.frame_period = frame_period
@@ -157,11 +192,16 @@ class WORLDAcousticSource(FileDataSource):
         self.d4c_threshold = d4c_threshold
         self.trajectory_smoothing = trajectory_smoothing
         self.trajectory_smoothing_cutoff = trajectory_smoothing_cutoff
+        self.trajectory_smoothing_f0 = trajectory_smoothing_f0
+        self.trajectory_smoothing_cutoff_f0 = trajectory_smoothing_cutoff_f0
         self.correct_vuv = correct_vuv
+        self.correct_f0 = correct_f0
+        self.use_world_codec = use_world_codec
         if dynamic_features_flags is None:
             # NOTE: we have up to 6 streams: (mgc, lf0, vuv, bap, vib, vib_flags)
             dynamic_features_flags = [True, True, False, True, True, False]
         self.dynamic_features_flags = dynamic_features_flags
+        self.res_type = res_type
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -170,12 +210,17 @@ class WORLDAcousticSource(FileDataSource):
 
     def collect_features(self, wav_path, label_path):
         labels = hts.load(label_path)
+        hts_frame_shift = self.frame_period * 1e4
+        labels.frame_shift = hts_frame_shift
+        num_frames = int(labels.num_frames(frame_shift=hts_frame_shift))
+
         l_features = fe.linguistic_features(
             labels,
             self.binary_dict,
-            self.continuous_dict,
+            self.numeric_dict,
             add_frame_features=True,
             subphone_features="coarse_coding",
+            frame_shift=hts_frame_shift,
         )
 
         f0_score = _midi_to_hz(l_features, self.pitch_idx, False)
@@ -201,23 +246,53 @@ class WORLDAcousticSource(FileDataSource):
         # Workaround segfault issues of WORLD's CheapTrick
         min_f0 = min(min_f0, 500)
 
-        fs, x = wavfile.read(wav_path)
-        x = x.astype(np.float64)
+        x, fs = sf.read(wav_path)
+        assert np.max(x) <= 1.0
+        assert x.dtype == np.float64
+
         if fs != self.sample_rate:
             x = librosa.resample(
-                x, orig_sr=fs, target_sr=self.sample_rate, res_type="scipy"
+                x, orig_sr=fs, target_sr=self.sample_rate, res_type=self.res_type
             )
             fs = self.sample_rate
 
-        if self.use_harvest:
+        if self.f0_extractor == "parselmouth":
+            import parselmouth
+
+            assert (
+                self.f0_floor is not None and self.f0_ceil is not None
+            ), "must be set manually"
+            harvest_num_frames = int(int(1000 * len(x) / fs) / self.frame_period) + 1
+            f0 = (
+                parselmouth.Sound(x.astype(np.float64), fs)
+                .to_pitch_ac(
+                    time_step=self.frame_period * 0.001,
+                    voicing_threshold=0.6,
+                    very_accurate=False,
+                    pitch_floor=min_f0,
+                    pitch_ceiling=max_f0,
+                )
+                .selected_array["frequency"]
+            )
+            pad = int(np.round((3 / min_f0) / (self.frame_period * 0.001)))
+            f0 = np.pad(f0, [[0, pad]], mode="constant")
+            if len(f0) > harvest_num_frames:
+                f0 = f0[:harvest_num_frames]
+            elif len(f0) < harvest_num_frames:
+                f0 = np.pad(f0, (0, harvest_num_frames - len(f0)), mode="constant")
+
+            timeaxis = np.arange(harvest_num_frames) * self.frame_period * 0.001
+        elif self.f0_extractor == "harvest":
             f0, timeaxis = pyworld.harvest(
                 x, fs, frame_period=self.frame_period, f0_floor=min_f0, f0_ceil=max_f0
             )
-        else:
+        elif self.f0_extractor == "dio":
             f0, timeaxis = pyworld.dio(
                 x, fs, frame_period=self.frame_period, f0_floor=min_f0, f0_ceil=max_f0
             )
             f0 = pyworld.stonemask(x, f0, timeaxis, fs)
+        else:
+            raise ValueError(f"unknown f0 extractor: {self.f0_extractor}")
 
         # Workaround for https://github.com/r9y9/nnsvs/issues/7
         f0 = np.maximum(f0, 0)
@@ -246,10 +321,19 @@ class WORLDAcousticSource(FileDataSource):
             print(aperiodicity)
             raise RuntimeError("Aperiodicity has NaN")
 
+        # Apply pitch correction
+        # NOTE: we should better to apply pitch corrections
+        # or manually adjust UST/musicxml in advance.
+        sr_f0 = int(1 / (self.frame_period * 0.001))
+        if self.correct_f0:
+            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=20)
+            ratio = compute_f0_correction_ratio(f0_smooth, f0_score)
+            f0 *= ratio
+
         lf0 = f0[:, np.newaxis].copy()
         nonzero_indices = np.nonzero(lf0)
         lf0[nonzero_indices] = np.log(f0[:, np.newaxis][nonzero_indices])
-        if self.use_harvest:
+        if self.f0_extractor == "harvest":
             # https://github.com/mmorise/World/issues/35#issuecomment-306521887
             vuv = (aperiodicity[:, 0] < 0.5).astype(np.float32)[:, None]
         else:
@@ -257,6 +341,12 @@ class WORLDAcousticSource(FileDataSource):
 
         # F0 -> continuous F0
         lf0 = interp1d(lf0, kind="slinear")
+
+        # Smooth continuous F0 to avoid discontinuities
+        if self.trajectory_smoothing_f0:
+            lf0 = extract_smoothed_continuous_f0(
+                lf0, sr_f0, cutoff=self.trajectory_smoothing_cutoff_f0
+            )
 
         # Fill continuous F0s for segments where no notes are assigned & no F0s are detected.
         lf0_score = _midi_to_hz(l_features, self.pitch_idx, True)
@@ -272,13 +362,12 @@ class WORLDAcousticSource(FileDataSource):
         lf0[ind, 0] = clf0_score[ind]
 
         # Vibrato parameter extraction
-        sr_f0 = int(1 / (self.frame_period * 0.001))
         if self.vibrato_mode == "sine":
             win_length = 64
             n_fft = 256
             threshold = 0.12
 
-            if self.use_harvest:
+            if self.f0_extractor == "harvest":
                 # NOTE: harvest is not supported here since the current implemented algorithm
                 # relies on v/uv flags to find vibrato sections.
                 # We use DIO since it provides more accurate v/uv detection in my experience.
@@ -317,9 +406,14 @@ class WORLDAcousticSource(FileDataSource):
         else:
             raise RuntimeError("Unknown vibrato mode: {}".format(self.vibrato_mode))
 
-        mgc = pysptk.sp2mc(
-            spectrogram, order=self.mgc_order, alpha=pysptk.util.mcepalpha(fs)
-        )
+        if self.use_world_codec:
+            mgc = pyworld.code_spectral_envelope(spectrogram, fs, self.mgc_order + 1)
+        else:
+            mgc = pysptk.sp2mc(
+                spectrogram, order=self.mgc_order, alpha=pysptk.util.mcepalpha(fs)
+            )
+        # NOTE: used as the target for post-filters
+        spectrogram = np.log(spectrogram)
 
         # Post-processing for aperiodicy
         # ref: https://github.com/MTG/WGANSing/blob/mtg/vocoder.py
@@ -338,7 +432,7 @@ class WORLDAcousticSource(FileDataSource):
 
         # Parameter trajectory smoothing
         if self.trajectory_smoothing:
-            modfs = int(1 / 0.005)
+            modfs = int(1 / (self.frame_period * 0.001))
             for d in range(mgc.shape[1]):
                 mgc[:, d] = lowpass_filter(
                     mgc[:, d], modfs, cutoff=self.trajectory_smoothing_cutoff
@@ -349,12 +443,13 @@ class WORLDAcousticSource(FileDataSource):
                 )
 
         # Adjust lengths
-        mgc = mgc[: labels.num_frames()]
-        lf0 = lf0[: labels.num_frames()]
-        vuv = vuv[: labels.num_frames()]
-        bap = bap[: labels.num_frames()]
-        vib = vib[: labels.num_frames()] if vib is not None else None
-        vib_flags = vib_flags[: labels.num_frames()] if vib_flags is not None else None
+        sp = spectrogram[:num_frames]
+        mgc = mgc[:num_frames]
+        lf0 = lf0[:num_frames]
+        vuv = vuv[:num_frames]
+        bap = bap[:num_frames]
+        vib = vib[:num_frames] if vib is not None else None
+        vib_flags = vib_flags[:num_frames] if vib_flags is not None else None
 
         if self.relative_f0:
             # # F0 derived from the musical score
@@ -393,25 +488,34 @@ class WORLDAcousticSource(FileDataSource):
         # Concat features
         if vib is None and vib_flags is None:
             features = np.hstack((mgc, f0_target, vuv, bap)).astype(np.float32)
+            pf_features = np.hstack((sp, f0_target, vuv, bap)).astype(np.float32)
         elif vib is not None and vib_flags is None:
             features = np.hstack((mgc, f0_target, vuv, bap, vib)).astype(np.float32)
+            pf_features = np.hstack((sp, f0_target, vuv, bap, vib)).astype(np.float32)
         elif vib is not None and vib_flags is not None:
             features = np.hstack((mgc, f0_target, vuv, bap, vib, vib_flags)).astype(
+                np.float32
+            )
+            pf_features = np.hstack((sp, f0_target, vuv, bap, vib, vib_flags)).astype(
                 np.float32
             )
         else:
             raise RuntimeError("Unknown combination of features")
 
+        if len(features) < num_frames:
+            print(f"WARN: length mismatch for {wav_path}")
+            print(len(features), num_frames)
+            return None, None, None
+
         # Align waveform and features
-        wave = x.astype(np.float32) / 2 ** 15
+        wave = x.astype(np.float32)
+
         T = int(features.shape[0] * (fs * self.frame_period / 1000))
         if len(wave) < T:
-            if T - len(wave) > int(fs * 0.005):
-                print("Warn!!", T, len(wave), T - len(wave))
-                print("you have unepxcted input. Please debug though ipdb")
-                import ipdb
-
-                ipdb.set_trace()
+            if T - len(wave) > int(fs * (self.frame_period * 0.001)):
+                print("Length mismatch", T, len(wave), T - len(wave))
+                print(f"Unaligned data: {wav_path} and {label_path}")
+                raise RuntimeError("Unaligned data")
             else:
                 pass
             wave = np.pad(wave, (0, T - len(wave)))
@@ -420,5 +524,266 @@ class WORLDAcousticSource(FileDataSource):
 
         assert np.isfinite(features).all()
         assert np.isfinite(wave).all()
+        assert np.isfinite(pf_features).all()
 
-        return features, wave
+        return features, wave, pf_features
+
+
+class MelF0AcousticSource(FileDataSource):
+    def __init__(
+        self,
+        utt_list,
+        wav_root,
+        label_root,
+        question_path,
+        f0_extractor="harvest",
+        f0_floor=150,
+        f0_ceil=700,
+        frame_period=5,
+        vibrato_mode="none",  # diff, sine
+        sample_rate=48000,
+        d4c_threshold=0.85,
+        trajectory_smoothing_f0=True,
+        trajectory_smoothing_cutoff_f0=20,
+        correct_vuv=False,
+        correct_f0=False,
+        res_type="scipy",
+        fft_size=512,
+        win_length=480,
+        hop_size=120,
+        fmin=30,
+        fmax=None,
+        eps=1e-10,
+    ):
+        self.utt_list = utt_list
+        self.wav_root = wav_root
+        self.label_root = label_root
+        self.binary_dict, self.numeric_dict = hts.load_question_set(
+            question_path, append_hat_for_LL=False
+        )
+        self.pitch_idx = get_pitch_index(self.binary_dict, self.numeric_dict)
+        self.f0_extractor = f0_extractor
+        self.f0_floor = f0_floor
+        self.f0_ceil = f0_ceil
+        self.frame_period = frame_period
+        self.vibrato_mode = vibrato_mode
+        self.sample_rate = sample_rate
+        self.d4c_threshold = d4c_threshold
+        self.trajectory_smoothing_f0 = trajectory_smoothing_f0
+        self.trajectory_smoothing_cutoff_f0 = trajectory_smoothing_cutoff_f0
+        self.correct_vuv = correct_vuv
+        self.correct_f0 = correct_f0
+        self.res_type = res_type
+        self.fft_size = fft_size
+        self.win_length = win_length
+        self.hop_size = hop_size
+        self.fmin = fmin
+        if fmax is None:
+            fmax = sample_rate // 2
+        self.fmax = fmax
+        self.eps = eps
+
+    def collect_files(self):
+        wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
+        label_paths = _collect_files(self.label_root, self.utt_list, ".lab")
+        return wav_paths, label_paths
+
+    def collect_features(self, wav_path, label_path):
+        labels = hts.load(label_path)
+        hts_frame_shift = int(self.frame_period * 1e4)
+        labels.frame_shift = hts_frame_shift
+        num_frames = int(labels.num_frames(frame_shift=hts_frame_shift))
+
+        l_features = fe.linguistic_features(
+            labels,
+            self.binary_dict,
+            self.numeric_dict,
+            add_frame_features=True,
+            subphone_features="coarse_coding",
+            frame_shift=hts_frame_shift,
+        )
+
+        f0_score = _midi_to_hz(l_features, self.pitch_idx, False)
+        notes = l_features[:, self.pitch_idx]
+        notes = notes[notes > 0]
+
+        # allow 200 cent upper and 600 cent lower to properly handle F0 estimation of
+        # preparation, vibrato and overshoot.
+        # NOET: set the minimum f0 to 63.5 Hz (125 - 3*20.5)
+        # https://acoustics.jp/qanda/answer/50.html
+        # NOTE: sinsy allows 30-150 cent frequency range for vibrato (as of 2010)
+        # https://staff.aist.go.jp/m.goto/PAPER/SIGMUS201007oura.pdf
+        min_f0 = max(63.5, librosa.midi_to_hz(min(notes) - 6))
+        max_f0 = librosa.midi_to_hz(max(notes) + 2)
+        assert max_f0 > min_f0
+
+        # Use fixed f0 range for HARVEST if specified
+        if self.f0_floor is not None:
+            min_f0 = self.f0_floor
+        if self.f0_ceil is not None:
+            max_f0 = self.f0_ceil
+
+        # Workaround segfault issues of WORLD's CheapTrick
+        min_f0 = min(min_f0, 500)
+
+        x, fs = sf.read(wav_path)
+        assert np.max(x) <= 1.0
+        assert x.dtype == np.float64
+
+        if fs != self.sample_rate:
+            x = librosa.resample(
+                x, orig_sr=fs, target_sr=self.sample_rate, res_type=self.res_type
+            )
+            fs = self.sample_rate
+
+        if self.f0_extractor == "parselmouth":
+            import parselmouth
+
+            assert (
+                self.f0_floor is not None and self.f0_ceil is not None
+            ), "must be set manually"
+            harvest_num_frames = int(int(1000 * len(x) / fs) / self.frame_period) + 1
+            f0 = (
+                parselmouth.Sound(x.astype(np.float64), fs)
+                .to_pitch_ac(
+                    time_step=self.frame_period * 0.001,
+                    voicing_threshold=0.6,
+                    very_accurate=False,
+                    pitch_floor=min_f0,
+                    pitch_ceiling=max_f0,
+                )
+                .selected_array["frequency"]
+            )
+            pad = int(np.round((3 / min_f0) / (self.frame_period * 0.001)))
+            f0 = np.pad(f0, [[0, pad]], mode="constant")
+            if len(f0) > harvest_num_frames:
+                f0 = f0[:harvest_num_frames]
+            elif len(f0) < harvest_num_frames:
+                f0 = np.pad(f0, (0, harvest_num_frames - len(f0)), mode="constant")
+
+            timeaxis = np.arange(harvest_num_frames) * self.frame_period * 0.001
+        elif self.f0_extractor == "harvest":
+            f0, timeaxis = pyworld.harvest(
+                x, fs, frame_period=self.frame_period, f0_floor=min_f0, f0_ceil=max_f0
+            )
+        elif self.f0_extractor == "dio":
+            f0, timeaxis = pyworld.dio(
+                x, fs, frame_period=self.frame_period, f0_floor=min_f0, f0_ceil=max_f0
+            )
+            f0 = pyworld.stonemask(x, f0, timeaxis, fs)
+        else:
+            raise ValueError(f"unknown f0 extractor: {self.f0_extractor}")
+
+        # Workaround for https://github.com/r9y9/nnsvs/issues/7
+        f0 = np.maximum(f0, 0)
+
+        # Correct V/UV (and F0) based on the musical score information
+        # treat frames where musical notes are not assigned as unvoiced
+        # Use smoothed mask so that we don't mask out overshoot or something
+        # that could happen at the start/end of notes
+        # 0.5 sec. window (could be tuned for better results)
+        if self.correct_vuv:
+            win_length = int(0.5 / (self.frame_period * 0.001))
+            mask = np.convolve(f0_score, np.ones(win_length) / win_length, "same")
+            if len(f0) > len(mask):
+                mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            elif len(f0) < len(mask):
+                mask = mask[: len(f0)]
+            f0 = f0 * np.sign(mask)
+
+        aperiodicity = pyworld.d4c(x, f0, timeaxis, fs, threshold=self.d4c_threshold)
+
+        if np.isnan(aperiodicity).any():
+            print(wav_path)
+            print(min_f0, max_f0, aperiodicity.shape, fs)
+            print(np.isnan(aperiodicity).sum())
+            print(aperiodicity)
+            raise RuntimeError("Aperiodicity has NaN")
+
+        # Apply pitch correction
+        # NOTE: we should better to apply pitch corrections
+        # or manually adjust UST/musicxml in advance.
+        sr_f0 = int(1 / (self.frame_period * 0.001))
+        if self.correct_f0:
+            f0_smooth = extract_smoothed_f0(f0, sr_f0, cutoff=20)
+            ratio = compute_f0_correction_ratio(f0_smooth, f0_score)
+            f0 *= ratio
+
+        lf0 = f0[:, np.newaxis].copy()
+        nonzero_indices = np.nonzero(lf0)
+        lf0[nonzero_indices] = np.log(f0[:, np.newaxis][nonzero_indices])
+        if self.f0_extractor == "harvest":
+            # https://github.com/mmorise/World/issues/35#issuecomment-306521887
+            vuv = (aperiodicity[:, 0] < 0.5).astype(np.float32)[:, None]
+        else:
+            vuv = (lf0 != 0).astype(np.float32)
+
+        # F0 -> continuous F0
+        lf0 = interp1d(lf0, kind="slinear")
+
+        # Smooth continuous F0 to avoid discontinuities
+        if self.trajectory_smoothing_f0:
+            lf0 = extract_smoothed_continuous_f0(
+                lf0, sr_f0, cutoff=self.trajectory_smoothing_cutoff_f0
+            )
+
+        # Fill continuous F0s for segments where no notes are assigned & no F0s are detected.
+        lf0_score = _midi_to_hz(l_features, self.pitch_idx, True)
+        clf0_score = interp1d(lf0_score, kind="slinear")
+        mask = np.convolve(lf0_score, np.ones(1), "same")
+        if len(f0) > len(mask):
+            mask = np.pad(mask, (0, len(f0) - len(mask)), "constant")
+            clf0_score = np.pad(clf0_score, (0, len(f0) - len(clf0_score)), "constant")
+        elif len(f0) < len(mask):
+            mask = mask[: len(f0)]
+            clf0_score = clf0_score[: len(f0)]
+        ind = (mask + f0.reshape(-1)) <= 0
+        lf0[ind, 0] = clf0_score[ind]
+
+        # Mel-spectrogram
+        logmel = logmelfilterbank(
+            x,
+            fs,
+            fft_size=self.fft_size,
+            hop_size=self.hop_size,
+            win_length=self.win_length,
+            window="hann",
+            fmin=self.fmin,
+            fmax=self.fmax,
+            eps=self.eps,
+        )
+
+        # Adjust lengths
+        logmel = logmel[:num_frames]
+        lf0 = lf0[:num_frames]
+        vuv = vuv[:num_frames]
+
+        # Concat features
+        features = np.hstack((logmel, lf0, vuv)).astype(np.float32)
+        pf_features = features
+
+        if len(features) < num_frames:
+            print(f"WARN: length mismatch for {wav_path}")
+            print(len(features), num_frames)
+            return None, None, None
+
+        # Align waveform and features
+        wave = x.astype(np.float32)
+
+        T = int(features.shape[0] * (fs * self.frame_period / 1000))
+        if len(wave) < T:
+            if T - len(wave) > int(fs * (self.frame_period * 0.001)):
+                print("Length mismatch", T, len(wave), T - len(wave))
+                print(f"Unaligned data: {wav_path} and {label_path}")
+                raise RuntimeError("Unaligned data")
+            else:
+                pass
+            wave = np.pad(wave, (0, T - len(wave)))
+        assert wave.shape[0] >= T
+        wave = wave[:T]
+
+        assert np.isfinite(features).all()
+        assert np.isfinite(wave).all()
+        assert np.isfinite(pf_features).all()
+
+        return features, wave, pf_features

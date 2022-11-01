@@ -1,0 +1,101 @@
+# General settings.
+spk: "jsut"
+sample_rate: 48000
+
+# exp tag(for managing experiments)
+tag:
+
+###########################################################
+#                DATA PREPARATION SETTING                 #
+###########################################################
+
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+
+# HTS-style question used for extracting musical/linguistic context from musicxml files
+question_path: "../../_common/hed/jp_dev_latest.hed"
+
+timelag_features: defaults
+duration_features: defaults
+acoustic_features: nnsvs_contrib_static_only
+
+# Parameter trajectory smoothing
+# Ref: The NAIST Text-to-Speech System for the Blizzard Challenge 2015
+trajectory_smoothing: false
+trajectory_smoothing_cutoff: 50
+
+# Base dump norm directory that contains scaler files
+base_dump_norm_dir:
+
+###########################################################
+#                TRAINING SETTING                         #
+###########################################################
+
+# Models
+# To customize, put your config or change ones in
+# conf/train/{timelag,duration,acoustic}/ and
+# specify the config name below
+# NOTE: *_model: model definition, *_train: general train configs,
+# *_data: data configs (e.g., batch size)
+
+timelag_model: timelag_mdn
+timelag_train: myconfig
+timelag_data: myconfig
+
+duration_model: duration_vp_mdn
+duration_train: myconfig
+duration_data: myconfig
+
+acoustic_model: acoustic_nnsvs_world_multi_ar_f0
+acoustic_train: myconfig
+acoustic_data: myconfig
+
+postfilter_model: postfilter_mgc
+postfilter_train: mgc
+postfilter_data: myconfig
+
+# Pretrained model dir (leave empty to disable)
+pretrained_expdir:
+
+# Advanced settings for hyperparameter search with Hydra and Optuna.
+# https://hydra.cc/docs/plugins/optuna_sweeper/
+# NOTE: Don't use spaces for each search space configuration.
+# OK: data.batch_size=range(1,16)
+# NG: data.batch_size=range(1, 16)
+# Example 1: data.batch_size=range(1,16) model.netG.hidden_dim=choice(32,64,128)
+# Example 2: train.optim.optimizer.params.lr=interval(0.0001,0.01)
+timelag_hydra_optuna_sweeper_args:
+timelag_hydra_optuna_sweeper_n_trials: 100
+duration_hydra_optuna_sweeper_args:
+duration_hydra_optuna_sweeper_n_trials: 100
+acoustic_hydra_optuna_sweeper_args:
+acoustic_hydra_optuna_sweeper_n_trials: 100
+
+###########################################################
+#                SYNTHESIS SETTING                        #
+###########################################################
+timelag_synthesis: defaults
+duration_synthesis: defaults
+acoustic_synthesis: defaults
+
+# latest.pth or best.pth
+timelag_eval_checkpoint: latest.pth
+duration_eval_checkpoint: latest.pth
+acoustic_eval_checkpoint: latest.pth
+postfilter_eval_checkpoint: latest.pth
+
+###########################################################
+#                VOCODER SETTING                          #
+###########################################################
+
+# NOTE: conf/parallel_wavegan/${vocoder_model}.yaml must exist.
+vocoder_model:
+# Pretrained checkpoint path for the vocoder model
+# NOTE: if you want to try fine-tuning, please specify the path here
+pretrained_vocoder_checkpoint:
+# absolute/relative path to the checkpoint
+# NOTE: the checkpoint is used for synthesis and packing
+# This doesn't have any effect on training
+vocoder_eval_checkpoint:

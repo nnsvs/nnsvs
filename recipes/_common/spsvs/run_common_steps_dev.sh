@@ -19,17 +19,12 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "stage 4: Training acoustic model"
-    . $NNSVS_COMMON_ROOT/train_resf0_acoustic.sh
-fi
-
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    echo "stage 5: Generate features from timelag/duration/acoustic models"
-    . $NNSVS_COMMON_ROOT/generate.sh
+    . $NNSVS_COMMON_ROOT/train_acoustic.sh
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     echo "stage 6: Synthesis waveforms"
-    . $NNSVS_COMMON_ROOT/synthesis_resf0.sh
+    . $NNSVS_COMMON_ROOT/synthesis.sh
 fi
 
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
@@ -64,16 +59,13 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
 fi
 
 if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
-    echo "stage 11: Synthesis waveforms by parallel_wavegan"
-    if [ -z "${vocoder_eval_checkpoint}" ]; then
-        vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"
-    fi
-    outdir="${expdir}/$vocoder_model/wav/$(basename "${vocoder_eval_checkpoint}" .pkl)"
-    for s in ${testsets[@]}; do
-        xrun parallel-wavegan-decode --dumpdir $dump_norm_dir/$s/in_vocoder \
-            --checkpoint $vocoder_eval_checkpoint \
-            --outdir $outdir
-    done
+    echo "stage 11: Synthesize waveforms from exracted features"
+    . $NNSVS_COMMON_ROOT/anasyn.sh
+fi
+
+if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
+    echo "stage 12: Training GAN-based acoustic model"
+    . $NNSVS_COMMON_ROOT/train_acoustic_gan.sh
 fi
 
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
@@ -101,6 +93,13 @@ if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     else
         dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
     fi
+
+    if [[ ${acoustic_features} == *"melf0"* ]]; then
+        feature_type="melf0"
+    else
+        feature_type="world"
+    fi
+
     mkdir -p $dst_dir
     # global config file
     # NOTE: New residual F0 prediction models require relative_f0 to be false.
@@ -109,6 +108,8 @@ if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
 sample_rate: ${sample_rate}
 frame_period: 5
 log_f0_conditioning: true
+use_world_codec: true
+feature_type: ${feature_type}
 
 # Model-specific synthesis configs
 timelag:
@@ -122,11 +123,6 @@ acoustic:
     force_clip_input_features: true
     relative_f0: false
     post_filter: true
-
-# Model definitions
-timelag_model: ${timelag_model}
-duration_model: ${duration_model}
-acoustic_model: ${acoustic_model}
 EOL
 
     . $NNSVS_COMMON_ROOT/pack_model.sh

@@ -3,12 +3,68 @@ Update guide
 
 This page summarizes guides when you use the updated version of NNSVS.
 
-v0.0.2 to master
+v0.0.3 to master
 ----------------
 
 .. warning::
 
     The master branch is the development version of NNSVS. It is ready for developers to try out new features but use it on your own.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- train_resf0.py is renamed to train_acoustic.py. Please use train_acoustic.py for training acoustic models.
+
+Hed
+~~~
+
+NNSVS now uses the rest note information in the preprocessing and synthesis stages.
+In addition, NNSVS aasumes that the rest note (or equivalent phoneme) context is on the first feature in your hed file. For example, the first feature of a JP hed file should look like:
+
+.. code-block::
+
+    QS "C-Phone_Muon"     {*-sil+*,*-pau+*}
+
+Please do make sure to have the rest note context on the top of the hed file.
+
+Models
+^^^^^^^
+
+- We've found that multi-stream models generally worked better than single-stream models. Please consider using multi-stream models. See also :doc:`acoustic_models` and :doc:`how_to_choose_model`.
+
+config.yaml
+^^^^^^^^^^^^
+
+TBD
+
+Run.sh
+^^^^^^^
+
+TBD
+
+train.py: train config
+^^^^^^^^^^^^^^^^^^^^^^
+
+TBD
+
+train.py: data config
+^^^^^^^^^^^^^^^^^^^^^^
+
+- New parameter: ``batch_max_frames`` if specified, the batch size will be automatically adjusted to fit the specified number of frames. To allow efficient use of GPU memory, please do set this value.
+
+train_acoustic.py: train config
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TBD
+
+train_resf0.py: data config
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- New parameter: ``batch_max_frames`` if specified, the batch size will be automatically adjusted to fit the specified number of frames. To allow efficient use of GPU memory, please do set this value.
+
+
+v0.0.2 to v0.0.3
+----------------
 
 Hed
 ~~~

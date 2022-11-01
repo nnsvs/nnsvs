@@ -5,6 +5,12 @@ log_dir: tensorboard/exp
 # only works on supported GPUs
 use_amp: false
 
+# Use distributed training or not. If true, uses distributed data parallel.
+use_ddp: false
+
+# PWG checkpoint for synthesizing waveforms
+pretrained_vocoder_checkpoint: null
+
 # steps can either be specified by steps or epochs
 max_train_steps: -1
 nepochs: 100
@@ -26,6 +32,8 @@ fm_weight: 10.0
 mask_nth_mgc_for_adv_loss: 0
 # Mask out unvoiced frames in the adversarial loss
 vuv_mask: false
+
+max_num_eval_utts: 10
 
 stream_wise_loss: false
 use_detect_anomaly: true

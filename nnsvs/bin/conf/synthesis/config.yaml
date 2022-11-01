@@ -2,46 +2,15 @@ defaults:
   - timelag: defaults
   - duration: defaults
   - acoustic: defaults
+  - vocoder: defaults
+  - synthesis: defaults
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
   - _self_
 
 verbose: 100
-
 device: cuda # or cpu
 
-# Input can be either specified by
-# 1) utt_list and in_dir
-# 2) label path
-# The former is useful for batch experiments, and latter is useful
-# for testing.
-
-# (1)
 utt_list:
 in_dir:
 out_dir:
-
-# (2)
-label_path:
-out_wav_path:
-
-sample_rate: 48000
-frame_period: 5
-question_path: path/to/qst.hed
-log_f0_conditioning: true
-
-# Use ground truth duration or not
-# if true, time-lag and duration models will not be used.
-ground_truth_duration: false
-
-# Inference time vibrato scaling
-# Set 0.0 to disable vibrato
-vibrato_scale: 1.0
-
-gain_normalize: false
-
-# If not empty, try to search statisics in the directory
-stats_dir:
-# If not empty, try to search models in the directory
-model_dir:
-model_checkpoint: latest.pth

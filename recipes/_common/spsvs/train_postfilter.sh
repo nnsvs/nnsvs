@@ -29,7 +29,7 @@ else
     post_args=""
 fi
 
-xrun nnsvs-train-postfilter $ext $hydra_opt \
+xrun python $NNSVS_ROOT/nnsvs/bin/train_postfilter.py  $ext $hydra_opt \
     model=$postfilter_model train=$postfilter_train data=$postfilter_data \
     data.train_no_dev.in_dir=$expdir/$acoustic_model/norm/$train_set/in_postfilter \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_postfilter \
@@ -41,4 +41,5 @@ xrun nnsvs-train-postfilter $ext $hydra_opt \
     train.out_dir=$expdir/${postfilter_model} \
     train.log_dir=tensorboard/${expname}_${postfilter_model} \
     train.resume.netG.checkpoint=$resume_checkpoint_g \
-    train.resume.netD.checkpoint=$resume_checkpoint_d $post_args
+    train.resume.netD.checkpoint=$resume_checkpoint_d \
+    train.pretrained_vocoder_checkpoint=$pretrained_vocoder_checkpoint $post_args

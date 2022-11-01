@@ -14,8 +14,6 @@ Helper for training
     :nosignatures:
 
     setup
-    setup_gan
-    setup_cyclegan
     save_checkpoint
     num_trainable_params
 
@@ -26,6 +24,7 @@ DataLoader
     :toctree: generated/
     :nosignatures:
 
+    batch_by_size
     collate_fn_default
     collate_fn_random_segments
     get_data_loaders

@@ -7,6 +7,8 @@ from nnsvs.layers.conv import ResnetBlock, WNConv1d
 from nnsvs.layers.layer_norm import LayerNorm
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.multistream import split_streams
+from nnsvs.transformer.attentions import sequence_mask
+from nnsvs.transformer.encoder import Encoder as _TransformerEncoder
 from nnsvs.util import init_weights
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -22,7 +24,9 @@ __all__ = [
     "Conv1dResnetMDN",
     "Conv1dResnetSAR",
     "FFConvLSTM",
+    "LSTMEncoder",
     "VariancePredictor",
+    "TransformerEncoder",
 ]
 
 
@@ -731,6 +735,12 @@ class FFConvLSTM(BaseModel):
         num_lstm_layers (int): the number of layers of the LSTM
         bidirectional (bool): whether to use bidirectional LSTM
         init_type (str): the type of weight initialization
+        use_mdn (bool): whether to use MDN or not
+        dim_wise (bool): whether to use dimension-wise or not
+        num_gaussians (int): the number of gaussians
+        in_ph_start_idx (int): the start index of phoneme identity in a hed file
+        in_ph_end_idx (int): the end index of phoneme identity in a hed file
+        embed_dim (int): the dimension of the phoneme embedding
     """
 
     def __init__(
@@ -739,16 +749,37 @@ class FFConvLSTM(BaseModel):
         ff_hidden_dim=2048,
         conv_hidden_dim=1024,
         lstm_hidden_dim=256,
-        out_dim=199,
+        out_dim=67,
         dropout=0.0,
         num_lstm_layers=2,
         bidirectional=True,
         init_type="none",
+        use_mdn=False,
+        dim_wise=True,
+        num_gaussians=4,
+        in_ph_start_idx: int = 1,
+        in_ph_end_idx: int = 50,
+        embed_dim=None,
     ):
         super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.in_ph_start_idx = in_ph_start_idx
+        self.in_ph_end_idx = in_ph_end_idx
+        self.num_vocab = in_ph_end_idx - in_ph_start_idx
+        self.embed_dim = embed_dim
+        self.use_mdn = use_mdn
+
+        if self.embed_dim is not None:
+            assert in_dim > self.num_vocab
+            self.emb = nn.Embedding(self.num_vocab, embed_dim)
+            self.fc_in = nn.Linear(in_dim - self.num_vocab, embed_dim)
+            ff_in_dim = embed_dim
+        else:
+            ff_in_dim = in_dim
 
         self.ff = nn.Sequential(
-            nn.Linear(in_dim, ff_hidden_dim),
+            nn.Linear(ff_in_dim, ff_hidden_dim),
             nn.ReLU(),
             nn.Linear(ff_hidden_dim, ff_hidden_dim),
             nn.ReLU(),
@@ -782,31 +813,59 @@ class FFConvLSTM(BaseModel):
         )
 
         last_in_dim = num_direction * lstm_hidden_dim
-        self.fc = nn.Linear(last_in_dim, out_dim)
+        if self.use_mdn:
+            assert dim_wise
+            self.fc = MDNLayer(
+                in_dim=last_in_dim,
+                out_dim=out_dim,
+                num_gaussians=num_gaussians,
+                dim_wise=dim_wise,
+            )
+        else:
+            self.fc = nn.Linear(last_in_dim, out_dim)
         init_weights(self, init_type)
 
+    def prediction_type(self):
+        return (
+            PredictionType.PROBABILISTIC
+            if self.use_mdn
+            else PredictionType.DETERMINISTIC
+        )
+
     def forward(self, x, lengths=None, y=None):
-        """Forward step
-
-        Args:
-            x (torch.Tensor): the input tensor
-            lengths (torch.Tensor): the lengths of the input tensor
-            y (torch.Tensor): the optional target tensor
-
-        Returns:
-            torch.Tensor: the output tensor
-        """
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
+
+        if self.embed_dim is not None:
+            x_first, x_ph_onehot, x_last = torch.split(
+                x,
+                [
+                    self.in_ph_start_idx,
+                    self.num_vocab,
+                    self.in_dim - self.num_vocab - self.in_ph_start_idx,
+                ],
+                dim=-1,
+            )
+            x_ph = torch.argmax(x_ph_onehot, dim=-1)
+            # Make sure to have one-hot vector
+            assert (x_ph_onehot.sum(-1) <= 1).all()
+            x = self.emb(x_ph) + self.fc_in(torch.cat([x_first, x_last], dim=-1))
 
         out = self.ff(x)
         out = self.conv(out.transpose(1, 2)).transpose(1, 2)
         sequence = pack_padded_sequence(out, lengths, batch_first=True)
         out, _ = self.lstm(sequence)
         out, _ = pad_packed_sequence(out, batch_first=True)
-        out = self.fc(out)
 
-        return out
+        return self.fc(out)
+
+    def inference(self, x, lengths=None):
+        if self.use_mdn:
+            log_pi, log_sigma, mu = self(x, lengths)
+            sigma, mu = mdn_get_most_probable_sigma_and_mu(log_pi, log_sigma, mu)
+            return mu, sigma
+        else:
+            return self(x, lengths)
 
 
 class VariancePredictor(BaseModel):
@@ -914,6 +973,224 @@ class VariancePredictor(BaseModel):
             return mu, sigma
         else:
             return self(x, lengths)
+
+
+class LSTMEncoder(BaseModel):
+    """LSTM encoder
+
+    A simple LSTM-based encoder
+
+    Args:
+        in_dim (int): the input dimension
+        hidden_dim (int): the hidden dimension
+        out_dim (int): the output dimension
+        num_layers (int): the number of layers
+        bidirectional (bool): whether to use bidirectional or not
+        dropout (float): the dropout rate
+        init_type (str): the initialization type
+        in_ph_start_idx (int): the start index of phonetic context in a hed file
+        in_ph_end_idx (int): the end index of phonetic context in a hed file
+        embed_dim (int): the embedding dimension
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        hidden_dim: int,
+        out_dim: int,
+        num_layers: int = 1,
+        bidirectional: bool = True,
+        dropout: float = 0.0,
+        init_type: str = "none",
+        in_ph_start_idx: int = 1,
+        in_ph_end_idx: int = 50,
+        embed_dim=None,
+    ):
+        super(LSTMEncoder, self).__init__()
+        self.in_dim = in_dim
+        self.in_ph_start_idx = in_ph_start_idx
+        self.in_ph_end_idx = in_ph_end_idx
+        self.num_vocab = in_ph_end_idx - in_ph_start_idx
+        self.embed_dim = embed_dim
+
+        if self.embed_dim is not None:
+            assert in_dim > self.num_vocab
+            self.emb = nn.Embedding(self.num_vocab, embed_dim)
+            self.fc_in = nn.Linear(in_dim - self.num_vocab, embed_dim)
+            lstm_in_dim = embed_dim
+        else:
+            lstm_in_dim = in_dim
+
+        self.num_layers = num_layers
+        num_direction = 2 if bidirectional else 1
+        self.lstm = nn.LSTM(
+            lstm_in_dim,
+            hidden_dim,
+            num_layers,
+            bidirectional=bidirectional,
+            batch_first=True,
+            dropout=dropout,
+        )
+        self.hidden2out = nn.Linear(num_direction * hidden_dim, out_dim)
+        init_weights(self, init_type)
+
+    def forward(self, x, lengths, y=None):
+        if self.embed_dim is not None:
+            x_first, x_ph_onehot, x_last = torch.split(
+                x,
+                [
+                    self.in_ph_start_idx,
+                    self.num_vocab,
+                    self.in_dim - self.num_vocab - self.in_ph_start_idx,
+                ],
+                dim=-1,
+            )
+            x_ph = torch.argmax(x_ph_onehot, dim=-1)
+            # Make sure to have one-hot vector
+            assert (x_ph_onehot.sum(-1) <= 1).all()
+            x = self.emb(x_ph) + self.fc_in(torch.cat([x_first, x_last], dim=-1))
+
+        if isinstance(lengths, torch.Tensor):
+            lengths = lengths.to("cpu")
+        x = pack_padded_sequence(x, lengths, batch_first=True)
+        out, _ = self.lstm(x)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+        out = self.hidden2out(out)
+        return out
+
+
+class TransformerEncoder(BaseModel):
+    """Transformer encoder
+
+
+    .. warning::
+
+        So far this is not well tested. Maybe be removed in the future.
+
+    Args:
+        in_dim (int): the input dimension
+        out_dim (int): the output dimension
+        hidden_dim (int): the hidden dimension
+        attention_dim (int): the attention dimension
+        num_heads (int): the number of heads
+        num_layers (int): the number of layers
+        kernel_size (int): the kernel size
+        dropout (float): the dropout rate
+        reduction_factor (int): the reduction factor
+        init_type (str): the initialization type
+        downsample_by_conv (bool): whether to use convolutional downsampling or not
+        in_ph_start_idx (int): the start index of phonetic context in a hed file
+        in_ph_end_idx (int): the end index of phonetic context in a hed file
+        embed_dim (int): the embedding dimension
+    """
+
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        hidden_dim,
+        attention_dim,
+        num_heads=2,
+        num_layers=2,
+        kernel_size=3,
+        dropout=0.1,
+        reduction_factor=1,
+        init_type="none",
+        downsample_by_conv=False,
+        in_ph_start_idx: int = 1,
+        in_ph_end_idx: int = 50,
+        embed_dim=None,
+    ):
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.in_ph_start_idx = in_ph_start_idx
+        self.in_ph_end_idx = in_ph_end_idx
+        self.num_vocab = in_ph_end_idx - in_ph_start_idx
+        self.embed_dim = embed_dim
+
+        if self.embed_dim is not None:
+            assert in_dim > self.num_vocab
+            self.emb = nn.Embedding(self.num_vocab, embed_dim)
+            self.fc_in = nn.Linear(in_dim - self.num_vocab, embed_dim)
+            self.fc = nn.Linear(embed_dim, hidden_dim)
+        else:
+            self.emb = None
+            self.fc_in = None
+            self.fc = nn.Linear(in_dim, hidden_dim)
+        self.reduction_factor = reduction_factor
+        self.encoder = _TransformerEncoder(
+            hidden_channels=hidden_dim,
+            filter_channels=attention_dim,
+            n_heads=num_heads,
+            n_layers=num_layers,
+            kernel_size=kernel_size,
+            p_dropout=dropout,
+        )
+        self.fc_out = nn.Linear(hidden_dim, out_dim * reduction_factor)
+
+        if reduction_factor > 1 and downsample_by_conv:
+            self.conv_downsample = nn.Conv1d(
+                in_dim,
+                in_dim,
+                kernel_size=reduction_factor,
+                stride=reduction_factor,
+                groups=in_dim,
+            )
+        else:
+            self.conv_downsample = None
+
+        for f in [self.fc_in, self.emb, self.fc, self.fc_out]:
+            if f is not None:
+                init_weights(f, init_type)
+
+    def forward(self, x, lengths=None, y=None):
+        """Forward pass
+
+        Args:
+            x (torch.Tensor): input tensor
+            lengths (torch.Tensor): input sequence lengths
+            y (torch.Tensor): target tensor (optional)
+
+        Returns:
+            torch.Tensor: output tensor
+        """
+        if isinstance(lengths, list):
+            lengths = torch.tensor(lengths).to(x.device)
+
+        if self.embed_dim is not None:
+            x_first, x_ph_onehot, x_last = torch.split(
+                x,
+                [
+                    self.in_ph_start_idx,
+                    self.num_vocab,
+                    self.in_dim - self.num_vocab - self.in_ph_start_idx,
+                ],
+                dim=-1,
+            )
+            x_ph = torch.argmax(x_ph_onehot, dim=-1)
+            # Make sure to have one-hot vector
+            assert (x_ph_onehot.sum(-1) <= 1).all()
+            x = self.emb(x_ph) + self.fc_in(torch.cat([x_first, x_last], dim=-1))
+
+        # Adjust lengths based on the reduction factor
+        if self.reduction_factor > 1:
+            lengths = (lengths / self.reduction_factor).long()
+            if self.conv_downsample is not None:
+                x = self.conv_downsample(x.transpose(1, 2)).transpose(1, 2)
+            else:
+                x = x[:, self.reduction_factor - 1 :: self.reduction_factor]
+
+        x = self.fc(x)
+        # (B, T, C) -> (B, C, T)
+        x = x.transpose(1, 2)
+        x_mask = sequence_mask(lengths, x.shape[2]).unsqueeze(1).to(x.device)
+        x = self.encoder(x * x_mask, x_mask)
+
+        # (B, C, T) -> (B, T, C)
+        x = self.fc_out(x.transpose(1, 2)).view(x.shape[0], -1, self.out_dim)
+
+        return x
 
 
 # For backward compatibility

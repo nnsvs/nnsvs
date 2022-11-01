@@ -5,4 +5,5 @@ ignore:
   - utils
   - nnsvs/bin
   - nnsvs/experimental
+  - nnsvs/usfgan
   - tests

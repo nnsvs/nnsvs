@@ -21,6 +21,7 @@ I tested this code with kiritan_singing and nit-song070 database.
 """
 import librosa
 import numpy as np
+import torch
 from nnsvs.dsp import lowpass_filter
 from scipy.signal import argrelmax, argrelmin
 
@@ -90,6 +91,102 @@ def nonzero_segments(f0):
         segments.append((s, len(vuv) - 1))
 
     return segments
+
+
+def note_segments(lf0_score_denorm):
+    """Compute note segments (start and end indices) from log-F0
+
+    Note that unvoiced frames must be set to 0 in advance.
+
+    Args:
+        lf0_score_denorm (Tensor): (B, T)
+
+    Returns:
+        list: list of note (start, end) indices
+    """
+    segments = []
+    for s, e in nonzero_segments(lf0_score_denorm):
+        out = torch.sign(torch.abs(torch.diff(lf0_score_denorm[s : e + 1])))
+        transitions = torch.where(out > 0)[0]
+        note_start, note_end = s, -1
+        for pos in transitions:
+            note_end = int(s + pos)
+            segments.append((note_start, note_end))
+            note_start = note_end + 1
+
+        # Handle last note
+        while (
+            note_start < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_start] <= 0
+        ):
+            note_start += 1
+        note_end = note_start + 1
+        while note_end < len(lf0_score_denorm) - 1 and lf0_score_denorm[note_end] > 0:
+            note_end += 1
+
+        if note_end != note_start + 1:
+            segments.append((note_start, note_end))
+
+    return segments
+
+
+def compute_f0_correction_ratio(
+    f0,
+    f0_score,
+    edges_to_be_excluded=50,
+    out_of_tune_threshold=200,
+    correction_threshold=100,
+):
+    """Compute f0 correction ratio
+
+    Args:
+        f0 (np.ndarray): array of f0
+        f0_score (np.ndarray): array of f0 score
+
+    Returns:
+        float: correction ratio to multiplied to F0 (i.e. f0 * ratio)
+    """
+    segments = note_segments(torch.from_numpy(f0_score))
+
+    center_f0s = []
+    center_score_f0s = []
+    # edges_to_be_excluded = 50  # 0.25 sec for excluding overshoot/preparation
+    for s, e in segments:
+        L = e - s
+        if L > edges_to_be_excluded * 2:
+            center_f0s.append(f0[s + edges_to_be_excluded : e - edges_to_be_excluded])
+            center_score_f0s.append(
+                f0_score[s + edges_to_be_excluded : e - edges_to_be_excluded]
+            )
+    center_f0s = np.concatenate(center_f0s)
+    center_score_f0s = np.concatenate(center_score_f0s)
+
+    # Compute pitch ratio to be multiplied
+    nonzero_indices = (center_f0s > 0) & (center_score_f0s > 0)
+    ratio = center_score_f0s[nonzero_indices] / center_f0s[nonzero_indices]
+
+    # Exclude too out-of-tune frames (over 2 semitone)
+    up_threshold = np.exp(out_of_tune_threshold * np.log(2) / 1200)
+    low_threshold = np.exp(-out_of_tune_threshold * np.log(2) / 1200)
+
+    ratio = ratio[(ratio < up_threshold) & (ratio > low_threshold)]
+
+    global_offset = ratio.mean()
+
+    # Avoid corrections over semi-tone
+    # If more than semi-tone pitch correction is needed, it is better to correct
+    # data by hand or fix musicxml or UST instead.
+    up_threshold = np.exp(correction_threshold * np.log(2) / 1200)
+    low_threshold = np.exp(-correction_threshold * np.log(2) / 1200)
+
+    if global_offset > up_threshold or global_offset < low_threshold:
+        print(
+            f"""warn: more than 1 semitone pitch correction is needed.
+global_offset: {global_offset} cent.
+It is likely that manual pitch corrections are preferable."""
+        )
+    global_offset = np.clip(global_offset, low_threshold, up_threshold)
+
+    return global_offset
 
 
 def extract_vibrato_parameters_impl(pitch_seg, sr):
@@ -207,6 +304,36 @@ def extract_smoothed_f0(f0, sr, cutoff=8):
     for s, e in segments:
         f0_smooth[s:e] = lowpass_filter(f0[s:e], sr, cutoff=cutoff)
 
+    return f0_smooth
+
+
+def extract_smoothed_continuous_f0(f0, sr, cutoff=20):
+    """Extract smoothed continuous f0 by low-pass filtering
+
+    Note that the input must be continuous F0 or log-F0.
+
+    Args:
+        f0 (np.ndarray): array of continuous f0
+        sr (int): sampling rate
+        cutoff (float): initial cutoff frequency
+
+    Returns:
+        np.ndarray: array of smoothed continuous f0
+    """
+    is_2d = len(f0.shape) == 2
+    f0 = f0.reshape(-1) if is_2d else f0
+
+    # Ref: https://bit.ly/3SOePFw
+    f0_smooth = lowpass_filter(f0, sr, cutoff=cutoff)
+
+    # Fallback case: shound't happen I believe
+    # NOTE: hard-coded for now
+    next_cutoff = 50
+    while (f0_smooth < 0).any():
+        f0_smooth = lowpass_filter(f0, sr, cutoff=next_cutoff)
+        next_cutoff *= 2
+
+    f0_smooth = f0_smooth.reshape(len(f0), 1) if is_2d else f0_smooth
     return f0_smooth
 
 

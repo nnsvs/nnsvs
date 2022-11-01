@@ -6,7 +6,7 @@ from nnsvs.util import init_weights
 from torch import nn
 
 
-def variance_scaling(gv, feats, offset=2):
+def variance_scaling(gv, feats, offset=2, note_frame_indices=None):
     """Variance scaling method to enhance synthetic speech quality
 
     Method proposed in :cite:t:`silen2012ways`.
@@ -15,17 +15,32 @@ def variance_scaling(gv, feats, offset=2):
         gv (tensor): global variance computed over training data
         feats (tensor): input features
         offset (int): offset
+        note_frame_indices (tensor): indices of note frames
 
     Returns:
         tensor: scaled features
     """
-    utt_gv = feats.var(0)
-    utt_mu = feats.mean(0)
+    if note_frame_indices is not None:
+        utt_gv = feats[note_frame_indices].var(0)
+        utt_mu = feats[note_frame_indices].mean(0)
+    else:
+        utt_gv = feats.var(0)
+        utt_mu = feats.mean(0)
+
     out = feats.copy()
-    out[:, offset:] = (
-        np.sqrt(gv[offset:] / utt_gv[offset:]) * (feats[:, offset:] - utt_mu[offset:])
-        + utt_mu[offset:]
-    )
+    if note_frame_indices is not None:
+        out[note_frame_indices, offset:] = (
+            np.sqrt(gv[offset:] / utt_gv[offset:])
+            * (feats[note_frame_indices, offset:] - utt_mu[offset:])
+            + utt_mu[offset:]
+        )
+    else:
+        out[:, offset:] = (
+            np.sqrt(gv[offset:] / utt_gv[offset:])
+            * (feats[:, offset:] - utt_mu[offset:])
+            + utt_mu[offset:]
+        )
+
     return out
 
 
@@ -128,7 +143,7 @@ class Conv2dPostFilter(BaseModel):
 
         init_weights(self, init_type)
 
-    def forward(self, x, lengths=None, is_inference=False):
+    def forward(self, x, lengths=None, y=None, is_inference=False):
         """Forward step
 
         Args:
@@ -212,7 +227,7 @@ class MultistreamPostFilter(BaseModel):
         self.mgc_offset = mgc_offset
         self.bap_offset = bap_offset
 
-    def forward(self, x, lengths=None, is_inference=False):
+    def forward(self, x, lengths=None, y=None, is_inference=False):
         """Forward step
 
         Each feature stream is processed independently.
@@ -282,6 +297,68 @@ class MultistreamPostFilter(BaseModel):
             out = torch.cat([mgc, lf0, vuv, bap, vib], dim=-1)
         elif len(streams) == 6:
             out = torch.cat([mgc, lf0, vuv, bap, vib, vib_flags], dim=-1)
+
+        return out
+
+    def inference(self, x, lengths):
+        return self(x, lengths, is_inference=True)
+
+
+class MelF0MultistreamPostFilter(BaseModel):
+    def __init__(
+        self,
+        mel_postfilter: nn.Module,
+        lf0_postfilter: nn.Module,
+        stream_sizes: list,
+        mel_offset: int = 0,
+    ):
+        super().__init__()
+        self.mel_postfilter = mel_postfilter
+        self.lf0_postfilter = lf0_postfilter
+        self.stream_sizes = stream_sizes
+        self.mel_offset = mel_offset
+
+    def forward(self, x, lengths=None, y=None, is_inference=False):
+        """Forward step
+
+        Each feature stream is processed independently.
+
+        Args:
+            x (torch.Tensor): input tensor of shape (B, T, C)
+            lengths (torch.Tensor): lengths of shape (B,)
+
+        Returns:
+            torch.Tensor: output tensor of shape (B, T, C)
+        """
+        streams = split_streams(x, self.stream_sizes)
+        assert len(streams) == 3
+        mel, lf0, vuv = streams
+
+        if self.mel_postfilter is not None:
+            if self.mel_offset > 0:
+                # keep unchanged for the 0-to-${mgc_offset}-th dim of mgc
+                mel0 = mel[:, :, : self.mel_offset]
+                if is_inference:
+                    mel_pf = self.mel_postfilter.inference(
+                        mel[:, :, self.mel_offset :], lengths
+                    )
+                else:
+                    mel_pf = self.mel_postfilter(mel[:, :, self.mel_offset :], lengths)
+                mel_pf = torch.cat([mel0, mel_pf], dim=-1)
+            else:
+                if is_inference:
+                    mel_pf = self.mel_postfilter.inference(mel, lengths)
+                else:
+                    mel_pf = self.mel_postfilter(mel, lengths)
+            mel = mel_pf
+
+        if self.lf0_postfilter is not None:
+            if is_inference:
+                lf0 = self.lf0_postfilter.inference(lf0, lengths)
+            else:
+                lf0 = self.lf0_postfilter(lf0, lengths)
+
+        out = torch.cat([mel, lf0, vuv], dim=-1)
 
         return out
 
@@ -422,7 +499,7 @@ class MultistreamConv2dPostFilter(nn.Module):
             padding_side="right",
         )
 
-    def forward(self, x, lengths):
+    def forward(self, x, lengths=None, y=None):
         assert x.shape[-1] == sum(self.stream_sizes)
 
         # (B, T, C)

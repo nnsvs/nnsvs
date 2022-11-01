@@ -1,0 +1,59 @@
+out_dir: exp
+log_dir: tensorboard/exp
+
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
+# Use distributed training or not. If true, uses distributed data parallel.
+use_ddp: false
+
+# PWG checkpoint for synthesizing waveforms
+pretrained_vocoder_checkpoint: null
+
+# steps can either be specified by steps or epochs
+max_train_steps: -1
+nepochs: 50
+checkpoint_epoch_interval: 20
+
+# mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
+# NOTE: no effect for MDN models
+feats_criterion: mse
+
+# Weight for pitch regularization loss
+# If > 0.0, add a pitch regularization loss that biases the model to
+# predict closer F0 to the F0 derived from the musical score.
+# This is conceptually same as imposing a prior distribution of the residual F0
+# to be N(0, sigma) (if we use L2 loss)
+# https://arxiv.org/abs/2108.02776
+pitch_reg_weight: 0.1
+
+# decay_size * 0.005 sec. decay to compute pitch reg weights
+pitch_reg_decay_size: 60
+
+max_num_eval_utts: 10
+
+stream_wise_loss: false
+use_detect_anomaly: false
+
+optim:
+  optimizer:
+    name: Adam
+    params:
+      lr: 0.001
+      betas: [0.9, 0.999]
+      weight_decay: 0.0
+  lr_scheduler:
+    name: StepLR
+    params:
+      step_size: 20
+      gamma: 0.5
+  clip_norm: 1.0
+
+resume:
+  checkpoint:
+  load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: true

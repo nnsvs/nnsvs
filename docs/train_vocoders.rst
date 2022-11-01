@@ -1,5 +1,5 @@
-How to train neural vocoders
-============================
+How to train neural vocoders with ParallelWaveGAN
+=================================================
 
 Please check :doc:`recipes` and :doc:`overview` first.
 
@@ -7,7 +7,7 @@ NNSVS v0.0.3 and later supports neural vocoders. This page summarizes how to tra
 
 .. warning::
 
-    Support for neural vocodoers is in the alpha stage. Use it at your own risk.
+    This section needs to be re-written according to the recent major updates. Will be updated soon.
 
 .. note::
 

@@ -1,0 +1,24 @@
+# (mgc, lf0, vuv, bap)
+stream_sizes: [60, 1, 1, 5]
+has_dynamic_features: [false, false, false, false]
+num_windows: 1
+# If None, automatically set based on stream sizes
+stream_weights:
+
+netG:
+  _target_: nnsvs.model.ResF0Conv1dResnet
+  in_dim: 86
+  out_dim: 67
+  hidden_dim: 128
+  num_layers: 6
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_lf0_idx: 51
+  out_lf0_idx: 60
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null
+
