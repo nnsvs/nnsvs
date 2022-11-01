@@ -15,6 +15,7 @@ function xrun () {
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/../../../
 NNSVS_COMMON_ROOT=$NNSVS_ROOT/recipes/_common/spsvs
+NO2_ROOT=$NNSVS_ROOT/recipes/_common/no2
 . $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
 
 eval $(parse_yaml "./config.yaml" "")
@@ -90,7 +91,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     #                nit-song070                              #
     ###########################################################
     dbname=$(echo $dbnames | awk '{print $1}')
-    python local/nit_data_prep.py $nit_db_root $out_dir/$dbname
+    python $NNSVS_ROOT/recipes/_common/db/$dbname/data_prep.py $nit_db_root $out_dir/$dbname
 
     echo "train/dev/eval split for nit-song070"
     mkdir -p data/$dbname/list
@@ -132,7 +133,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     #                jsut-song                                #
     ###########################################################
     dbname=$(echo $dbnames | awk '{print $3}')
-    python local/jsut_data_prep.py ./downloads/jsut-song_ver1 \
+    python $NNSVS_ROOT/recipes/_common/db/$dbname/data_prep.py ./downloads/jsut-song_ver1 \
         ./downloads/todai_child/ \
         ./downloads/HTS-demo_NIT-SONG070-F001/ data/$dbname
 
@@ -149,7 +150,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     #                PJS                                      #
     ###########################################################
     dbname=$(echo $dbnames | awk '{print $4}')
-    python local/pjs_data_prep.py downloads/PJS_corpus_ver1.1 data/$dbname
+    python $NNSVS_ROOT/recipes/_common/db/$dbname/data_prep.py downloads/PJS_corpus_ver1.1 data/$dbname
     echo "train/dev/eval split for PJS"
     mkdir -p data/$dbname/list
     # exclude utts that are not strictly aligned
@@ -159,14 +160,21 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     grep 055 data/$dbname/list/utt_list.txt > data/$dbname/list/$dev_set.list
     grep -v 056 data/$dbname/list/utt_list.txt | grep -v 056    > data/$dbname/list/$train_set.list
 
-    # Normalize audio if sv56 is available
-    for dbname in $dbnames;
-    do
-        if command -v sv56demo &> /dev/null; then
-            echo "Normalize audio gain with sv56"
-            python $NNSVS_COMMON_ROOT/sv56.py $out_dir/$dbname/acoustic/wav $out_dir/$dbname/acoustic/wav
-        fi
-    done
+    ###########################################################
+    #                namine_ritsu                             #
+    ###########################################################
+    dbname=$(echo $dbnames | awk '{print $5}')
+    sh $NO2_ROOT/utils/data_prep.sh ./ritsu_config.yaml ust
+
+    echo "train/dev/eval split for namine_ritsu"
+    mkdir -p data/$dbname/list
+    # NOTE: 110 songs in total
+    find data/$dbname/acoustic/ -type f -name "namine*.wav" -exec basename {} .wav \; \
+	 | sort > data/$dbname/list/utt_list.txt
+    # # 5 songs for dev/eval
+    grep -e 1st_color -e 2018 -e ARROW -e BC -e VRD data/$dbname/list/utt_list.txt > data/$dbname/list/$eval_set.list
+    grep -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/$dbname/list/utt_list.txt > data/$dbname/list/$dev_set.list
+    grep -v -e 1st_color -e 2018 -e ARROW -e BC -e VRD -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/$dbname/list/utt_list.txt > data/$dbname/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -176,6 +184,7 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "stage 2: Prepare vocoder input/output features"
+
     . $NNSVS_COMMON_ROOT/multidb_prepare_voc_features.sh
 fi
 
