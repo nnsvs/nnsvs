@@ -67,9 +67,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
 	 | sort > data/list/utt_list.txt
     # # 5 songs for dev/eval
-    grep -e 1st_color -e 2018 -e ARROW -e BC -e VRD data/list/utt_list.txt > data/list/$eval_set.list
-    grep -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v -e 1st_color -e 2018 -e ARROW -e BC -e VRD -e Baptism -e COZMIC_HEART -e Choir -e Closetoyou -e Creuzer data/list/utt_list.txt > data/list/$train_set.list
+    grep -e 1st_color -e ARROW -e BC -e Closetoyou -e ERROR data/list/utt_list.txt > data/list/$eval_set.list
+    grep -e Baptism -e COZMIC_HEART -e Choir -e BRD -e Creuzer data/list/utt_list.txt > data/list/$dev_set.list
+    grep -v -e 1st_color -e ERROR -e ARROW -e BC -e Closetoyou -e Baptism -e COZMIC_HEART -e Choir -e BRD -e Creuzer data/list/utt_list.txt > data/list/$train_set.list
 fi
 
 # Run the rest of the steps
