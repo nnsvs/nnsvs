@@ -1,0 +1,109 @@
+# Feature dim:: 86 for acoustic model, 82 for duration/timelag
+# in_rest_idx: 0
+# in_lf0_idx: 51
+
+QS "C-Phone_Muon"     {*-sil+*,*-pau+*}
+
+QS "C-VUV_Voiced" {*-a+*,*-i+*,*-u+*,*-e+*,*-o+*,*-v+*,*-b+*,*-by+*,*-m+*,*-my+*,*-w+*,*-z+*,*-j+*,*-d+*,*-dy+*,*-n+*,*-ny+*,*-N+*,*-r+*,*-ry+*,*-g+*,*-gy+*,*-y+*}
+# NOTE: rename "C-NOFIX_VUV_Unvoiced" to "C-VUV_Unvoiced" to enable auto correcting unvoied phonemes
+QS "C-NOFIX_VUV_Unvoiced"  {*-A+*,*-I+*,*-U+*,*-E+*,*-O+*,*-f+*,*-p+*,*-py+*,*-s+*,*-sh+*,*-ts+*,*-ch+*,*-t+*,*-ty+*,*-k+*,*-ky+*,*-h+*,*-hy+*}
+
+QS "C-Phone_sil" {*-sil+*}
+QS "C-Phone_pau" {*-pau+*}
+QS "C-Phone_A"   {*-A+*}
+QS "C-Phone_E"   {*-E+*}
+QS "C-Phone_I"   {*-I+*}
+QS "C-Phone_N"   {*-N+*}
+QS "C-Phone_O"   {*-O+*}
+QS "C-Phone_U"   {*-U+*}
+QS "C-Phone_a"   {*-a+*}
+QS "C-Phone_b"   {*-b+*}
+QS "C-Phone_br"  {*-br+*}
+QS "C-Phone_by"  {*-by+*}
+QS "C-Phone_ch"  {*-ch+*}
+QS "C-Phone_cl"  {*-cl+*}
+QS "C-Phone_d"   {*-d+*}
+QS "C-Phone_dy"  {*-dy+*}
+QS "C-Phone_e"   {*-e+*}
+QS "C-Phone_f"   {*-f+*}
+QS "C-Phone_g"   {*-g+*}
+QS "C-Phone_gy"  {*-gy+*}
+QS "C-Phone_h"   {*-h+*}
+QS "C-Phone_hy"  {*-hy+*}
+QS "C-Phone_i"   {*-i+*}
+QS "C-Phone_j"   {*-j+*}
+QS "C-Phone_k"   {*-k+*}
+QS "C-Phone_ky"  {*-ky+*}
+QS "C-Phone_m"   {*-m+*}
+QS "C-Phone_my"  {*-my+*}
+QS "C-Phone_n"   {*-n+*}
+QS "C-Phone_ny"  {*-ny+*}
+QS "C-Phone_o"   {*-o+*}
+QS "C-Phone_p"   {*-p+*}
+QS "C-Phone_py"  {*-py+*}
+QS "C-Phone_r"   {*-r+*}
+QS "C-Phone_ry"  {*-ry+*}
+QS "C-Phone_s"   {*-s+*}
+QS "C-Phone_sh"  {*-sh+*}
+QS "C-Phone_t"   {*-t+*}
+QS "C-Phone_ts"  {*-ts+*}
+QS "C-Phone_ty"  {*-ty+*}
+QS "C-Phone_u"   {*-u+*}
+QS "C-Phone_v"   {*-v+*}
+QS "C-Phone_w"   {*-w+*}
+QS "C-Phone_y"   {*-y+*}
+QS "C-Phone_z"   {*-z+*}
+QS "C-Phone_GlottalStop"   {*-GlottalStop+*}
+QS "C-Phone_Edge"          {*-Edge+*}
+
+# absolute pitch (L/C/R)
+CQS "d1" {/D:(\NOTE)!}
+CQS "e1" {/E:(\NOTE)]}
+CQS "f1" {/F:(\NOTE)#}
+
+# relative pitch (C)
+CQS "e2" {](\d+)^}
+
+# phoneme-level positional features (C)
+CQS "p12" {-(\d+)!}
+CQS "p13" {!(\d+)[}
+
+# distance between consonant and vowel
+CQS "p14" {[(\d+)$}
+CQS "p15" {$(\d+)]}
+
+# number of phonemes in a syllable (C)
+CQS "b1" {/B:(\d+)_}
+
+# syllable potional features (C)
+CQS "b2" {_(\d+)_}
+CQS "b3" {_(\d+)@}
+
+# length of current note (C)
+CQS "e6" {!(\d+)@}
+CQS "e7" {@(\d+)#}
+CQS "e8" {#(\d+)+}
+
+# note-level positional features in measures (C)
+CQS "e10_position_by_note_in_measure"      {](\d+)$}
+CQS "e11_position_by_note_in_measure"      {$(\d+)|}
+CQS "e12_position_by_10ms_in_measure"      {|(\d+)[}
+CQS "e13_position_by_10ms_in_measure"      {[(\d+)&}
+CQS "e14_position_by_96th_note_in_measure" {&(\d+)]}
+CQS "e15_position_by_96th_note_in_measure" {](\d+)=}
+CQS "e16_position_by_percent_in_measure"   {=(\d+)^}
+CQS "e17_position_by_percent_in_measure"   {^(\d+)~}
+
+# note-level positional features in phrase (C)
+CQS "e18_position_by_note"      {~(\d+)#}
+CQS "e19_position_by_note"      {#(\d+)_}
+CQS "e20_position_by_10ms"      {_(\d+);}
+CQS "e21_position_by_10ms"      {;(\d+)$}
+CQS "e22_position_by_96th_note" {$(\d+)&}
+CQS "e23_position_by_96th_note" {&(\d+)%}
+CQS "e24_position_by_percent"   {%(\d+)[}
+CQS "e25_position_by_percent"   {[(\d+)|}
+
+# pitch diff
+CQS "e57" {~([pm]\d+)+}
+CQS "e58" {+([pm]\d+)!}

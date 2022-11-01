@@ -1,0 +1,40 @@
+# (mel, lf0, vuv)
+stream_sizes: [80, 1, 1]
+has_dynamic_features: [false, false, false]
+num_windows: 1
+stream_weights:
+
+netG:
+  _target_: nnsvs_contrib.acoustic_models.BiLSTMResF0NonAttentiveDecoder
+  in_dim: 86
+  out_dim: 82
+  in_ph_start_idx: 3
+  in_ph_end_idx: 50
+  embed_dim: 256
+  ff_hidden_dim: 2048
+  conv_hidden_dim: 1024
+  lstm_hidden_dim: 256
+  dropout: 0.0
+  num_lstm_layers: 2
+  decoder_layers: 2
+  decoder_hidden_dim: 1024
+  prenet_layers: 0
+  prenet_hidden_dim: 256
+  prenet_dropout: 0.5
+  zoneout: 0.0
+  reduction_factor: 2
+  downsample_by_conv: true
+  scaled_tanh: true
+  # Last MDN layer (disabled by default)
+  use_mdn: false
+  num_gaussians: 1
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_lf0_idx: 51
+  out_lf0_idx: 80
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null

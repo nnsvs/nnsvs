@@ -1,0 +1,1 @@
+../icassp2023-24k-world/synthesis_icassp2023.sh
