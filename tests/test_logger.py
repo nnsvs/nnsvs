@@ -13,7 +13,9 @@ def test_logger(verbose):
 
 @pytest.mark.parametrize("verbose", [0, 1, 100])
 def test_logger_filename(verbose):
-    with tempfile.NamedTemporaryFile() as tmp:
-        logger = getLogger(verbose=verbose, filename=tmp.name)
-
-    logger.info(f"verbose={verbose}")
+    try:
+        with tempfile.NamedTemporaryFile() as tmp:
+            logger = getLogger(verbose=verbose, filename=tmp.name)
+        logger.info(f"verbose={verbose}")
+    except PermissionError:
+        pass
