@@ -62,12 +62,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     sh $NO2_ROOT/utils/data_prep.sh ./config.yaml musicxml
     mkdir -p data/list
 
-        # Normalize audio if sv56 is available
-    if command -v sv56demo &> /dev/null; then
-        echo "Normalize audio gain with sv56"
-        python $NNSVS_COMMON_ROOT/sv56.py $out_dir/acoustic/wav $out_dir/acoustic/wav
-    fi
-
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
