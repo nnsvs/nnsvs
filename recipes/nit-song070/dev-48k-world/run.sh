@@ -58,7 +58,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     # the following three directories will be created
     # 1) data/timelag 2) data/duration 3) data/acoustic
-    python $NNSVS_ROOT/recipes/_common/db/$dbname/data_prep.py $db_root $out_dir
+    python $NNSVS_ROOT/recipes/_common/db/nit-song070/data_prep.py $db_root $out_dir
 
     echo "train/dev/eval split"
     mkdir -p data/list
