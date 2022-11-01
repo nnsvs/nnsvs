@@ -70,15 +70,9 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    python local/data_prep.py ./downloads/jsut-song_ver1 \
+    python $NNSVS_ROOT/recipes/_common/db/jsut-song/data_prep.py ./downloads/jsut-song_ver1 \
         ./downloads/todai_child/ \
-        ./downloads/HTS-demo_NIT-SONG070-F001/ data
-
-    # Normalize audio if sv56 is available
-    if command -v sv56demo &> /dev/null; then
-        echo "Normalize audio gain with sv56"
-        python $NNSVS_COMMON_ROOT/sv56.py data/acoustic/wav data/acoustic/wav
-    fi
+        ./downloads/HTS-demo_NIT-SONG070-F001/ data/
 
     echo "train/dev/eval split"
     mkdir -p data/list
