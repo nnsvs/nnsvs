@@ -58,13 +58,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
     # the following three directories will be created
     # 1) data/timelag 2) data/duration 3) data/acoustic
-    python local/data_prep.py $db_root $out_dir
-
-    # Normalize audio if sv56 is available
-    if command -v sv56demo &> /dev/null; then
-        echo "Normalize audio gain with sv56"
-        python $NNSVS_COMMON_ROOT/sv56.py $out_dir/acoustic/wav $out_dir/acoustic/wav
-    fi
+    python $NNSVS_ROOT/recipes/_common/db/$dbname/data_prep.py $db_root $out_dir
 
     echo "train/dev/eval split"
     mkdir -p data/list
