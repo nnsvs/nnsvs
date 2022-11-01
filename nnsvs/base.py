@@ -4,9 +4,55 @@ from torch import nn
 
 
 class PredictionType(Enum):
+    """Prediction types"""
+
     DETERMINISTIC = 1
+    """Deterministic prediction
+
+    Non-MDN single-stream models should use this type.
+
+    Pseudo code:
+
+    .. code-block::
+
+        # training
+        y = model(x)
+        # inference
+        y = model.inference(x)
+    """
+
     PROBABILISTIC = 2
+    """Probabilistic prediction with mixture density networks
+
+    MDN-based models should use this type.
+
+    Pseudo code:
+
+    .. code-block::
+
+        # training
+        mdn_params = model(x)
+        # inference
+        mu, sigma = model.inference(x)
+    """
+
     MULTISTREAM_HYBRID = 3
+    """Multi-stream preodictions where each prediction can be
+    detereministic or probabilistic
+
+    Multi-stream models should use this type.
+
+    Pseudo code:
+
+    .. code-block::
+
+        # training
+        feature_streams = model(x) # e.g. (mgc, lf0, vuv, bap) or (mel, lf0, vuv)
+        # inference
+        y = model.inference(x)
+
+    Note that concatenated features are assumed to be returned during inference.
+    """
 
 
 class BaseModel(nn.Module):

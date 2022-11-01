@@ -15,6 +15,7 @@ def variance_scaling(gv, feats, offset=2, note_frame_indices=None):
         gv (tensor): global variance computed over training data
         feats (tensor): input features
         offset (int): offset
+        note_frame_indices (tensor): indices of note frames
 
     Returns:
         tensor: scaled features
