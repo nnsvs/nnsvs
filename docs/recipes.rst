@@ -1,6 +1,10 @@
 Getting started with recipes
 ============================
 
+.. warning::
+
+    This section needs to be re-written according to the recent major updates. Will be updated soon.
+
 This page describes how to use a recipe to create a singing voice synthesis (SVS) system.
 
 What is a recipe?
@@ -44,7 +48,7 @@ An example of ``conf`` directory is shown below. You can find model-specific con
     │       │   └── timelag_mdn.yaml
     │       └── train
     │           └── myconfig.yaml
-    └── train_resf0
+    └── train_acoustic
         └── acoustic
             ├── data
             │   └── myconfig.yaml
@@ -268,7 +272,7 @@ You can explicltly specify a model type by:
     CUDA_VISIBLE_DEVICES=0 ./run.sh --stage 4 --stop-stage 4 \
         --acoustic-model acoustic_test
 
-You can find available model configs in ``conf/train_resf0/acoustic/model``, or you can create your own model config.
+You can find available model configs in ``conf/train_acoustic/acoustic/model``, or you can create your own model config.
 
 .. note::
 

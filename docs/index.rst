@@ -8,7 +8,9 @@ NNSVS
 
 Neural network based singing voice synthesis library
 
-https://github.com/nnsvs/nnsvs
+- GitHub: https://github.com/nnsvs/nnsvs
+- Paper: https://arxiv.org/abs/2210.15987
+
 
 Features
 --------
@@ -24,18 +26,12 @@ A detailed tutorial for for making voice banks can be found at `NNSVS Database M
 Audio samples
 -------------
 
-Samples by r9y9: https://soundcloud.com/r9y9/sets/dnn-based-singing-voice
+https://r9y9.github.io/projects/nnsvs/
 
-Selected videos
----------------
-
-Demo by https://github.com/DYVAUX
-
-
-..  youtube:: 0sSd31TUVCU
+..  youtube:: u2210L3JXPo
    :align: center
 
-You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs?ref=nicotop_search>`_
+You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.com/results?search_query=nnsvs+enunu>`_, `NicoNico <https://www.nicovideo.jp/search/nnsvs%20OR%20enunu>`_
 
 
 .. toctree::
@@ -50,8 +46,10 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
 
    installation
    recipes
+   how_to_choose_model
    custom_models
    devdocs
+   tips
    update_guide
 
 .. toctree::
@@ -60,15 +58,15 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
 
    optuna
    train_vocoders
+   train_usfgan
    train_postfilters
-
+   enunu2nnsvs
 
 .. toctree::
    :maxdepth: 1
    :caption: Notes
 
    overview
-   tips
 
 .. toctree::
    :maxdepth: 1

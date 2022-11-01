@@ -4,7 +4,17 @@ Change log
 v0.1.0 <2022-xx-xx>
 -------------------
 
-TBD
+WILL BE MOVED TO GITHUB RELEASES.
+
+New features
+^^^^^^^^^^^^
+
+- Dynamic batch size support (by ``batch_max_frames``).
+- New acoustic models based on duration informed Tacotron.
+- New F0 prediction models based on duration informed Tacotron.
+- Multi-stream model implementations
+- Support mel-spectrogram as acoustic features.
+- Integrate uSFGAN vocoder
 
 v0.0.3 <2022-10-15>
 -------------------
