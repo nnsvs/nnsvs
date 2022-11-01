@@ -1,0 +1,116 @@
+# (mgc, lf0, vuv, bap)
+stream_sizes: [60, 1, 1, 3]
+has_dynamic_features: [false, false, false, false]
+num_windows: 1
+stream_weights:
+
+netG:
+  _target_: nnsvs_contrib.acoustic_models.MultistreamSeparateF0ParametricModel
+  in_dim: 86
+  out_dim: 65
+
+  stream_sizes: [60, 1, 1, 3]
+  reduction_factor: 4
+
+  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all
+  in_rest_idx: 0
+  in_lf0_idx: 51
+  out_lf0_idx: 60
+  # Please leave the following parameters unspecified if you want to
+  # find the corresponding values automatically from in/out scalers.
+  in_lf0_min: null
+  in_lf0_max: null
+  out_lf0_mean: null
+  out_lf0_scale: null
+
+  # A separate model for modeling continuous log-F0
+  lf0_model:
+    _target_: nnsvs_contrib.acoustic_models.BiLSTMResF0NonAttentiveDecoder
+    in_dim: 86
+    out_dim: 1
+    in_ph_start_idx: 3
+    in_ph_end_idx: 50
+    embed_dim: 256
+    ff_hidden_dim: 256
+    conv_hidden_dim: 128
+    lstm_hidden_dim: 64
+    num_lstm_layers: 2
+    decoder_layers: 1
+    decoder_hidden_dim: 256
+    prenet_layers: 0
+    prenet_hidden_dim: 16
+    prenet_dropout: 0.5
+    scaled_tanh: true
+    zoneout: 0.0
+    reduction_factor: 4
+    downsample_by_conv: true
+    in_lf0_idx: 51
+    out_lf0_idx: 0
+    in_lf0_min: null
+    in_lf0_max: null
+    out_lf0_mean: null
+    out_lf0_scale: null
+
+  # Shared encoder
+  encoder:
+    _target_: nnsvs_contrib.acoustic_models.LSTMEncoder
+    in_dim: 86
+    in_ph_start_idx: 3
+    in_ph_end_idx: 50
+    embed_dim: 256
+    hidden_dim: 512
+    out_dim: 1024
+    num_layers: 3
+    dropout: 0.0
+    bidirectional: true
+    init_type: "kaiming_normal"
+
+  # Decoders for the rest of streams
+  mgc_model:
+    _target_: nnsvs_contrib.acoustic_models.NonAttentiveDecoder
+    in_dim: 1026
+    out_dim: 60
+    layers: 2
+    hidden_dim: 1024
+    prenet_layers: 2
+    prenet_hidden_dim: 192
+    prenet_dropout: 0.5
+    zoneout: 0.0
+    reduction_factor: 2
+    downsample_by_conv: true
+    postnet_layers: 5
+    postnet_channels: 512
+    postnet_kernel_size: 5
+    postnet_dropout: 0.0
+
+  vuv_model:
+    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    in_dim: 1026
+    ff_hidden_dim: 256
+    conv_hidden_dim: 128
+    lstm_hidden_dim: 64
+    num_lstm_layers: 2
+    bidirectional: true
+    out_dim: 1
+    dropout: 0.1
+
+  bap_model:
+    _target_: nnsvs_contrib.acoustic_models.NonAttentiveDecoder
+    in_dim: 1026
+    out_dim: 3
+    layers: 2
+    hidden_dim: 256
+    prenet_layers: 2
+    prenet_hidden_dim: 16
+    prenet_dropout: 0.5
+    zoneout: 0.0
+    reduction_factor: 2
+    downsample_by_conv: true
+    postnet_layers: 5
+    postnet_channels: 64
+    postnet_kernel_size: 5
+    postnet_dropout: 0.0
+
+  vib_model: null
+  vib_flags_model: null

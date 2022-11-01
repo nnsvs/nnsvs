@@ -1,0 +1,42 @@
+out_dir: exp
+log_dir: tensorboard/exp
+
+# Use automatic mixed precision training or not
+# only works on supported GPUs
+use_amp: false
+
+# Use distributed training or not. If true, uses distributed data parallel.
+use_ddp: false
+
+# steps can either be specified by steps or epochs
+max_train_steps: -1
+nepochs: 100
+checkpoint_epoch_interval: 50
+
+# mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
+# NOTE: no effect for MDN models
+feats_criterion: mse
+
+stream_wise_loss: false
+use_detect_anomaly: false
+
+optim:
+  optimizer:
+    name: Adam
+    params:
+      lr: 0.001
+      betas: [0.9, 0.999]
+      weight_decay: 0.0
+  lr_scheduler:
+    name: StepLR
+    params:
+      step_size: 20
+      gamma: 0.5
+
+resume:
+  checkpoint:
+  load_optimizer: false
+
+cudnn:
+  benchmark: false
+  deterministic: true
