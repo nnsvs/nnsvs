@@ -56,7 +56,8 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    python local/data_prep.py downloads/PJS_corpus_ver1.1 data
+    python $NNSVS_ROOT/recipes/_common/db/pjs/data_prep.py downloads/PJS_corpus_ver1.1 data/
+
     echo "train/dev/eval split"
     mkdir -p data/list
     # exclude utts that are not strictly aligned
@@ -64,7 +65,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         | grep -v 030 | sort > data/list/utt_list.txt
     grep 056 data/list/utt_list.txt > data/list/$eval_set.list
     grep 055 data/list/utt_list.txt > data/list/$dev_set.list
-    grep -v 056 data/list/utt_list.txt | grep -v 056    > data/list/$train_set.list
+    grep -v 056 data/list/utt_list.txt | grep -v 056 > data/list/$train_set.list
 fi
 
 # Run the rest of the steps
