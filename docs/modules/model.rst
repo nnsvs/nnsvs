@@ -56,7 +56,17 @@ FFConvLSTM
 
 .. autoclass:: FFConvLSTM
 
+LSTMEncoder
+-----------
+
+.. autoclass:: LSTMEncoder
+
 VariancePredictor
 ------------------
 
 .. autoclass:: VariancePredictor
+
+TransformerEncoder
+------------------
+
+.. autoclass:: TransformerEncoder
