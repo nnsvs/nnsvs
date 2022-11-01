@@ -56,7 +56,7 @@ duration_data: myconfig
 
 acoustic_model: acoustic_resf0convlstm
 acoustic_train: myconfig
-acoustic_data: myconfig
+acoustic_data: nit-song070
 
 postfilter_model: postfilter_mgc
 postfilter_train: mgc
