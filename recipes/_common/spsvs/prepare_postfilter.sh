@@ -31,8 +31,8 @@ do
         utt_list=data/list/$s.list normalize=false gta=true mgc2sp=true \
         gv_postfilter=true sample_rate=$sample_rate
 
-    if [ -d conf/prepare_static_features ]; then
-        ext="--config-dir conf/prepare_static_features"
+    if [ -d conf/prepare_features ]; then
+        ext="--config-dir conf/prepare_features"
     else
         ext=""
     fi

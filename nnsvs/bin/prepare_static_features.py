@@ -55,7 +55,7 @@ def _extract_static_features(
     np.save(static_path, static_feats, allow_pickle=False)
 
 
-@hydra.main(config_path="conf/prepare_static_features", config_name="config")
+@hydra.main(config_path="conf/prepare_features", config_name="config")
 def my_app(config: DictConfig) -> None:
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))

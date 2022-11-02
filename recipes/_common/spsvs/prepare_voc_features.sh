@@ -3,8 +3,8 @@
 
 for s in ${datasets[@]};
 do
-    if [ -d conf/prepare_static_features ]; then
-        ext="--config-dir conf/prepare_static_features"
+    if [ -d conf/prepare_features ]; then
+        ext="--config-dir conf/prepare_features"
     else
         ext=""
     fi

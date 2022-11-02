@@ -55,7 +55,7 @@ def _prepare_voc_features(
         os.symlink(join(in_dir, utt_id + "-wave.npy"), save_wave_path)
 
 
-@hydra.main(config_path="conf/prepare_static_features", config_name="config")
+@hydra.main(config_path="conf/prepare_features", config_name="config")
 def my_app(config: DictConfig) -> None:
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
