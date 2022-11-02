@@ -176,6 +176,8 @@ def my_app(config: DictConfig) -> None:
             dynamic_features_flags=config.acoustic.dynamic_features_flags,
             use_world_codec=config.acoustic.use_world_codec,
             res_type=config.acoustic.res_type,
+            use_mcep_aperiodicity=config.acoustic.use_mcep_aperiodicity,
+            mcep_aperiodicity_order=config.acoustic.mcep_aperiodicity_order,
         )
     elif config.acoustic.feature_type == "melf0":
         out_acoustic_source = MelF0AcousticSource(

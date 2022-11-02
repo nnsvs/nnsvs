@@ -87,12 +87,20 @@ if __name__ == "__main__":
     out_stats_dir = Path(f"{args.out_dir}/stats")
     out_stats_dir.mkdir(parents=True, exist_ok=True)
 
+    # NOTE: mgc order is fixed regardless of sampling rate
     if args.feature_type == "world":
-        # (mgc, lf0, vuv, bap)
-        # NOTE: 現状、mgcの次元数はサンプリング周波数によらず固定
-        stream_sizes = [60, 1, 1, pyworld.get_num_aperiodicities(sample_rate)]
+        if len(scaler.mean_) > 65:
+            # (mgc, lf0, vuv, mcap)
+            stream_sizes = [60, 1, 1, len(scaler.mean_) - 62]
+            # NOTE: pretend codeap as mcap
+            feat_types = ["f0", "contf0", "mcep", "codeap"]
+        else:
+            # (mgc, lf0, vuv, bap)
+            stream_sizes = [60, 1, 1, pyworld.get_num_aperiodicities(sample_rate)]
+            feat_types = ["f0", "contf0", "mcep", "codeap"]
         # NOTE: scaler for F0 is dummy and never used at usfgan training
         assert len(scaler.mean_.reshape(-1)) == sum(stream_sizes)
+
         usfgan_scaler = {
             "mcep": StandardScaler(
                 scaler.mean_[0:60], scaler.var_[0:60], scaler.scale_[0:60]
@@ -226,7 +234,7 @@ if __name__ == "__main__":
 hop_size: {hop_size}
 sample_rate: {sample_rate}
 aux_channels: {aux_channels}
-feat_types: ["f0", "contf0", "mcep", "codeap"]
+feat_types: {feat_types}
 aux_feats: ["mcep", "codeap"]"""
         )
     elif args.feature_type == "melf0":
@@ -235,6 +243,6 @@ aux_feats: ["mcep", "codeap"]"""
 hop_size: {hop_size}
 sample_rate: {sample_rate}
 aux_channels: {aux_channels}
-feat_types: ["f0", "contf0", "logmsp"]
+feat_types: {feat_types}
 aux_feats: ["logmsp"]"""
         )

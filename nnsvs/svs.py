@@ -316,8 +316,9 @@ def synthesis_from_timings(
                 mel[:, d] = lowpass_filter(
                     mel[:, d], modfs, cutoff=trajectory_smoothing_cutoff
                 )
-
     if feature_type == "world":
+        use_mcep_aperiodicity = bap.shape[-1] > 5
+    if feature_type == "world" and not use_mcep_aperiodicity:
         bap = np.clip(bap, a_min=-60, a_max=0)
 
     # Waveform generation by (1) WORLD or (2) neural vocoder
@@ -365,19 +366,35 @@ def synthesis_from_timings(
     elif vocoder_type == "usfgan":
         if feature_type == "world":
             fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
-            aperiodicity = pyworld.decode_aperiodicity(
-                np.ascontiguousarray(bap).astype(np.float64),
-                sample_rate,
-                fftlen,
-            )
-            # fill aperiodicity with ones for unvoiced regions
+            if use_mcep_aperiodicity:
+                aperiodicity_order = bap.shape[-1] - 1
+                alpha = pysptk.util.mcepalpha(sample_rate)
+                aperiodicity = pysptk.mc2sp(
+                    np.ascontiguousarray(bap).astype(np.float64),
+                    fftlen=fftlen,
+                    alpha=alpha,
+                )
+            else:
+                aperiodicity = pyworld.decode_aperiodicity(
+                    np.ascontiguousarray(bap).astype(np.float64),
+                    sample_rate,
+                    fftlen,
+                )
+                # fill aperiodicity with ones for unvoiced regions
             aperiodicity[vuv.reshape(-1) < vuv_threshold, 0] = 1.0
             # WORLD fails catastrophically for out of range aperiodicity
             aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
-            # back to bap
-            bap = pyworld.code_aperiodicity(aperiodicity, sample_rate).astype(
-                np.float32
-            )
+
+            if use_mcep_aperiodicity:
+                bap = pysptk.sp2mc(
+                    aperiodicity,
+                    order=aperiodicity_order,
+                    alpha=alpha,
+                )
+            else:
+                bap = pyworld.code_aperiodicity(aperiodicity, sample_rate).astype(
+                    np.float32
+                )
             aux_feats = [mgc, bap]
         elif feature_type == "melf0":
             aux_feats = [mel]

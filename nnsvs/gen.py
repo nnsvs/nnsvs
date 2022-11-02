@@ -708,7 +708,13 @@ def gen_spsvs_static_features(
 
 
 def gen_world_params(
-    mgc, lf0, vuv, bap, sample_rate, vuv_threshold=0.3, use_world_codec=False
+    mgc,
+    lf0,
+    vuv,
+    bap,
+    sample_rate,
+    vuv_threshold=0.3,
+    use_world_codec=False,
 ):
     """Generate WORLD parameters from mgc, lf0, vuv and bap.
 
@@ -726,6 +732,8 @@ def gen_world_params(
     """
     fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
     alpha = pysptk.util.mcepalpha(sample_rate)
+    use_mcep_aperiodicity = bap.shape[-1] > 5
+
     if use_world_codec:
         spectrogram = pyworld.decode_spectral_envelope(
             np.ascontiguousarray(mgc).astype(np.float64), sample_rate, fftlen
@@ -734,9 +742,15 @@ def gen_world_params(
         spectrogram = pysptk.mc2sp(
             np.ascontiguousarray(mgc), fftlen=fftlen, alpha=alpha
         )
-    aperiodicity = pyworld.decode_aperiodicity(
-        np.ascontiguousarray(bap).astype(np.float64), sample_rate, fftlen
-    )
+
+    if use_mcep_aperiodicity:
+        aperiodicity = pysptk.mc2sp(
+            np.ascontiguousarray(bap), fftlen=fftlen, alpha=alpha
+        )
+    else:
+        aperiodicity = pyworld.decode_aperiodicity(
+            np.ascontiguousarray(bap).astype(np.float64), sample_rate, fftlen
+        )
 
     # fill aperiodicity with ones for unvoiced regions
     aperiodicity[vuv.reshape(-1) < vuv_threshold, 0] = 1.0
