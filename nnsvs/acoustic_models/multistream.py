@@ -33,8 +33,6 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         lf0_model (nn.Module): log-F0 prediction model.
         vuv_model (nn.Module): V/UV prediction model.
         bap_model (nn.Module): BAP prediction model.
-        vib_model (nn.Module): VIB prediction model.
-        vib_flags_model (nn.Module): VIB flags prediction model.
         in_rest_idx (int): Index of the rest symbol in the input features.
         in_lf0_idx (int): index of lf0 in input features
         in_lf0_min (float): minimum value of lf0 in the training data of input features
@@ -56,8 +54,8 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         lf0_model: nn.Module,
         vuv_model: nn.Module,
         bap_model: nn.Module,
-        vib_model: nn.Module,
-        vib_flags_model: nn.Module,
+        vib_model: nn.Module = None,  # kept as is for compatibility
+        vib_flags_model: nn.Module = None,  # kept as is for compatibility
         # NOTE: you must carefully set the following parameters
         in_rest_idx=1,
         in_lf0_idx=300,
@@ -75,7 +73,7 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         self.reduction_factor = reduction_factor
         self.lf0_teacher_forcing = lf0_teacher_forcing
 
-        assert len(stream_sizes) in [4, 5, 6]
+        assert len(stream_sizes) in [4]
 
         self.encoder = encoder
         if self.encoder is not None:
@@ -84,8 +82,6 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         self.lf0_model = lf0_model
         self.vuv_model = vuv_model
         self.bap_model = bap_model
-        self.vib_model = vib_model
-        self.vib_flags_model = vib_flags_model
         self.in_rest_idx = in_rest_idx
         self.in_lf0_idx = in_lf0_idx
         self.in_lf0_min = in_lf0_min
@@ -109,16 +105,6 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
             or self.lf0_model.is_autoregressive()
             or self.vuv_model.is_autoregressive()
             or self.bap_model.is_autoregressive()
-            or (
-                self.vib_model.is_autoregressive()
-                if self.vib_model is not None
-                else False
-            )
-            or (
-                self.vib_flags_model.is_autoregressive()
-                if self.vib_flags_model is not None
-                else False
-            )
         )
 
     def forward(self, x, lengths=None, y=None):
@@ -127,23 +113,10 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
 
         if y is not None:
             # Teacher-forcing
-            outs = split_streams(y, self.stream_sizes)
-            if self.vib_model is None and self.vib_flags_model is None:
-                y_mgc, y_lf0, y_vuv, y_bap = outs
-            elif self.vib_flags_model is None:
-                y_mgc, y_lf0, y_vuv, y_bap, y_vib = outs
-            else:
-                y_mgc, y_lf0, y_vuv, y_bap, y_vib, y_vib_flags = outs
+            y_mgc, y_lf0, y_vuv, y_bap = split_streams(y, self.stream_sizes)
         else:
             # Inference
-            y_mgc, y_lf0, y_vuv, y_bap, y_vib, y_vib_flags = (
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            )
+            y_mgc, y_lf0, y_vuv, y_bap = None, None, None, None
 
         # Predict continuous log-F0 first
         lf0, lf0_residual = self.lf0_model(x, lengths, y_lf0)
@@ -165,11 +138,6 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         vuv = self.vuv_model(encoder_outs, lengths, y_vuv)
         bap = self.bap_model(encoder_outs, lengths, y_bap)
 
-        if self.vib_model is not None:
-            vib = self.vib_model(encoder_outs, lengths, y_vib)
-        if self.vib_flags_model is not None:
-            vib_flags = self.vib_flags_model(encoder_outs, lengths, y_vib_flags)
-
         # make a concatenated stream
         has_postnet_output = (
             isinstance(mgc, list)
@@ -184,22 +152,12 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
                 lf0_ = lf0[idx] if isinstance(lf0, list) else lf0
                 vuv_ = vuv[idx] if isinstance(vuv, list) else vuv
                 bap_ = bap[idx] if isinstance(bap, list) else bap
-                if self.vib_model is None and self.vib_flags_model is None:
-                    out = torch.cat([mgc_, lf0_, vuv_, bap_], dim=-1)
-                elif self.vib_flags_model is None:
-                    out = torch.cat([mgc_, lf0_, vuv_, bap_, vib], dim=-1)
-                else:
-                    out = torch.cat([mgc_, lf0_, vuv_, bap_, vib, vib_flags], dim=-1)
+                out = torch.cat([mgc_, lf0_, vuv_, bap_], dim=-1)
                 assert out.shape[-1] == self.out_dim
                 outs.append(out)
             return outs, lf0_residual
         else:
-            if self.vib_model is None and self.vib_flags_model is None:
-                out = torch.cat([mgc, lf0, vuv, bap], dim=-1)
-            elif self.vib_flags_model is None:
-                out = torch.cat([mgc, lf0, vuv, bap, vib], dim=-1)
-            else:
-                out = torch.cat([mgc, lf0, vuv, bap, vib, vib_flags], dim=-1)
+            out = torch.cat([mgc, lf0, vuv, bap], dim=-1)
             assert out.shape[-1] == self.out_dim
 
         return out, lf0_residual
