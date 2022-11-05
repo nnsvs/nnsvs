@@ -78,7 +78,7 @@ setup(
             "nnsvs-fit-scaler = nnsvs.bin.fit_scaler:entry",
             "nnsvs-preprocess-normalize = nnsvs.bin.preprocess_normalize:entry",
             "nnsvs-train = nnsvs.bin.train:entry",
-            "nnsvs-train-resf0 = nnsvs.bin.train_resf0:entry",
+            "nnsvs-train-acoustic = nnsvs.bin.train_acoustic:entry",
             "nnsvs-train-postfilter = nnsvs.bin.train_postfilter:entry",
             "nnsvs-train-postfilter-cycle = nnsvs.bin.train_postfilter_cycle:entry",
             "nnsvs-generate = nnsvs.bin.generate:entry",
