@@ -8,6 +8,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pyworld
+from nnsvs.util import StandardScaler
 from omegaconf import OmegaConf
 from parallel_wavegan.utils import write_hdf5
 from scipy.io import wavfile
@@ -82,12 +83,46 @@ if __name__ == "__main__":
     # NOTE: used for de-normalization
     scaler = joblib.load(f"dump/{spk}/norm/out_acoustic_scaler.joblib")
 
+    # Save scaler for usfgan
+    out_stats_dir = Path(f"{args.out_dir}/stats")
+    out_stats_dir.mkdir(parents=True, exist_ok=True)
+
     if args.feature_type == "world":
         # (mgc, lf0, vuv, bap)
         # NOTE: 現状、mgcの次元数はサンプリング周波数によらず固定
         stream_sizes = [60, 1, 1, pyworld.get_num_aperiodicities(sample_rate)]
+        # NOTE: scaler for F0 is dummy and never used at usfgan training
+        assert len(scaler.mean_.reshape(-1)) == sum(stream_sizes)
+        usfgan_scaler = {
+            "mcep": StandardScaler(
+                scaler.mean_[0:60], scaler.var_[0:60], scaler.scale_[0:60]
+            ),
+            "f0": StandardScaler(
+                scaler.mean_[60:61], scaler.var_[60:61], scaler.scale_[60:61]
+            ),
+            "contf0": StandardScaler(
+                scaler.mean_[60:61], scaler.var_[60:61], scaler.scale_[60:61]
+            ),
+            "codeap": StandardScaler(
+                scaler.mean_[62:], scaler.var_[62:], scaler.scale_[62:]
+            ),
+        }
+        joblib.dump(usfgan_scaler, out_stats_dir / "scaler.joblib")
     elif args.feature_type == "melf0":
         stream_sizes = [80, 1, 1]
+        assert len(scaler.mean_.reshape(-1)) == sum(stream_sizes)
+        feat_types = ["f0", "contf0", "logmsp"]
+        usfgan_scaler = {
+            "logmsp": StandardScaler(
+                scaler.mean_[0:80], scaler.var_[0:80], scaler.scale_[0:80]
+            ),
+            "f0": StandardScaler(
+                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+            ),
+            "contf0": StandardScaler(
+                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+            ),
+        }
     else:
         raise ValueError(f"Unknown feature type: {args.feature_type}")
 
