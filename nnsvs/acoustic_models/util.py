@@ -87,8 +87,10 @@ def pad_inference(
         ):
             if len(y[0]) == 4:
                 mgc, lf0, vuv, bap = y[0]
-                mgc = mdn_get_most_probable_sigma_and_mu(*mgc)[1]
-                bap = mdn_get_most_probable_sigma_and_mu(*bap)[1]
+                if isinstance(mgc, tuple):
+                    mgc = mdn_get_most_probable_sigma_and_mu(*mgc)[1]
+                if isinstance(bap, tuple):
+                    bap = mdn_get_most_probable_sigma_and_mu(*bap)[1]
                 if pad != 0:
                     mgc = mgc[:, :-pad] if mgc.shape[1] > x.shape[1] else mgc
                     bap = bap[:, :-pad] if bap.shape[1] > x.shape[1] else bap
@@ -97,7 +99,8 @@ def pad_inference(
                 mu = torch.cat([mgc, lf0, vuv, bap], dim=-1)
             elif len(y[0]) == 3:
                 mel, lf0, vuv = y[0]
-                mel = mdn_get_most_probable_sigma_and_mu(*mel)[1]
+                if isinstance(mel, tuple):
+                    mel = mdn_get_most_probable_sigma_and_mu(*mel)[1]
                 if pad != 0:
                     mel = mel[:, :-pad] if mel.shape[1] > x.shape[1] else mel
                     lf0 = lf0[:, :-pad] if lf0.shape[1] > x.shape[1] else lf0

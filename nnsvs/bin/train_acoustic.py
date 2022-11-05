@@ -147,17 +147,20 @@ def train_step(
 
     loss = loss_feats + pitch_reg_weight * loss_pitch
     with torch.no_grad():
-        if prediction_type == 3:
+        if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             if len(pred_out_feats) == 4:
                 pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
-                pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-                pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+                if isinstance(pred_mgc, tuple):
+                    pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
+                if isinstance(pred_bap, tuple):
+                    pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
                 pred_out_feats_ = torch.cat(
                     [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
                 )
             elif len(pred_out_feats) == 3:
                 pred_mel, pred_lf0, pred_vuv = pred_out_feats
-                pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
+                if isinstance(pred_mel, tuple):
+                    pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
                 pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
             else:
                 raise RuntimeError("not supported")

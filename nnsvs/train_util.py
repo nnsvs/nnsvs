@@ -1589,8 +1589,10 @@ def eval_spss_model(
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_mgc, pred_lf0, pred_vuv, pred_bap = outs
-            pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-            pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+            if isinstance(pred_mgc, tuple):
+                pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
+            if isinstance(pred_bap, tuple):
+                pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
             pred_out_feats = torch.cat([pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs
@@ -1607,10 +1609,10 @@ def eval_spss_model(
             pred_out_feats = [pred_out_feats]
 
         # Run inference
-        if (
-            prediction_type == PredictionType.PROBABILISTIC
-            or prediction_type == PredictionType.MULTISTREAM_HYBRID
-        ):
+        if prediction_type in [
+            PredictionType.PROBABILISTIC,
+            PredictionType.MULTISTREAM_HYBRID,
+        ]:
             if isinstance(netG, nn.DataParallel) or isinstance(netG, DDP):
                 inference_out_feats, _ = netG.module.inference(
                     in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
@@ -1802,7 +1804,8 @@ def eval_mel_model(
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_logmel, pred_lf0, pred_vuv = outs
-            pred_logmel = mdn_get_most_probable_sigma_and_mu(*pred_logmel)[1]
+            if isinstance(pred_logmel, tuple):
+                pred_logmel = mdn_get_most_probable_sigma_and_mu(*pred_logmel)[1]
             pred_out_feats = torch.cat([pred_logmel, pred_lf0, pred_vuv], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs
@@ -1819,10 +1822,10 @@ def eval_mel_model(
             pred_out_feats = [pred_out_feats]
 
         # Run inference
-        if (
-            prediction_type == PredictionType.PROBABILISTIC
-            or prediction_type == PredictionType.MULTISTREAM_HYBRID
-        ):
+        if prediction_type in [
+            PredictionType.PROBABILISTIC,
+            PredictionType.MULTISTREAM_HYBRID,
+        ]:
             if isinstance(netG, nn.DataParallel) or isinstance(netG, DDP):
                 inference_out_feats, _ = netG.module.inference(
                     in_feats[utt_idx, : lengths[utt_idx]].unsqueeze(0),
