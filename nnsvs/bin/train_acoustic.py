@@ -16,6 +16,7 @@ from nnsvs.train_util import (
     compute_batch_pitch_regularization_weight,
     compute_distortions,
     eval_model,
+    get_stream_weight,
     load_vocoder,
     log_params_from_omegaconf_dict,
     save_checkpoint,
@@ -44,6 +45,8 @@ def train_step(
     feats_criterion="mse",
     pitch_reg_dyn_ws=1.0,
     pitch_reg_weight=1.0,
+    stream_wise_loss=False,
+    stream_weights=None,
 ):
     model.train() if train else model.eval()
     optimizer.zero_grad()
@@ -74,12 +77,19 @@ def train_step(
     mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
     # Compute loss
-    if prediction_type == 3:
+    if prediction_type == PredictionType.MULTISTREAM_HYBRID:
         loss_feats = 0
         streams = split_streams(out_feats, model_config.stream_sizes)
         assert len(streams) == len(pred_out_feats)
-        N = 0
-        for pred_stream, stream in zip(pred_out_feats, streams):
+        if stream_wise_loss:
+            weights = get_stream_weight(stream_weights, model_config.stream_sizes).to(
+                in_feats.device
+            )
+        else:
+            weights = [None] * len(streams)
+            N = 0
+
+        for pred_stream, stream, sw in zip(pred_out_feats, streams, weights):
             # MDN
             if isinstance(pred_stream, tuple):
                 pi, sigma, mu = pred_stream
@@ -90,17 +100,25 @@ def train_step(
                     loss_feats_ = mdn_loss(
                         pi, sigma, mu, stream, reduce=False
                     ).masked_select(mask_)
-                    loss_feats += loss_feats_.sum()
-                    N += len(loss_feats_.view(-1))
+                    if stream_wise_loss:
+                        loss_feats += sw * loss_feats_.mean()
+                    else:
+                        loss_feats += loss_feats_.sum()
+                        N += len(loss_feats_.view(-1))
             else:
+                # non-MDN
                 with autocast(enabled=grad_scaler is not None):
                     loss_feats_ = criterion(
                         pred_stream.masked_select(mask), stream.masked_select(mask)
                     )
-                    loss_feats += loss_feats_.sum()
-                    N += len(loss_feats_.view(-1))
+                    if stream_wise_loss:
+                        loss_feats += sw * loss_feats_.mean()
+                    else:
+                        loss_feats += loss_feats_.sum()
+                        N += len(loss_feats_.view(-1))
         # NOTE: Mean over batch, time and feature axis
-        loss_feats /= N
+        if not stream_wise_loss:
+            loss_feats /= N
     elif prediction_type == PredictionType.PROBABILISTIC:
         pi, sigma, mu = pred_out_feats
 
@@ -112,18 +130,32 @@ def train_step(
             loss_feats = loss_feats.masked_select(mask_).mean()
     else:
         with autocast(enabled=grad_scaler is not None):
-            # NOTE: multiple predictions
-            if isinstance(pred_out_feats, list):
-                loss_feats = 0
-                for pred_out_feats_ in pred_out_feats:
-                    loss_feats += criterion(
-                        pred_out_feats_.masked_select(mask),
-                        out_feats.masked_select(mask),
-                    ).mean()
-            else:
-                loss_feats = criterion(
-                    pred_out_feats.masked_select(mask), out_feats.masked_select(mask)
-                ).mean()
+            if not isinstance(pred_out_feats, list):
+                # NOTE: treat as multiple predictions
+                pred_out_feats = [pred_out_feats]
+            loss_feats = 0
+            for pred_out_feats_ in pred_out_feats:
+                if stream_wise_loss:
+                    weights = get_stream_weight(
+                        stream_weights, model_config.stream_sizes
+                    ).to(in_feats.device)
+                    streams = split_streams(out_feats, model_config.stream_sizes)
+                    pred_streams = split_streams(
+                        pred_out_feats_, model_config.stream_sizes
+                    )
+                else:
+                    streams = [out_feats]
+                    pred_streams = [pred_out_feats_]
+                    weights = [1.0]
+                for pred_stream, stream, sw in zip(pred_streams, streams, weights):
+                    with autocast(enabled=grad_scaler is not None):
+                        loss_feats += (
+                            sw
+                            * criterion(
+                                pred_stream.masked_select(mask),
+                                stream.masked_select(mask),
+                            ).mean()
+                        )
 
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
@@ -330,6 +362,8 @@ def train_loop(
                     lengths=lengths,
                     out_scaler=out_scaler,
                     feats_criterion=feats_criterion,
+                    stream_wise_loss=config.train.stream_wise_loss,
+                    stream_weights=config.model.stream_weights,
                     pitch_reg_dyn_ws=pitch_reg_dyn_ws,
                     pitch_reg_weight=pitch_reg_weight,
                 )
