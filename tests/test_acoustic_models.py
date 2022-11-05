@@ -643,8 +643,8 @@ def test_lstm_encoder():
 def test_nonar_multistream_parametric_model(reduction_factor):
     params = {
         "in_dim": 300,
-        "out_dim": 206,
-        "stream_sizes": [180, 3, 1, 15, 6, 1],
+        "out_dim": 199,
+        "stream_sizes": [180, 3, 1, 15],
         "reduction_factor": reduction_factor,
         # Separate f0 model
         "lf0_model": ResF0Conv1dResnet(
@@ -668,8 +668,6 @@ def test_nonar_multistream_parametric_model(reduction_factor):
         "mgc_model": FFN(in_dim=8, hidden_dim=5, out_dim=180),
         "vuv_model": FFN(in_dim=8, hidden_dim=5, out_dim=1),
         "bap_model": FFN(in_dim=8, hidden_dim=5, out_dim=15),
-        "vib_model": FFN(in_dim=8, hidden_dim=5, out_dim=6),
-        "vib_flags_model": FFN(in_dim=8, hidden_dim=5, out_dim=1),
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
@@ -683,32 +681,13 @@ def test_nonar_multistream_parametric_model(reduction_factor):
     assert not model.is_autoregressive()
     _test_model_impl(model, params["in_dim"], params["out_dim"])
 
-    # No vib_flags model
-    params["stream_sizes"] = [180, 3, 1, 15, 6]
-    params["vib_flags_model"] = None
-    params["out_dim"] = 205
-    model = MultistreamSeparateF0ParametricModel(**params)
-    assert model.prediction_type() == PredictionType.DETERMINISTIC
-    assert not model.is_autoregressive()
-    _test_model_impl(model, params["in_dim"], params["out_dim"])
-
-    # No vib_flags model & no vib model
-    params["stream_sizes"] = [180, 3, 1, 15]
-    params["vib_flags_model"] = None
-    params["vib_model"] = None
-    params["out_dim"] = 199
-    model = MultistreamSeparateF0ParametricModel(**params)
-    assert model.prediction_type() == PredictionType.DETERMINISTIC
-    assert not model.is_autoregressive()
-    _test_model_impl(model, params["in_dim"], params["out_dim"])
-
 
 @pytest.mark.parametrize("reduction_factor", [1, 2])
 def test_ar_multistream_parametric_model(reduction_factor):
     params = {
         "in_dim": 300,
-        "out_dim": 206,
-        "stream_sizes": [180, 3, 1, 15, 6, 1],
+        "out_dim": 199,
+        "stream_sizes": [180, 3, 1, 15],
         "reduction_factor": reduction_factor,
         # Separate f0 model
         "lf0_model": ResF0Conv1dResnet(
@@ -747,20 +726,6 @@ def test_ar_multistream_parametric_model(reduction_factor):
             in_dim=8,
             hidden_dim=5,
             out_dim=15,
-            layers=1,
-            reduction_factor=reduction_factor,
-        ),
-        "vib_model": NonAttentiveDecoder(
-            in_dim=8,
-            hidden_dim=5,
-            out_dim=6,
-            layers=1,
-            reduction_factor=reduction_factor,
-        ),
-        "vib_flags_model": NonAttentiveDecoder(
-            in_dim=8,
-            hidden_dim=5,
-            out_dim=1,
             layers=1,
             reduction_factor=reduction_factor,
         ),
@@ -853,8 +818,6 @@ def test_ar_multistream_parametric_model_with_postnet(reduction_factor, postnet_
             postnet_kernel_size=3,
             reduction_factor=reduction_factor,
         ),
-        "vib_model": None,
-        "vib_flags_model": None,
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
@@ -890,8 +853,6 @@ def test_nonar_multistream_parametric_model_no_encoder():
         "mgc_model": FFN(in_dim=300, hidden_dim=5, out_dim=60),
         "vuv_model": FFN(in_dim=300, hidden_dim=5, out_dim=1),
         "bap_model": FFN(in_dim=300, hidden_dim=5, out_dim=5),
-        "vib_model": None,
-        "vib_flags_model": None,
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
