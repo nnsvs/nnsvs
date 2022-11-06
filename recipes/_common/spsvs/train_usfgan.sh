@@ -19,6 +19,13 @@ else
     feature_type="world"
 fi
 
+if [ -z "${RUNNING_TEST_RECIPES+x}" ]; then
+    usfgan_train_config=nnsvs_hn_usfgan_sr48k
+else
+    # If we are running tests, use a config for testing purpose
+    usfgan_train_config=nnsvs_hn_usfgan_sr48k_test
+fi
+
 # Convert NNSVS's data to usfgan's format
 if [ ! -d dump_usfgan ]; then
     python $NNSVS_ROOT/utils/nnsvs2usfgan.py config.yaml dump_usfgan --feature_type $feature_type
@@ -33,7 +40,7 @@ cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
 cmdstr="usfgan-train --config-dir conf/train_usfgan/ \
     data=nnsvs_${feature_type}_sr48k \
     discriminator=nnsvs_hifigan \
-    train=nnsvs_hn_usfgan_sr48k_test \
+    train=$usfgan_train_config \
     generator=$vocoder_model \
     data.train_audio=dump_usfgan/scp/${spk}_sr${sample_rate}_train_no_dev.scp \
     data.train_feat=dump_usfgan/scp/${spk}_sr${sample_rate}_train_no_dev.list \

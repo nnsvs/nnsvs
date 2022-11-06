@@ -5,6 +5,9 @@ set -e
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/..
 
+# NOTE: This environmental variable is only used for testing purpose
+export RUNNING_TEST_RECIPES=1
+
 ###########################################################
 #                Dev (melf0, 48k)                         #
 ###########################################################
@@ -36,12 +39,27 @@ rm -rf dump exp outputs tensorboard packed_models
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model hn-sinc-nsf_sr48k_melf0_pwgD_test
 
+# Train hn-uSFGAN
+# NOTE: conf/usfgan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 11 --stop-stage 11 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
+
 # Run the packaging step
 ./run.sh --stage 99 --stop-stage 99 \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model hn-sinc-nsf_sr48k_melf0_pwgD_test
+
+# Run the packaging step with hn-uSFGAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
 
 ###########################################################
 #                Dev (world), 48k)                        #
@@ -91,6 +109,14 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_nnsvs_world_test \
     --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
 
+# Train hn-uSFGAN
+# NOTE: conf/usfgan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 11 --stop-stage 11 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+
 # Run the packaging step
 ./run.sh --stage 99 --stop-stage 99 \
     --timelag-model timelag_test \
@@ -98,3 +124,11 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_nnsvs_world_test \
     --postfilter_model postfilter_merged \
     --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
+
+# Run the packaging step with hn-uSFGAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --postfilter_model postfilter_merged \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
