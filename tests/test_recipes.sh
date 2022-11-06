@@ -103,7 +103,7 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     exp/yoko/postfilter_merged
 
 # Train neural vocoder
-./run.sh --stage 9 --stop-stage 11 \
+./run.sh --stage 9 --stop-stage 10 \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_world_test \
@@ -116,6 +116,15 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_world_test \
     --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+
+# Analysis-by-synthesis
+# TODO: needs to add synthesis configs to support neural vocoders
+# specifically, needs to specify vocoder_type and feature_type
+./run.sh --stage 12 --stop-stage 12 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
 
 # Run the packaging step
 ./run.sh --stage 99 --stop-stage 99 \
