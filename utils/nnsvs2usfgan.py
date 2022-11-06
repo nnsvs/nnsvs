@@ -107,7 +107,6 @@ if __name__ == "__main__":
                 scaler.mean_[62:], scaler.var_[62:], scaler.scale_[62:]
             ),
         }
-        joblib.dump(usfgan_scaler, out_stats_dir / "scaler.joblib")
     elif args.feature_type == "melf0":
         stream_sizes = [80, 1, 1]
         assert len(scaler.mean_.reshape(-1)) == sum(stream_sizes)
@@ -125,6 +124,8 @@ if __name__ == "__main__":
         }
     else:
         raise ValueError(f"Unknown feature type: {args.feature_type}")
+
+    joblib.dump(usfgan_scaler, out_stats_dir / "scaler.joblib")
 
     hop_size = -1
     aux_channels = -1
