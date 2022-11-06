@@ -52,7 +52,7 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
     # NOTE: copy normalization stats to expdir for convenience
     mkdir -p $expdir/$vocoder_model
     cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
-    xrun parallel-wavegan-train --config conf/parallel_wavegan/${vocoder_model}.yaml \
+    xrun parallel-wavegan-train --config conf/train_parallel_wavegan/${vocoder_model}.yaml \
         --train-dumpdir $dump_norm_dir/$train_set/in_vocoder \
         --dev-dumpdir $dump_norm_dir/$dev_set/in_vocoder/ \
         --outdir $expdir/$vocoder_model $extra_args
