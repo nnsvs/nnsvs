@@ -510,7 +510,12 @@ class WORLDAcousticSource(FileDataSource):
         # Align waveform and features
         wave = x.astype(np.float32)
 
-        T = int(features.shape[0] * (fs * self.frame_period / 1000))
+        # NOTE: since neural vocoders need to perform integer-valued up-sampling
+        # (e.g., 120x upsampling with 5ms and 24kHz sampling), we must ensure
+        # that the length of the waveform is a multiple of the integer-valued
+        # up-sampling factor.
+        frame_shift_int = int(fs * self.frame_period / 1000)
+        T = int(features.shape[0] * frame_shift_int)
         if len(wave) < T:
             if T - len(wave) > int(fs * (self.frame_period * 0.001)):
                 print("Length mismatch", T, len(wave), T - len(wave))
@@ -770,7 +775,12 @@ class MelF0AcousticSource(FileDataSource):
         # Align waveform and features
         wave = x.astype(np.float32)
 
-        T = int(features.shape[0] * (fs * self.frame_period / 1000))
+        # NOTE: since neural vocoders need to perform integer-valued up-sampling
+        # (e.g., 120x upsampling with 5ms and 24kHz sampling), we must ensure
+        # that the length of the waveform is a multiple of the integer-valued
+        # up-sampling factor.
+        frame_shift_int = int(fs * self.frame_period / 1000)
+        T = int(features.shape[0] * frame_shift_int)
         if len(wave) < T:
             if T - len(wave) > int(fs * (self.frame_period * 0.001)):
                 print("Length mismatch", T, len(wave), T - len(wave))
