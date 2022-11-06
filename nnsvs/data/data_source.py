@@ -210,7 +210,7 @@ class WORLDAcousticSource(FileDataSource):
 
     def collect_features(self, wav_path, label_path):
         labels = hts.load(label_path)
-        hts_frame_shift = self.frame_period * 1e4
+        hts_frame_shift = int(self.frame_period * 1e4)
         labels.frame_shift = hts_frame_shift
         num_frames = int(labels.num_frames(frame_shift=hts_frame_shift))
 
