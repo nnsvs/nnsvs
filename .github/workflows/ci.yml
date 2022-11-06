@@ -53,6 +53,8 @@ jobs:
 
         # Install NSF implementations for PWG
         pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
+        # Install hn-uSFGAN
+        pip install git+https://github.com/r9y9/HN-UnifiedSourceFilterGAN@nnsvs
 
     - name: Lint with pysen
       run: |
