@@ -40,6 +40,7 @@ fi
 
 # Vocoder model
 if [[ ${vocoder_model+x} || ${vocoder_eval_checkpoint+x} ]]; then
+    # PWG & uSFGAN
     if [[ -z "${vocoder_eval_checkpoint}" && ! -z ${vocoder_model} && -d ${expdir}/${vocoder_model} ]]; then
         vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
     fi
@@ -51,6 +52,9 @@ if [[ ${vocoder_model+x} || ${vocoder_eval_checkpoint+x} ]]; then
         # PWG's expdir
         if [ -e ${voc_dir}/config.yml ]; then
             cp ${voc_dir}/config.yml $dst_dir/vocoder_model.yaml
+        # uSFGAN's expdir
+        elif [ -e ${voc_dir}/config.yaml ]; then
+            cp ${voc_dir}/config.yaml $dst_dir/vocoder_model.yaml
         # Packed model's dir
         elif [ -e ${voc_dir}/vocoder_model.yaml ]; then
             cp ${voc_dir}/vocoder_model.yaml $dst_dir/vocoder_model.yaml

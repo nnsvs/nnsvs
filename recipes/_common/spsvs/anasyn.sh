@@ -18,8 +18,8 @@ if [ -z $acoustic_eval_checkpoint ]; then
 fi
 
 if [ -z "${vocoder_eval_checkpoint}" ]; then
-    if [ ! -z "${vocoder_model}" ]; then
-        vocoder_eval_checkpoint="$(ls -dt "${expdir}/${vocoder_model}"/*.pkl | head -1 || true)"
+    if [[ -z "${vocoder_eval_checkpoint}" && ! -z ${vocoder_model} ]]; then
+        vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
     fi
 fi
 

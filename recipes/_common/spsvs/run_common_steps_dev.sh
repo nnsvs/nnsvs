@@ -59,18 +59,22 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
 fi
 
 if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
-    echo "stage 11: Synthesize waveforms from exracted features"
-    . $NNSVS_COMMON_ROOT/anasyn.sh
+    echo "stage 11: Training uSFGAN vocoder"
+    . $NNSVS_COMMON_ROOT/train_usfgan.sh
 fi
 
 if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
-    echo "stage 12: Training GAN-based acoustic model"
-    . $NNSVS_COMMON_ROOT/train_acoustic_gan.sh
+    echo "stage 12: Synthesize waveforms from exracted features"
+    . $NNSVS_COMMON_ROOT/anasyn.sh
 fi
 
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
+    # PWG
     if [[ -z "${vocoder_eval_checkpoint}" && -f ${expdir}/${vocoder_model}/config.yml ]]; then
+        vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
+    # uSFGAN
+    elif [[ -z "${vocoder_eval_checkpoint}" && -f ${expdir}/${vocoder_model}/config.yaml ]]; then
         vocoder_eval_checkpoint="$(ls -dt "$expdir/$vocoder_model"/*.pkl | head -1 || true)"
     fi
     # Determine the directory name of a packed model
@@ -80,15 +84,22 @@ if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
         # PWG's expdir
         if [ -e ${voc_dir}/config.yml ]; then
             voc_config=${voc_dir}/config.yml
+            vocoder_config_name=$(basename $(grep config: ${voc_config} | awk '{print $2}'))
+            vocoder_config_name=${vocoder_config_name/.yaml/}
+        # uSFGAN
+        elif [ -e ${voc_dir}/config.yaml ]; then
+            voc_config=${voc_dir}/config.yaml
+            vocoder_config_name=$(basename $(grep out_dir: ${voc_config} | awk '{print $2}'))
         # Packed model's dir
         elif [ -e ${voc_dir}/vocoder_model.yaml ]; then
+            # NOTE: assuming PWG for now
             voc_config=${voc_dir}/vocoder_model.yaml
+            vocoder_config_name=$(basename $(grep config: ${voc_config} | awk '{print $2}'))
+            vocoder_config_name=${vocoder_config_name/.yaml/}
         else
             echo "ERROR: vocoder config is not found!"
             exit 1
         fi
-        vocoder_config_name=$(basename $(grep config: ${voc_config} | awk '{print $2}'))
-        vocoder_config_name=${vocoder_config_name/.yaml/}
         dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}_${vocoder_config_name}
     else
         dst_dir=packed_models/${expname}_${timelag_model}_${duration_model}_${acoustic_model}
