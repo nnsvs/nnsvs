@@ -250,7 +250,10 @@ def test_multistream_mel_model(reduction_factor):
 
 
 @pytest.mark.parametrize("num_gaussians", [1, 2, 4])
-def test_npss_mdn_multistream_parametric_model(num_gaussians):
+@pytest.mark.parametrize("vuv_model_bap0_conditioning", [False, True])
+def test_npss_mdn_multistream_parametric_model(
+    num_gaussians, vuv_model_bap0_conditioning
+):
     params = {
         "in_dim": 300,
         "out_dim": 67,
@@ -282,10 +285,11 @@ def test_npss_mdn_multistream_parametric_model(num_gaussians):
             num_gaussians=num_gaussians,
         ),
         "vuv_model": FFN(
-            in_dim=306,
+            in_dim=302 if vuv_model_bap0_conditioning else 306,
             hidden_dim=5,
             out_dim=1,
         ),
+        "vuv_model_bap0_conditioning": vuv_model_bap0_conditioning,
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
@@ -299,7 +303,8 @@ def test_npss_mdn_multistream_parametric_model(num_gaussians):
     _test_model_impl(model, params["in_dim"], params["out_dim"])
 
 
-def test_nonmdn_npss_multistream_parametric_model():
+@pytest.mark.parametrize("vuv_model_bap0_conditioning", [False, True])
+def test_nonmdn_npss_multistream_parametric_model(vuv_model_bap0_conditioning):
     params = {
         "in_dim": 300,
         "out_dim": 67,
@@ -327,10 +332,11 @@ def test_nonmdn_npss_multistream_parametric_model():
             out_dim=5,
         ),
         "vuv_model": FFN(
-            in_dim=306,
+            in_dim=302 if vuv_model_bap0_conditioning else 306,
             hidden_dim=5,
             out_dim=1,
         ),
+        "vuv_model_bap0_conditioning": vuv_model_bap0_conditioning,
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
