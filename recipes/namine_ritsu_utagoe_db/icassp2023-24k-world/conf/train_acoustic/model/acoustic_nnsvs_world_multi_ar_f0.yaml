@@ -5,7 +5,7 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs_contrib.acoustic_models.MultistreamSeparateF0ParametricModel
+  _target_: nnsvs.acoustic_models.MultistreamSeparateF0ParametricModel
   in_dim: 86
   out_dim: 65
 
@@ -26,7 +26,7 @@ netG:
 
   # A separate model for modeling continuous log-F0
   lf0_model:
-    _target_: nnsvs_contrib.acoustic_models.BiLSTMResF0NonAttentiveDecoder
+    _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
     in_dim: 86
     out_dim: 1
     in_ph_start_idx: 3
@@ -54,7 +54,7 @@ netG:
 
   # Shared encoder
   encoder:
-    _target_: nnsvs_contrib.acoustic_models.LSTMEncoder
+    _target_: nnsvs.model.LSTMEncoder
     in_dim: 86
     in_ph_start_idx: 3
     in_ph_end_idx: 50
@@ -68,7 +68,7 @@ netG:
 
   # Decoders for the rest of streams
   mgc_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.model.FFConvLSTM
     in_dim: 1026
     ff_hidden_dim: 1024
     conv_hidden_dim: 512
@@ -79,7 +79,7 @@ netG:
     dropout: 0.1
 
   vuv_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.model.FFConvLSTM
     in_dim: 1026
     ff_hidden_dim: 256
     conv_hidden_dim: 128
@@ -90,7 +90,7 @@ netG:
     dropout: 0.1
 
   bap_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.model.FFConvLSTM
     in_dim: 1026
     ff_hidden_dim: 256
     conv_hidden_dim: 128

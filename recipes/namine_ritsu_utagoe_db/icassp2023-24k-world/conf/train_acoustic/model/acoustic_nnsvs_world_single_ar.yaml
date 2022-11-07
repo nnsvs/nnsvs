@@ -5,7 +5,7 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs_contrib.acoustic_models.BiLSTMResF0NonAttentiveDecoder
+  _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
   in_dim: 86
   out_dim: 65
   in_ph_start_idx: 3
