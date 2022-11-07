@@ -26,11 +26,11 @@ aux_feats: ["mcep", "codeap"]      # Auxiliary features.
                                  # "logmsp": log mel-spectrogram.
 
 # Collater setting
-batch_max_length: 24000  # Length of each audio in batch. Make sure dividable by hop_size.
+batch_max_length: 48000  # Length of each audio in batch. Make sure dividable by hop_size.
 
 # Data loader setting
-batch_size: 5     # Batch size
-num_workers: 0    # Number of workers in Pytorch DataLoader
+batch_size: 3     # Batch size
+num_workers: 2    # Number of workers in Pytorch DataLoader
 pin_memory: true  # Whether to pin memory in Pytorch DataLoader
 
 # Other setting
