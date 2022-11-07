@@ -1,9 +1,9 @@
-# stream_sizes: [60, 1, 1, 5]
+# stream_sizes: [80, 1, 1]
 # hop_size: 240
 # sample_rate: 48000
-# aux_channels: 65
-# feat_types: ["f0", "contf0", "mcep", "codeap"]
-# aux_feats: ["mcep", "codeap"]
+# aux_channels: 80
+# feat_types: ["f0", "contf0", "logmsp"]
+# aux_feats: ["logmsp"]
 
 _target_: usfgan.models.ParallelHnUSFGANGenerator
 harmonic_network_params:
