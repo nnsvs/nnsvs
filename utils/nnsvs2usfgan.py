@@ -103,6 +103,10 @@ if __name__ == "__main__":
             "contf0": StandardScaler(
                 scaler.mean_[60:61], scaler.var_[60:61], scaler.scale_[60:61]
             ),
+            # NOTE: cf0 is for sifigan repo. it is better to unify them in the future.
+            "cf0": StandardScaler(
+                scaler.mean_[60:61], scaler.var_[60:61], scaler.scale_[60:61]
+            ),
             "codeap": StandardScaler(
                 scaler.mean_[62:], scaler.var_[62:], scaler.scale_[62:]
             ),
@@ -119,6 +123,9 @@ if __name__ == "__main__":
                 scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
             ),
             "contf0": StandardScaler(
+                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+            ),
+            "cf0": StandardScaler(
                 scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
             ),
         }
@@ -175,6 +182,7 @@ if __name__ == "__main__":
             write_hdf5(usfgan_feat_path, "/uv", vuv)
             write_hdf5(usfgan_feat_path, "/f0", f0)
             write_hdf5(usfgan_feat_path, "/contf0", contf0)
+            write_hdf5(usfgan_feat_path, "/cf0", contf0)
 
             if args.feature_type == "world":
                 write_hdf5(usfgan_feat_path, "/mcep", mgc)
