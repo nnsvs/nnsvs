@@ -31,6 +31,6 @@ share_upsamples: false                # Whether to share up-sampling transposed 
 share_downsamples: false              # Whether to share down-sampling CNNs.
 bias: true                            # Whether to use bias parameter in conv.
 nonlinear_activation: "LeakyReLU"     # Nonlinear activation type.
-nonlinear_activation_params:          # Nonlinear activation paramters.
+nonlinear_activation_params:          # Nonlinear activation parameters.
     negative_slope: 0.1
 use_weight_norm: true                 # Whether to apply weight normalization.
