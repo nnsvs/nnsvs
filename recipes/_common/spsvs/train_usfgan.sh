@@ -37,6 +37,7 @@ cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
 
 # NOTE: To get the maximum performance, it is highly recommended to configure
 # training options in detail
+# NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
 cmdstr="usfgan-train --config-dir conf/train_usfgan/ \
     data=nnsvs_${feature_type}_sr48k \
     discriminator=nnsvs_univnet \
