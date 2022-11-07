@@ -8,7 +8,7 @@ num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs_contrib.acoustic_models.MultistreamSeparateF0MelModel
+  _target_: nnsvs.acoustic_models.MultistreamSeparateF0MelModel
   in_dim: 86
   out_dim: 82
 
@@ -56,7 +56,7 @@ netG:
 
   # Shared encoder
   encoder:
-    _target_: nnsvs_contrib.acoustic_models.LSTMEncoder
+    _target_: nnsvs.model.LSTMEncoder
     in_dim: 86
     in_ph_start_idx: 3
     in_ph_end_idx: 50
@@ -70,7 +70,7 @@ netG:
 
   # Decoders for the rest of streams
   mel_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.model.FFConvLSTM
     in_dim: 1026
     out_dim: 80
     ff_hidden_dim: 1024
@@ -82,7 +82,7 @@ netG:
     init_type: "kaiming_normal"
 
   vuv_model:
-    _target_: nnsvs_contrib.acoustic_models.FFConvLSTM
+    _target_: nnsvs.model.FFConvLSTM
     in_dim: 1026
     ff_hidden_dim: 256
     conv_hidden_dim: 128
