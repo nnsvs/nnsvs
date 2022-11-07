@@ -25,7 +25,7 @@ if [ -z "${RUNNING_TEST_RECIPES+x}" ]; then
 else
     # If we are running tests, use a config for testing purpose
     usfgan_train_config=nnsvs_hn_usfgan_sr48k_test
-    usfgan_discriminator_config=nnsvs_univnet
+    usfgan_discriminator_config=nnsvs_hifigan
 fi
 
 # Convert NNSVS's data to usfgan's format
