@@ -2,8 +2,8 @@
 discriminator_train_start_steps: 0    # Number of steps to start to train discriminator.
 train_max_steps: 2                    # Number of pre-training steps.
 save_interval_steps: 2                # Interval steps to save checkpoint.
-eval_interval_steps: 2000             # Interval steps to evaluate the network.
-log_interval_steps: 2000              # Interval steps to record the training log.
+eval_interval_steps: 2                # Interval steps to evaluate the network.
+log_interval_steps: 2                 # Interval steps to record the training log.
 resume:                               # Epoch to resume training.
 
 # Loss balancing coefficients.
