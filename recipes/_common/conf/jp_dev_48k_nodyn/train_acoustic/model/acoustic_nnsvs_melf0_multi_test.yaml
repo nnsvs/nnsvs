@@ -36,7 +36,7 @@ netG:
     out_lf0_scale: null
 
   encoder:
-    _target_: nnsvs.acoustic_models.LSTMEncoder
+    _target_: nnsvs.model.LSTMEncoder
     in_dim: 86
     hidden_dim: 4
     out_dim: 7
