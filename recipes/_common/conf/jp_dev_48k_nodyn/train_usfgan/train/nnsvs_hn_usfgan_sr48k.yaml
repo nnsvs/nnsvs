@@ -32,7 +32,7 @@ source_loss:
   fft_size: 4096        # FFT size.
   hop_size: 240         # Hop size.
   f0_floor: 70          # Minimum F0.
-  f0_ceil: 340          # Maximum F0.
+  f0_ceil: 1000         # Maximum F0.
   n_mels: 80            # Number of mel-filter-bank bins.
   fmin: 0               # Minimum frequency of mel-filter-bank.
   fmax: null            # Maximum frequency of mel-filter-bank.
