@@ -68,6 +68,12 @@ if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
     . $NNSVS_COMMON_ROOT/anasyn.sh
 fi
 
+if [ ${stage} -le 13 ] && [ ${stop_stage} -ge 13 ]; then
+    echo "stage 13: Training SiFi-GAN vocoder"
+    . $NNSVS_COMMON_ROOT/train_sifigan.sh
+fi
+
+
 if [ ${stage} -le 99 ] && [ ${stop_stage} -ge 99 ]; then
     echo "Pack models for SVS"
     # PWG
