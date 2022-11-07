@@ -69,6 +69,13 @@ rm -rf dump exp outputs tensorboard packed_models
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
 
+# Run the packaging step with SiFi-GAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_sifigan_sr48k
+
 ###########################################################
 #                Dev (world), 48k)                        #
 ###########################################################
@@ -157,3 +164,11 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_nnsvs_world_test \
     --postfilter_model postfilter_merged \
     --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+
+# Run the packaging step with SiFi-GAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --postfilter_model postfilter_merged \
+    --vocoder_model nnsvs_world_sifigan_sr48k
