@@ -20,10 +20,12 @@ else
 fi
 
 if [ -z "${RUNNING_TEST_RECIPES+x}" ]; then
+    usfgan_data_config=nnsvs_${feature_type}_sr48k
     usfgan_train_config=nnsvs_hn_usfgan_sr48k
     usfgan_discriminator_config=nnsvs_univnet
 else
     # If we are running tests, use a config for testing purpose
+    usfgan_data_config=nnsvs_${feature_type}_sr48k_test
     usfgan_train_config=nnsvs_hn_usfgan_sr48k_test
     usfgan_discriminator_config=nnsvs_hifigan
 fi
@@ -41,7 +43,7 @@ cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
 # training options in detail
 # NOTE: conf/usfgan/generator/${vocoder_model}.yaml must exist
 cmdstr="usfgan-train --config-dir conf/train_usfgan/ \
-    data=nnsvs_${feature_type}_sr48k \
+    data=$usfgan_data_config \
     discriminator=$usfgan_discriminator_config \
     train=$usfgan_train_config \
     generator=$vocoder_model \

@@ -1,0 +1,41 @@
+# NOTE
+# upsample_scales: [5, 4, 4, 3]
+# 0.2kHz -> 1kHz -> 4kHz -> 16kHz -> 48kHz
+
+# Dataset settings
+train_audio: data/scp/namine_ritsu_train_no_dev.scp  # List file of training audio files.
+train_feat: data/scp/namine_ritsu_train_no_dev.list  # List file of training feature files.
+valid_audio: data/scp/namine_ritsu_dev.scp  # List file of validation audio files.
+valid_feat: data/scp/namine_ritsu_dev.list  # List file of validation feature files.
+eval_feat: data/scp/namine_ritsu_eval.list    # List file of evaluation feature files for decoding.
+stats: data/stats/namine_ritsu_train_no_dev.joblib   # Path to the file of statistics.
+allow_cache: false  # Whether to allow cache in dataset. If true, it requires cpu memory
+
+# Feature settings
+sample_rate: 48000               # Sampling rate.
+hop_size: 240                    # Hop size.
+dense_factors: [0.5, 1, 4, 8]    # Dense factor in PDCNNs.
+sine_amp: 0.1                    # Sine amplitude.
+noise_amp: 0.003                 # Noise amplitude.
+signal_types: ["sine"]           # List of input signal types for generator.
+sine_f0_type: "cf0"              # F0 type for sine signal ("f0" or "cf0").
+df_f0_type: "cf0"                # F0 type for dilation factor ("f0" or "cf0").
+aux_feats: ["mcep", "codeap"]    # Auxiliary features.
+                                 # "uv": V/UV binary.
+                                 # "f0": descrete f0.
+                                 # "mcep": mel-cepstral envelope.
+                                 # "cf0": continuous f0.
+                                 # "mcap": mel-cepstral aperiodicity.
+                                 # "bap": coded aperiodicity.
+                                 # "logmsp": log mel-spectrogram.
+
+# Collater setting
+batch_max_length: 6000  # Length of each audio in batch. Make sure dividable by hop_size.
+
+# Data loader setting
+batch_size: 2      # Batch size
+num_workers: 0     # Number of workers in Pytorch DataLoader
+pin_memory: true   # Whether to pin memory in Pytorch DataLoader
+
+# Other setting
+remove_short_samples: true  # Whether to remove samples the length of which are less than batch_max_length

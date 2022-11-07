@@ -20,10 +20,12 @@ else
 fi
 
 if [ -z "${RUNNING_TEST_RECIPES+x}" ]; then
+    sifigan_data_config=nnsvs_${feature_type}_sr48k
     sifigan_train_config=nnsvs_sifigan
     sifigan_discriminator_config=nnsvs_univnet
 else
     # If we are running tests, use a config for testing purpose
+    sifigan_data_config=nnsvs_${feature_type}_sr48k_test
     sifigan_train_config=nnsvs_sifigan_test
     sifigan_discriminator_config=nnsvs_hifigan
 fi
@@ -42,7 +44,7 @@ cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
 # training options in detail
 # NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
 cmdstr="sifigan-train --config-dir conf/train_sifigan/ \
-    data=nnsvs_${feature_type}_sr48k \
+    data=$sifigan_data_config \
     discriminator=$sifigan_discriminator_config \
     train=$sifigan_train_config \
     generator=$vocoder_model \
