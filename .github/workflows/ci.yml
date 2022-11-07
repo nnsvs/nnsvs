@@ -55,6 +55,8 @@ jobs:
         pip install git+https://github.com/nnsvs/ParallelWaveGAN@nnsvs
         # Install hn-uSFGAN
         pip install git+https://github.com/nnsvs/HN-UnifiedSourceFilterGAN@nnsvs
+        # Install SiFi-GAN
+        pip install git+https://github.com/nnsvs/SiFiGAN@nnsvs
 
     - name: Lint with pysen
       run: |
