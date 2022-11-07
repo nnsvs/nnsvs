@@ -39,7 +39,7 @@ cp -v $dump_norm_dir/in_vocoder*.npy $expdir/$vocoder_model
 # training options in detail
 cmdstr="usfgan-train --config-dir conf/train_usfgan/ \
     data=nnsvs_${feature_type}_sr48k \
-    discriminator=nnsvs_hifigan \
+    discriminator=nnsvs_univnet \
     train=$usfgan_train_config \
     generator=$vocoder_model \
     data.train_audio=dump_usfgan/scp/${spk}_sr${sample_rate}_train_no_dev.scp \
