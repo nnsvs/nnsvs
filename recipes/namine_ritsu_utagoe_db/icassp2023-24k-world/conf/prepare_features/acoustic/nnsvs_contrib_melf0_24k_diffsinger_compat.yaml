@@ -21,7 +21,7 @@ subphone_features: coarse_coding
 f0_floor: null
 f0_ceil: null
 
-use_harvest: true
+f0_extractor: harvest
 d4c_threshold: 0.15
 
 frame_period: 5.333333333333333 # ms
