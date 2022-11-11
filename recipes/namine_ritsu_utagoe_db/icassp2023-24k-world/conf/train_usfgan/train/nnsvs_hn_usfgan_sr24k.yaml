@@ -17,7 +17,7 @@ stft_loss:
   _target_: usfgan.losses.MelSpectralLoss
   fft_size: 1024        # FFT size for STFT-based loss.
   hop_size: 256         # Hop size for STFT-based loss
-  win_length: 2048      # Window length for STFT-based loss.
+  win_length: 1024      # Window length for STFT-based loss.
   window: hann_window   # Window function for STFT-based loss.
   sampling_rate: 24000  # Samplring rate.
   n_mels: 80            # Number of bins of mel-filter-bank.
