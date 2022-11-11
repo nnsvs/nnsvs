@@ -46,10 +46,22 @@ rm -rf dump exp outputs tensorboard packed_models
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
+# Synthesize waveforms with hn-uSFGAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
 
 # Train SiFi-GAN
 # NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
 ./run.sh --stage 13 --stop-stage 13 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_sifigan_sr48k
+# Synthesize waveforms with SiFi-GAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_melf0_test \
@@ -131,10 +143,22 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_world_test \
     --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+# Synthesize waveforms with hn-uSFGAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
 
 # Train SiFi-GAN
 # NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
 ./run.sh --stage 13 --stop-stage 13 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_sifigan_sr48k
+# Synthesize waveforms with SiFi-GAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_world_test \
