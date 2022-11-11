@@ -83,7 +83,7 @@ acoustic_hydra_optuna_sweeper_n_trials: 100
 #                SYNTHESIS SETTING                        #
 ###########################################################
 # conf/synthesis/synthesis/${synthesis}
-synthesis: world_gv
+synthesis: melf0_gv_usfgan
 
 # latest.pth or best.pth
 timelag_eval_checkpoint: latest.pth

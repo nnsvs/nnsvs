@@ -75,9 +75,8 @@ acoustic_hydra_optuna_sweeper_n_trials: 100
 ###########################################################
 #                SYNTHESIS SETTING                        #
 ###########################################################
-timelag_synthesis: defaults
-duration_synthesis: defaults
-acoustic_synthesis: defaults
+# conf/synthesis/synthesis/${synthesis}
+synthesis: world_gv
 
 # latest.pth or best.pth
 timelag_eval_checkpoint: latest.pth
