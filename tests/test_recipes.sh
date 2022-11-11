@@ -47,7 +47,7 @@ rm -rf dump exp outputs tensorboard packed_models
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
 # Synthesize waveforms with hn-uSFGAN
-./run.sh --stage 6 --stop-stage 6 --testsets eval
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
     --synthesis melf0_gv_usfgan \
     --timelag-model timelag_test \
     --duration-model duration_test \
