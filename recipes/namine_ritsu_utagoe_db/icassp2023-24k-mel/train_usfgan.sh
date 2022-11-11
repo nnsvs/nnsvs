@@ -1,0 +1,1 @@
+../icassp2023-24k-world/train_usfgan.sh
