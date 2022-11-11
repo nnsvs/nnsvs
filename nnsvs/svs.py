@@ -391,7 +391,7 @@ def synthesis_from_timings(
         )
 
         contf0 = np.exp(lf0)
-        if vocoder_config.data.sine_f0_type == "contf0":
+        if vocoder_config.data.sine_f0_type in ["contf0", "cf0"]:
             f0_inp = contf0
         elif vocoder_config.data.sine_f0_type == "f0":
             f0_inp = contf0
