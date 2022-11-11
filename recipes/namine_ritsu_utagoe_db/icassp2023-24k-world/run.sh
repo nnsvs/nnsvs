@@ -77,6 +77,10 @@ fi
 # Please check the script file for more details
 . $NNSVS_COMMON_ROOT/run_common_steps_dev.sh
 
+if [ ${stage} -le 20 ] && [ ${stop_stage} -ge 20 ]; then
+    . train_usfgan.sh
+fi
+
 if [ ${stage} -le 100 ] && [ ${stop_stage} -ge 100 ]; then
     . synthesis_icassp2023.sh
 fi

@@ -55,4 +55,45 @@ The above two commands are based on my command line history.
 
 ## How to train uSFGAN vocoder
 
-TBD
+### WORLD ver.
+
+```
+CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 98 --stop-stage 98 --vocoder-model nnsvs_world_parallel_hn_usfgan_sr24k
+```
+
+### MEL ver.
+
+```
+CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 98 --stop-stage 98 --vocoder-model nnsvs_melf0_parallel_hn_usfgan_sr24k
+```
+
+## How to synthesize waveforms
+
+Please do make sure to set ``--synthesis ${name}` property. For neural vocoders, please also specify `--vocoder-eval-checkpoint` explicitly.
+Examples are as follows:
+
+### WORLD vocoder
+
+``--synthesis world_gv`
+
+```
+CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acoustic_nnsvs_world_multi_ar_mgcf0bap_npss_v1 --synthesis world_gv
+```
+
+### uSFGAN (WORLD ver.)
+
+``--synthesis world_gv_usfgan`
+
+```
+CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acoustic_nnsvs_world_multi_ar_mgcf0bap_npss_v1 --synthesis world_gv_usfgan \
+    --vocoder-model nnsvs_world_parallel_hn_usfgan_sr24k --vocoder-eval-checkpoint /path/to/checkpoint.pkl
+```
+
+### uSFGAN (MEL ver.)
+
+``--synthesis melf0_gv_usfgan`
+
+```
+CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acoustic_nnsvs_melf0_multi_ar_f0 --synthesis melf0_gv_usfgan \
+    --vocoder-model nnsvs_melf0_parallel_hn_usfgan_sr24k --vocoder-eval-checkpoint /path/to/checkpoint.pkl
+```
