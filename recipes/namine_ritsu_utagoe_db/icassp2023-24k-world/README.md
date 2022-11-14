@@ -97,3 +97,7 @@ CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acous
 CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acoustic_nnsvs_melf0_multi_ar_f0 --synthesis melf0_gv_usfgan \
     --vocoder-model nnsvs_melf0_parallel_hn_usfgan_sr24k --vocoder-eval-checkpoint /path/to/checkpoint.pkl
 ```
+
+## Subjective tests
+
+Please check mos_utt_list.txt for the list of utterance IDs used for our subjective evaluations.
