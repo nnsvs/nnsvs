@@ -52,7 +52,11 @@ jobs:
         pip install -e ".[dev,lint,test]"
 
         # Install NSF implementations for PWG
-        pip install git+https://github.com/r9y9/ParallelWaveGAN@nnsvs
+        pip install git+https://github.com/nnsvs/ParallelWaveGAN@nnsvs
+        # Install hn-uSFGAN
+        pip install git+https://github.com/nnsvs/HN-UnifiedSourceFilterGAN@nnsvs
+        # Install SiFi-GAN
+        pip install git+https://github.com/nnsvs/SiFiGAN@nnsvs
 
     - name: Lint with pysen
       run: |

@@ -1,0 +1,83 @@
+# Interval setting
+discriminator_train_start_steps: 0    # Number of steps to start to train discriminator.
+train_max_steps: 2                    # Number of pre-training steps.
+save_interval_steps: 2                # Interval steps to save checkpoint.
+eval_interval_steps: 2                # Interval steps to evaluate the network.
+log_interval_steps: 2                 # Interval steps to record the training log.
+resume:                               # Epoch to resume training.
+
+# Loss balancing coefficients.
+lambda_mel: 45.0
+lambda_reg: 1.0
+lambda_adv: 1.0
+lambda_fm: 0.0
+
+# Mel-spectral loss setting
+mel_loss:
+  _target_: sifigan.losses.MelSpectralLoss
+  fft_size: 2048        # FFT size for STFT-based loss.
+  hop_size: 512         # Hop size for STFT-based loss
+  win_length: 2048      # Window length for STFT-based loss.
+  window: hann_window   # Window function for STFT-based loss.
+  sample_rate: 48000    # Samplring rate.
+  n_mels: 80            # Number of bins of mel-filter-bank.
+  fmin: 0               # Minimum frequency of mel-filter-bank.
+  fmax: null            # Maximum frequency of mel-filter-bank.
+                        # If null, it will be fs / 2.
+
+# Source regularization loss setting
+reg_loss:
+  _target_: sifigan.losses.ResidualLoss
+  sample_rate: 48000    # Sampling rate.
+  fft_size: 4096        # FFT size.
+  hop_size: 240         # Hop size.
+  f0_floor: 70          # Minimum F0.
+  f0_ceil: 1000         # Maximum F0.
+  n_mels: 80            # Number of mel-filter-bank bins.
+  fmin: 0               # Minimum frequency of mel-filter-bank.
+  fmax: null            # Maximum frequency of mel-filter-bank.
+  power: false          # Whether to use power or magnitude spectrogram.
+  elim_0th: true        # Whether to exclude 0th components of cepstrums in
+                        # CheapTrick estimation. If set to true, source-network
+                        # is forced to estimate the power of the output signal.
+
+# Adversarial loss setting
+adv_loss:
+  _target_: sifigan.losses.AdversarialLoss
+  average_by_discriminators: false  # Whether to average loss by #discriminators.
+  loss_type: mse
+
+# Feature matching loss setting
+fm_loss:
+  _target_: sifigan.losses.FeatureMatchLoss
+  average_by_layers: false  # Whether to average loss by #layers in each discriminator.
+
+# Optimizer and scheduler setting
+generator_optimizer:
+  _target_: torch.optim.Adam
+  lr: 2.0e-4
+  betas: [0.5, 0.9]
+  weight_decay: 0.0
+generator_scheduler:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  gamma: 0.5
+  milestones:
+    - 200000
+    - 400000
+    - 600000
+    - 800000
+generator_grad_norm: 10
+discriminator_optimizer:
+  _target_: torch.optim.Adam
+  lr: 2.0e-4
+  betas: [0.5, 0.9]
+  weight_decay: 0.0
+discriminator_scheduler:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  gamma: 0.5
+  milestones:
+    - 200000
+    - 400000
+    - 600000
+    - 800000
+discriminator_grad_norm: 10

@@ -1,0 +1,39 @@
+_target_: sifigan.models.UnivNetMultiResolutionMultiPeriodDiscriminator
+fft_sizes: [1024, 2048, 512]           # FFT sizes for each spectral discriminator.
+hop_sizes: [120, 240, 50]              # Hop sizes for each spectral discriminator.
+win_lengths: [600, 1200, 240]          # Window lengths for each spectral discriminator.
+window: "hann_window"                  # Name of window function.
+spectral_discriminator_params:         # Params for UnivNet spectral discriminator.
+  channels: 32                         # Number of channels for conv layer.
+  kernel_sizes:                        # List of stride sizes in down-sampling CNNs.
+    - [3, 9]
+    - [3, 9]
+    - [3, 9]
+    - [3, 9]
+    - [3, 3]
+    - [3, 3]
+  strides:                             #  List of kernel sizes in down-sampling CNNs.
+    - [1, 1]
+    - [1, 2]
+    - [1, 2]
+    - [1, 2]
+    - [1, 1]
+    - [1, 1]
+  bias: true                           # Whether to add bias parameter in convolution layers.
+  nonlinear_activation: "LeakyReLU"    # Nonlinear activation.
+  nonlinear_activation_params:         # Nonlinear activation parameters.
+    negative_slope: 0.2
+periods: [2, 3, 5, 7, 11]              # List of period for multi-period discriminator.
+period_discriminator_params:           # Params for HiFiGAN period discriminator.
+  in_channels: 1                       # Number of input channels.
+  out_channels: 1                      # Number of output channels.
+  kernel_sizes: [5, 3]                 # List of kernel sizes.
+  channels: 32                         # Initial number of channels.
+  downsample_scales: [3, 3, 3, 3, 1]   # Downsampling scales.
+  max_downsample_channels: 1024        # Maximum number of channels in downsampling conv layers.
+  bias: true                           # Whether to use bias parameter in conv layer."
+  nonlinear_activation: "LeakyReLU"    # Nonlinear activation.
+  nonlinear_activation_params:         # Nonlinear activation parameters.
+    negative_slope: 0.1
+  use_weight_norm: true                # Whether to apply weight normalization.
+  use_spectral_norm: false             # Whether to apply spectral normalization.

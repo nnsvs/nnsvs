@@ -5,6 +5,9 @@ set -e
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_ROOT=$script_dir/..
 
+# NOTE: This environmental variable is only used for testing purpose
+export RUNNING_TEST_RECIPES=1
+
 ###########################################################
 #                Dev (melf0, 48k)                         #
 ###########################################################
@@ -36,12 +39,56 @@ rm -rf dump exp outputs tensorboard packed_models
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model hn-sinc-nsf_sr48k_melf0_pwgD_test
 
+# Train hn-uSFGAN
+# NOTE: conf/usfgan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 11 --stop-stage 11 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
+# Synthesize waveforms with hn-uSFGAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --synthesis melf0_gv_usfgan \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
+
+# Train SiFi-GAN
+# NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 13 --stop-stage 13 \
+    --synthesis melf0_gv_usfgan \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_sifigan_sr48k
+# Synthesize waveforms with SiFi-GAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_sifigan_sr48k
+
 # Run the packaging step
 ./run.sh --stage 99 --stop-stage 99 \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model hn-sinc-nsf_sr48k_melf0_pwgD_test
+
+# Run the packaging step with hn-uSFGAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_parallel_hn_usfgan_sr48k
+
+# Run the packaging step with SiFi-GAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_melf0_test \
+    --vocoder_model nnsvs_melf0_sifigan_sr48k
 
 ###########################################################
 #                Dev (world), 48k)                        #
@@ -85,7 +132,46 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     exp/yoko/postfilter_merged
 
 # Train neural vocoder
-./run.sh --stage 9 --stop-stage 11 \
+./run.sh --stage 9 --stop-stage 10 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
+
+# Train hn-uSFGAN
+# NOTE: conf/usfgan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 11 --stop-stage 11 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+# Synthesize waveforms with hn-uSFGAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --synthesis world_gv_usfgan \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+
+# Train SiFi-GAN
+# NOTE: conf/sifigan/generator/${vocoder_model}.yaml must exist
+./run.sh --stage 13 --stop-stage 13 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_sifigan_sr48k
+# Synthesize waveforms with SiFi-GAN
+./run.sh --stage 6 --stop-stage 6 --testsets eval \
+    --synthesis world_gv_usfgan \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --vocoder_model nnsvs_world_sifigan_sr48k
+
+# Analysis-by-synthesis
+# TODO: needs to add synthesis configs to support neural vocoders
+# specifically, needs to specify vocoder_type and feature_type
+./run.sh --stage 12 --stop-stage 12 \
     --timelag-model timelag_test \
     --duration-model duration_test \
     --acoustic_model acoustic_nnsvs_world_test \
@@ -98,3 +184,19 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_nnsvs_world_test \
     --postfilter_model postfilter_merged \
     --vocoder_model hn-sinc-nsf_sr48k_pwgD_test
+
+# Run the packaging step with hn-uSFGAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --postfilter_model postfilter_merged \
+    --vocoder_model nnsvs_world_parallel_hn_usfgan_sr48k
+
+# Run the packaging step with SiFi-GAN
+./run.sh --stage 99 --stop-stage 99 \
+    --timelag-model timelag_test \
+    --duration-model duration_test \
+    --acoustic_model acoustic_nnsvs_world_test \
+    --postfilter_model postfilter_merged \
+    --vocoder_model nnsvs_world_sifigan_sr48k

@@ -1,0 +1,36 @@
+# stream_sizes: [60, 1, 1, 5]
+# hop_size: 240
+# sample_rate: 48000
+# aux_channels: 65
+# feat_types: ["f0", "contf0", "mcep", "codeap"]
+# aux_feats: ["mcep", "codeap"]
+
+_target_: sifigan.models.SiFiGANGenerator
+in_channels: 65                       # Number of input channels.
+out_channels: 1                       # Number of output channels.
+channels: 512                         # Number of initial channels.
+kernel_size: 7                        # Kernel size of initial and final conv layers.
+upsample_scales: [5, 4, 4, 3]         # Upsampling scales.
+upsample_kernel_sizes: [10, 8, 8, 6]  # Kernel size for upsampling layers.
+source_network_params:                # Parameters for source-network.
+    resblock_kernel_size: 3           # Kernel size for adaptive residual blocks.
+    resblock_dilations:               # Dilations for adaptive residual blocks.
+        - [1]
+        - [1, 2]
+        - [1, 2, 4]
+        - [1, 2, 4, 8]
+    use_additional_convs: true        # Whether to use additional conv layers.
+filter_network_params:                # Parameters for filter-network.
+    resblock_kernel_sizes: [3, 5, 7]  # Kernel size for residual blocks.
+    resblock_dilations:               # Dilations for residual blocks.
+        - [1, 3, 5]
+        - [1, 3, 5]
+        - [1, 3, 5]
+    use_additional_convs: false       # Whether to use additional conv layers.
+share_upsamples: false                # Whether to share up-sampling transposed CNNs.
+share_downsamples: false              # Whether to share down-sampling CNNs.
+bias: true                            # Whether to use bias parameter in conv.
+nonlinear_activation: "LeakyReLU"     # Nonlinear activation type.
+nonlinear_activation_params:          # Nonlinear activation parameters.
+    negative_slope: 0.1
+use_weight_norm: true                 # Whether to apply weight normalization.

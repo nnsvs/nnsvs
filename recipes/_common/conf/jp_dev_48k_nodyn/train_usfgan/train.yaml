@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - generator: parallel_hn_usfgan
+  - discriminator: hifigan
+  - train: hn_usfgan
+  - data: vctk_24kHz
+
+hydra:
+  # job:
+  #   chdir: false
+  # output_subdir: null
+  job_logging:
+    formatters:
+      simple:
+        format: '[%(levelname)s][%(module)s | %(lineno)s] %(message)s'
+
+out_dir:     # Directory to output training results.
+seed: 12345  # Seed number for random numbers.

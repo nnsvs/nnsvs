@@ -14,6 +14,7 @@ recipes*/*/*/data*
 recipes*/*/*/db
 recipes*/*/*/downloads
 recipes*/*/*/dump
+recipes*/*/*/dump_usfgan
 recipes*/*/*/exp
 recipes*/*/*/tensorboard
 recipes*/*/*/wav*
