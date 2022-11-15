@@ -107,6 +107,8 @@ Please check mos_utt_list.txt for the list of utterance IDs used for our subject
 
 Code: https://github.com/nnsvs/DiffSinger (branch: namine_ritsu)
 
+Firstly, please do make sure to setup a python environment following the DiffSinger's documentation.
+
 In the following guide, we assume NNSVS and DiffSinger repositories are placed at $HOME/nnsvs and $HOME/DiffSinger, respectively.
 
 The basic strategy is to convert NNSVS's data to one of the DiffSinger's supported databases (i.e., Opencpop), so that the DiffSinger's code can be used with minimal changes. Once the conversion is property done, we can just use DiffSinger's codebase.
