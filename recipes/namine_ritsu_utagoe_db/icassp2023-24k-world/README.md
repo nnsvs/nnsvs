@@ -101,3 +101,74 @@ CUDA_VISIBLE_DEVICES=0 ./run.sh  --stage 6 --stop-stage 6 --acoustic-model acous
 ## Subjective tests
 
 Please check mos_utt_list.txt for the list of utterance IDs used for our subjective evaluations.
+
+
+## How to train DiffSinger
+
+Code: https://github.com/nnsvs/DiffSinger (branch: namine_ritsu)
+
+In the following guide, we assume NNSVS and DiffSinger repositories are placed at $HOME/nnsvs and $HOME/DiffSinger, respectively.
+
+### Convert NNSVS's dataset to DiffSinger's format
+
+- You first need to run stage 0 for one of the icassp2023-* recipes (e.g., icassp2023-24k-mel-diffsinger-compat). Make sure to have the `data/acoustic` directory.
+- Once the stage 0 is finished, you can convert the NNSVS' data to Opencpop's style by the following command:
+
+```
+python $HOME/nnsvs/utils/nnsvs2opencpop.py data/acoustic/ $HOME/DiffSinger/data/raw/ritsu_24k_diffsinger/segments
+```
+
+### Feature extraction
+
+Please make sure to change the working directory to the DiffSinger directory.
+
+```
+cd $HOME/DiffSinger
+```
+
+Then, run the following command:
+
+```
+PYTHONPATH=. CUDA_VISIBLE_DEVICES=0 python data_gen/tts/bin/binarize.py --config usr/configs/midi/cascade/opencs/aux_rel_ritsu.yaml
+```
+
+### Training pitch extarctor
+
+```
+PYTHONPATH=. CUDA_VISIBLE_DEVICES=0 python tasks/run.py --config usr/configs/midi/pe_ritsu.yaml --exp_name 0923_ritsu_pe --reset
+```
+
+### Training DiffSinger MIDI-B version
+
+There are two configs for training DiffSinger's acoustic model:
+
+- usr/configs/midi/e2e/opencpop/ds100_adj_rel_ritsu_v3_ritsu_pe.yaml
+- usr/configs/midi/e2e/opencpop/ds100_adj_rel_ritsu_v4_ritsu_pe.yaml
+
+#### Using the pre-trained vocoder for Namine Ritsu (ds100_adj_rel_ritsu_v4_ritsu_pe.yaml)
+
+NOTE: To train a DiffSinger model used in our experiments, you must need a pre-trained vocoder trained on Namine Ritsu's database. If you want to get a pre-trained model, please contact [@r9y9](https://github.com/r9y9).
+
+```
+PYTHONPATH=. CUDA_VISIBLE_DEVICES=0 python tasks/run.py --config usr/configs/midi/e2e/opencpop/ds100_adj_rel_ritsu_v4_ritsu_pe.yaml --exp_name 0923_ds100_adj_rel_ritsu_v4_ritsu_pe --reset
+```
+
+#### Using the pre-trained universal vocoder provided by the DiffSinger's authors (ds100_adj_rel_ritsu_v3_ritsu_pe.yaml)
+
+Alternatively, if you are fine with the pre-trained universal vocoder provided by the DiffSinger's authors, you can train the DiffSinger by the following command:
+
+```
+PYTHONPATH=. CUDA_VISIBLE_DEVICES=0 python tasks/run.py --config usr/configs/midi/e2e/opencpop/ds100_adj_rel_ritsu_v3_ritsu_pe.yaml --exp_name 0923_ds100_adj_rel_ritsu_v3_ritsu_pe --reset
+```
+
+The results get slightly worse in my experience, but it should work fine.
+
+### Synthesizing waveforms
+
+Add ``--infer`` to the training command. e.g.,
+
+```
+PYTHONPATH=. CUDA_VISIBLE_DEVICES=0 python tasks/run.py --config usr/configs/midi/e2e/opencpop/ds100_adj_rel_ritsu_v4_ritsu_pe.yaml --exp_name 0923_ds100_adj_rel_ritsu_v4_ritsu_pe --reset --infer
+```
+
+Please also check the DiffSinger's documentation for the detailed usage.
