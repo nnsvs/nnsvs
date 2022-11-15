@@ -170,6 +170,8 @@ class WORLDAcousticSource(FileDataSource):
         correct_f0=False,
         dynamic_features_flags=None,
         use_world_codec=False,
+        use_mcep_aperiodicity=False,
+        mcep_aperiodicity_order=24,
         res_type="scipy",
     ):
         self.utt_list = utt_list
@@ -197,6 +199,8 @@ class WORLDAcousticSource(FileDataSource):
         self.correct_vuv = correct_vuv
         self.correct_f0 = correct_f0
         self.use_world_codec = use_world_codec
+        self.use_mcep_aperiodicity = use_mcep_aperiodicity
+        self.mcep_aperiodicity_order = mcep_aperiodicity_order
         if dynamic_features_flags is None:
             # NOTE: we have up to 6 streams: (mgc, lf0, vuv, bap, vib, vib_flags)
             dynamic_features_flags = [True, True, False, True, True, False]
@@ -428,7 +432,15 @@ class WORLDAcousticSource(FileDataSource):
                         np.where(is_voiced)[0],
                         aperiodicity[is_voiced, k],
                     )
-        bap = pyworld.code_aperiodicity(aperiodicity, fs)
+
+        if self.use_mcep_aperiodicity:
+            bap = pysptk.sp2mc(
+                aperiodicity,
+                order=self.mcep_aperiodicity_order,
+                alpha=pysptk.util.mcepalpha(fs),
+            )
+        else:
+            bap = pyworld.code_aperiodicity(aperiodicity, fs)
 
         # Parameter trajectory smoothing
         if self.trajectory_smoothing:

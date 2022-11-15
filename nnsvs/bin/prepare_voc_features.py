@@ -75,6 +75,8 @@ def my_app(config: DictConfig) -> None:
             config.acoustic.mgc_order,
             config.acoustic.num_windows,
             config.acoustic.vibrato_mode,
+            use_mcep_aperiodicity=config.acoustic.use_mcep_aperiodicity,
+            mcep_aperiodicity_order=config.acoustic.mcep_aperiodicity_order,
         )
     elif config.acoustic.feature_type == "melf0":
         stream_sizes = [80, 1, 1]

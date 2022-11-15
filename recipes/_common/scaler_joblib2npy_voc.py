@@ -22,6 +22,17 @@ def get_parser():
     parser.add_argument("--mgc_order", type=int, default=59, help="mgc order")
     parser.add_argument("--num_windows", type=int, default=3, help="number of windows")
     parser.add_argument("--vibrato_mode", type=str, default="none", help="vibrato mode")
+    parser.add_argument(
+        "--use_mcep_aperiodicity",
+        action="store_true",
+        help="use mcep-based aperiodicity",
+    )
+    parser.add_argument(
+        "--mcep_aperiodicity_order",
+        type=int,
+        default=24,
+        help="order of mcep-based aperiodicity",
+    )
 
     return parser
 
@@ -51,7 +62,12 @@ if __name__ == "__main__":
         stream_sizes = [80, 1, 1]
     else:
         stream_sizes = get_world_stream_info(
-            args.sample_rate, args.mgc_order, args.num_windows, args.vibrato_mode
+            args.sample_rate,
+            args.mgc_order,
+            args.num_windows,
+            args.vibrato_mode,
+            use_mcep_aperiodicity=args.use_mcep_aperiodicity,
+            mcep_aperiodicity_order=args.mcep_aperiodicity_order,
         )
     has_dynamic_features = [False] * len(stream_sizes)
 

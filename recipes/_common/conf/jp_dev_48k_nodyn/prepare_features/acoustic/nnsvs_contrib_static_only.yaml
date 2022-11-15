@@ -31,6 +31,10 @@ mgc_order: 59
 # Use WORLD-based coding for spectral envelope or not
 use_world_codec: true
 
+# Use mcep-based aperidicity paramatrization
+use_mcep_aperiodicity: false
+mcep_aperiodicity_order: 24
+
 # windows to compute delta and delta-delta features
 # set 1 to disable
 num_windows: 1

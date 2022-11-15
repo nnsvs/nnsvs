@@ -1383,7 +1383,12 @@ def synthesize(
     else:
         # Fallback to WORLD
         f0, spectrogram, aperiodicity = gen_world_params(
-            mgc, lf0, vuv, bap, sr, use_world_codec=use_world_codec
+            mgc,
+            lf0,
+            vuv,
+            bap,
+            sr,
+            use_world_codec=use_world_codec,
         )
         wav = pyworld.synthesize(f0, spectrogram, aperiodicity, sr, 5)
 
@@ -1941,6 +1946,7 @@ def plot_spsvs_params(
     fftlen = pyworld.get_cheaptrick_fft_size(sr)
     alpha = pysptk.util.mcepalpha(sr)
     hop_length = int(sr * 0.005)
+    use_mcep_aperiodicity = bap.shape[-1] > 5
 
     # Log-F0
     if lf0_score is not None:
@@ -2080,7 +2086,10 @@ def plot_spsvs_params(
     fig, ax = plt.subplots(2, 1, figsize=(8, 6))
     ax[0].set_title("Reference aperiodicity")
     ax[1].set_title("Predicted aperiodicity")
-    aperiodicity = pyworld.decode_aperiodicity(bap.astype(np.float64), sr, fftlen).T
+    if use_mcep_aperiodicity:
+        aperiodicity = pysptk.mc2sp(bap, fftlen=fftlen, alpha=alpha).T
+    else:
+        aperiodicity = pyworld.decode_aperiodicity(bap.astype(np.float64), sr, fftlen).T
     mesh = librosa.display.specshow(
         20 * np.log10(aperiodicity),
         sr=sr,
@@ -2091,9 +2100,14 @@ def plot_spsvs_params(
         ax=ax[0],
     )
     fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
-    pred_aperiodicity = pyworld.decode_aperiodicity(
-        np.ascontiguousarray(pred_bap).astype(np.float64), sr, fftlen
-    ).T
+    if use_mcep_aperiodicity:
+        pred_aperiodicity = pysptk.mc2sp(
+            np.ascontiguousarray(pred_bap), fftlen=fftlen, alpha=alpha
+        ).T
+    else:
+        pred_aperiodicity = pyworld.decode_aperiodicity(
+            np.ascontiguousarray(pred_bap).astype(np.float64), sr, fftlen
+        ).T
     mesh = librosa.display.specshow(
         20 * np.log10(pred_aperiodicity),
         sr=sr,

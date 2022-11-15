@@ -55,7 +55,12 @@ def init_weights(net, init_type="normal", init_gain=0.02):
 
 
 def get_world_stream_info(
-    sr: int, mgc_order: int, num_windows: int = 3, vibrato_mode: str = "none"
+    sr: int,
+    mgc_order: int,
+    num_windows: int = 3,
+    vibrato_mode: str = "none",
+    use_mcep_aperiodicity: bool = False,
+    mcep_aperiodicity_order: int = 24,
 ):
     """Get stream sizes for WORLD-based acoustic features
 
@@ -73,7 +78,9 @@ def get_world_stream_info(
         (mgc_order + 1) * num_windows,
         num_windows,
         1,
-        pyworld.get_num_aperiodicities(sr) * num_windows,
+        pyworld.get_num_aperiodicities(sr) * num_windows
+        if not use_mcep_aperiodicity
+        else mcep_aperiodicity_order + 1,
     ]
     if vibrato_mode == "diff":
         # vib
