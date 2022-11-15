@@ -109,14 +109,18 @@ Code: https://github.com/nnsvs/DiffSinger (branch: namine_ritsu)
 
 In the following guide, we assume NNSVS and DiffSinger repositories are placed at $HOME/nnsvs and $HOME/DiffSinger, respectively.
 
-### Convert NNSVS's dataset to DiffSinger's format
+The basic strategy is to convert NNSVS's data to one of the DiffSinger's supported databases (i.e., Opencpop), so that the DiffSinger's code can be used with minimal changes. Once the conversion is property done, we can just use DiffSinger's codebase.
 
-- You first need to run stage 0 for one of the icassp2023-* recipes (e.g., icassp2023-24k-mel-diffsinger-compat). Make sure to have the `data/acoustic` directory.
-- Once the stage 0 is finished, you can convert the NNSVS' data to Opencpop's style by the following command:
+### Convert NNSVS's dataset to Opencpop's format
+
+- You first need to run stage 0 for one of the icassp2023-* recipes (e.g., icassp2023-24k-mel-diffsinger-compat). Please make sure that `data/acoustic` directory is created.
+- After the stage 0 is finished, you can convert the NNSVS' data to Opencpop's style by the following command:
 
 ```
 python $HOME/nnsvs/utils/nnsvs2opencpop.py data/acoustic/ $HOME/DiffSinger/data/raw/ritsu_24k_diffsinger/segments
 ```
+
+Note that we only tested Namine Ritsu's database, but it should be possible to use other databases as long as the same data preparation as in the NNSVS's stage 0 is used.
 
 ### Feature extraction
 
