@@ -1191,7 +1191,7 @@ def eval_pitch_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         if prediction_type == PredictionType.PROBABILISTIC:
@@ -1588,16 +1588,20 @@ def eval_spss_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_mgc, pred_lf0, pred_vuv, pred_bap = outs
-            if isinstance(pred_mgc, tuple):
+            if isinstance(pred_mgc, tuple) and len(pred_mgc) == 3:
                 pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-            if isinstance(pred_bap, tuple):
+            elif isinstance(pred_mgc, tuple) and len(pred_mgc) == 2:
+                pred_mgc = pred_mgc[1]
+            if isinstance(pred_bap, tuple) and len(pred_bap) == 3:
                 pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+            elif isinstance(pred_bap, tuple) and len(pred_bap) == 2:
+                pred_bap = pred_bap[1]
             pred_out_feats = torch.cat([pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs
@@ -1803,14 +1807,16 @@ def eval_mel_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_logmel, pred_lf0, pred_vuv = outs
-            if isinstance(pred_logmel, tuple):
+            if isinstance(pred_logmel, tuple) and len(pred_logmel) == 3:
                 pred_logmel = mdn_get_most_probable_sigma_and_mu(*pred_logmel)[1]
+            elif isinstance(pred_logmel, tuple) and len(pred_logmel) == 2:
+                pred_logmel = pred_logmel[1]
             pred_out_feats = torch.cat([pred_logmel, pred_lf0, pred_vuv], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs

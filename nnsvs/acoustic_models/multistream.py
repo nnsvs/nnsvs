@@ -505,22 +505,34 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
 
         # Predict V/UV
         if is_inference:
-            if self.vuv_model_bap0_conditioning:
-                bap_inp = bap[1][:, :, 0:1]
+            if self.bap_model.prediction_type() == PredictionType.PROBABILISTIC:
+                bap_cond = bap[0]
             else:
-                bap_inp = bap[1]
-            vuv_inp = torch.cat([x, lf0, bap_inp], dim=-1)
+                bap_cond = bap
+
+            if self.vuv_model_bap0_conditioning:
+                bap_cond = bap_cond[:, :, 0:1]
+
+            vuv_inp = torch.cat([x, lf0, bap_cond], dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
             if self.vuv_model_bap0_conditioning:
-                y_bap_inp = y_bap[:, :, 0:1]
+                y_bap_cond = y_bap[:, :, 0:1]
             else:
-                y_bap_inp = y_bap
-            vuv_inp = torch.cat([x, lf0, y_bap_inp], dim=-1)
+                y_bap_cond = y_bap
+            vuv_inp = torch.cat([x, lf0, y_bap_cond], dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
-            out = torch.cat([mgc[0], lf0, vuv, bap[0]], dim=-1)
+            if self.bap_model.prediction_type() == PredictionType.PROBABILISTIC:
+                bap_ = bap[0]
+            else:
+                bap_ = bap
+            if self.mgc_model.prediction_type() == PredictionType.PROBABILISTIC:
+                mgc_ = mgc[0]
+            else:
+                mgc_ = mgc
+            out = torch.cat([mgc_, lf0, vuv, bap_], dim=-1)
             assert out.shape[-1] == self.out_dim
             # TODO: better design
             return out, out

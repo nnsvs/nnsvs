@@ -90,8 +90,19 @@ def train_step(
             N = 0
 
         for pred_stream, stream, sw in zip(pred_out_feats, streams, weights):
+            # DDPM
+            if isinstance(pred_stream, tuple) and len(pred_stream) == 2:
+                noise, x_recon = pred_stream
+                loss_feats_ = criterion(
+                    noise.masked_select(mask), x_recon.masked_select(mask)
+                )
+                if stream_wise_loss:
+                    loss_feats += sw * loss_feats_.mean()
+                else:
+                    loss_feats += loss_feats_.sum()
+                    N += len(loss_feats_.view(-1))
             # MDN
-            if isinstance(pred_stream, tuple):
+            elif isinstance(pred_stream, tuple) and len(pred_stream) == 3:
                 pi, sigma, mu = pred_stream
                 # (B, max(T)) or (B, max(T), D_out)
                 mask_ = mask if len(pi.shape) == 4 else mask.squeeze(-1)
@@ -182,17 +193,26 @@ def train_step(
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             if len(pred_out_feats) == 4:
                 pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
-                if isinstance(pred_mgc, tuple):
+                if isinstance(pred_mgc, tuple) and len(pred_mgc) == 3:
                     pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-                if isinstance(pred_bap, tuple):
+                elif isinstance(pred_mgc, tuple) and len(pred_mgc) == 2:
+                    # Diffusion case: noise
+                    pred_mgc = pred_mgc[1]
+                if isinstance(pred_bap, tuple) and len(pred_bap) == 3:
                     pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+                elif isinstance(pred_bap, tuple) and len(pred_bap) == 2:
+                    # Diffusion case: noise
+                    pred_bap = pred_bap[1]
                 pred_out_feats_ = torch.cat(
                     [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
                 )
             elif len(pred_out_feats) == 3:
                 pred_mel, pred_lf0, pred_vuv = pred_out_feats
-                if isinstance(pred_mel, tuple):
+                if isinstance(pred_mel, tuple) and len(pred_mel) == 3:
                     pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
+                elif isinstance(pred_mel, tuple) and len(pred_mel) == 2:
+                    # Diffusion case: noise
+                    pred_mel = pred_mel[1]
                 pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
             else:
                 raise RuntimeError("not supported")
