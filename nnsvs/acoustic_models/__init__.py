@@ -133,6 +133,9 @@ class ResF0Conv1dResnet(BaseModel):
             else PredictionType.DETERMINISTIC
         )
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, x, lengths=None, y=None):
         """Forward step
 
@@ -256,6 +259,9 @@ class ResF0VariancePredictor(VariancePredictor):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, x, lengths=None, y=None):
         """Forward step
 
@@ -358,6 +364,9 @@ class ResF0TransformerEncoder(BaseModel):
             init_type=init_type,
             downsample_by_conv=downsample_by_conv,
         )
+
+    def has_residual_lf0_prediction(self):
+        return True
 
     def forward(self, x, lengths=None, y=None):
         """Forward pass

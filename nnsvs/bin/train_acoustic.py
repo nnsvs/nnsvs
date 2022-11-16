@@ -68,7 +68,7 @@ def train_step(
     # Run forward
     with autocast(enabled=grad_scaler is not None):
         outs = model(in_feats, lengths, out_feats)
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if model.has_residual_lf0_prediction():
             pred_out_feats, lf0_residual = outs
         else:
             pred_out_feats, lf0_residual = outs, None

@@ -129,3 +129,13 @@ class BaseModel(nn.Module):
             bool: True if autoregressive. Default is False.
         """
         return False
+
+    def has_residual_lf0_prediction(self):
+        """Whether the model has residual log-F0 prediction or not.
+
+        This should only be used for acoustic models.
+
+        Returns:
+            bool: True if the model has residual log-F0 prediction. Default is False.
+        """
+        return False

@@ -90,6 +90,9 @@ class MultistreamSeparateF0ParametricModel(BaseModel):
         self.out_lf0_mean = out_lf0_mean
         self.out_lf0_scale = out_lf0_scale
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def _set_lf0_params(self):
         # Special care for residual F0 prediction models
         # NOTE: don't overwrite out_lf0_idx and in_lf0_idx
@@ -267,6 +270,9 @@ class NPSSMultistreamParametricModel(BaseModel):
             or self.vuv_model.is_autoregressive()
             or self.bap_model.is_autoregressive()
         )
+
+    def has_residual_lf0_prediction(self):
+        return True
 
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
@@ -455,6 +461,9 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
             or self.bap_model.is_autoregressive()
         )
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
         assert x.shape[-1] == self.in_dim
@@ -609,6 +618,9 @@ class MultistreamSeparateF0MelModel(BaseModel):
             or self.vuv_model.is_autoregressive()
         )
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
         assert x.shape[-1] == self.in_dim
@@ -758,6 +770,9 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
             or self.lf0_model.is_autoregressive()
             or self.vuv_model.is_autoregressive()
         )
+
+    def has_residual_lf0_prediction(self):
+        return True
 
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()

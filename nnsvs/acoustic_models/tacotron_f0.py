@@ -120,6 +120,9 @@ class ResF0NonAttentiveDecoder(BaseModel):
     def is_autoregressive(self):
         return True
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, encoder_outs, in_lens, decoder_targets=None):
         """Forward step
 
@@ -356,6 +359,9 @@ class MDNResF0NonAttentiveDecoder(BaseModel):
         return PredictionType.PROBABILISTIC
 
     def is_autoregressive(self):
+        return True
+
+    def has_residual_lf0_prediction(self):
         return True
 
     def forward(self, encoder_outs, in_lens, decoder_targets=None):
@@ -693,6 +699,9 @@ class BiLSTMResF0NonAttentiveDecoder(BaseModel):
             if self.use_mdn
             else PredictionType.DETERMINISTIC
         )
+
+    def has_residual_lf0_prediction(self):
+        return True
 
     def forward(self, x, lengths=None, y=None):
         self._set_lf0_params()
