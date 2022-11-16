@@ -819,14 +819,23 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
 
         # Predict V/UV
         if is_inference:
-            vuv_inp = torch.cat([x, lf0, mel[1]], dim=-1)
+            if self.mel_model.prediction_type() == PredictionType.PROBABILISTIC:
+                mel_cond = mel[0]
+            else:
+                mel_cond = mel
+
+            vuv_inp = torch.cat([x, lf0, mel_cond], dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
             vuv_inp = torch.cat([x, lf0, y_mel], dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
-            out = torch.cat([mel[0], lf0, vuv], dim=-1)
+            if self.mel_model.prediction_type() == PredictionType.PROBABILISTIC:
+                mel_ = mel[0]
+            else:
+                mel_ = mel
+            out = torch.cat([mel, lf0, vuv], dim=-1)
             assert out.shape[-1] == self.out_dim
             # TODO: better design
             return out, out
