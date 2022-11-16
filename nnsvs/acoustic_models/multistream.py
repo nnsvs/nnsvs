@@ -835,7 +835,7 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
                 mel_ = mel[0]
             else:
                 mel_ = mel
-            out = torch.cat([mel, lf0, vuv], dim=-1)
+            out = torch.cat([mel_, lf0, vuv], dim=-1)
             assert out.shape[-1] == self.out_dim
             # TODO: better design
             return out, out
