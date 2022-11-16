@@ -62,6 +62,7 @@ class GaussianDiffusion(BaseModel):
         in_dim,
         out_dim,
         denoise_fn,
+        encoder=None,
         K_step=100,
         betas=None,
         schedule_type="linear",
@@ -73,6 +74,7 @@ class GaussianDiffusion(BaseModel):
         self.denoise_fn = denoise_fn
         self.K_step = K_step
         self.pndm_speedup = pndm_speedup
+        self.encoder = encoder
 
         if betas is not None:
             betas = (
@@ -257,6 +259,9 @@ class GaussianDiffusion(BaseModel):
         B = cond.shape[0]
         device = cond.device
 
+        if self.encoder is not None:
+            cond = self.encoder(cond, lengths)
+
         # (B, M, T)
         cond = cond.transpose(1, 2)
 
@@ -277,6 +282,9 @@ class GaussianDiffusion(BaseModel):
     def inference(self, cond, lengths=None):
         B = cond.shape[0]
         device = cond.device
+
+        if self.encoder is not None:
+            cond = self.encoder(cond, lengths)
 
         # (B, M, T)
         cond = cond.transpose(1, 2)
