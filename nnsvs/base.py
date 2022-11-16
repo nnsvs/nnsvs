@@ -54,6 +54,8 @@ class PredictionType(Enum):
     Note that concatenated features are assumed to be returned during inference.
     """
 
+    DIFFUSION = 4
+
 
 class BaseModel(nn.Module):
     """Base class for all models
