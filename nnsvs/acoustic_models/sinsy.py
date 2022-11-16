@@ -126,6 +126,9 @@ class ResSkipF0FFConvLSTM(BaseModel):
             else PredictionType.DETERMINISTIC
         )
 
+    def has_residual_lf0_prediction(self):
+        return True
+
     def forward(self, x, lengths=None, y=None):
         """Forward step
 

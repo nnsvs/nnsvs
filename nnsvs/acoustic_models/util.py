@@ -116,7 +116,7 @@ def pad_inference(
                 sigma = sigma[:, :-pad]
         y = (mu, sigma)
     else:
-        if isinstance(y, tuple):
+        if model.has_residual_lf0_prediction():
             y = y[0]
         # Multiple output: (out, out_fine)
         if isinstance(y, list):

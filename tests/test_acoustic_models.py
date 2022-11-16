@@ -39,7 +39,7 @@ def _test_model_impl(model, in_dim, out_dim):
     # warmup forward pass
     with torch.no_grad():
         outs = model(x, lengths, y)
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if model.has_residual_lf0_prediction():
             y, lf0_residual = outs
         else:
             y, lf0_residual = outs, None
