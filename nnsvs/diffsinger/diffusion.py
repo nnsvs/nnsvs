@@ -20,13 +20,15 @@ def extract(a, t, x_shape):
     return out.reshape(b, *((1,) * (len(x_shape) - 1)))
 
 
-def noise_like(shape, device, repeat=False):
-    # TODO: fix warning
-    repeat_noise = lambda: torch.randn((1, *shape[1:]), device=device).repeat(  # noqa
-        shape[0], *((1,) * (len(shape) - 1))
-    )
-    noise = lambda: torch.randn(shape, device=device)  # noqa
-    return repeat_noise() if repeat else noise()
+def noise_like(shape, noise_fn, device, repeat=False):
+    if repeat:
+        resid = [1] * (len(shape) - 1)
+        shape_one = (1, *shape[1:])
+
+        return noise_fn(*shape_one, device=device).repeat(shape[0], *resid)
+
+    else:
+        return noise_fn(*shape, device=device)
 
 
 def linear_beta_schedule(timesteps, max_beta=0.06):
@@ -173,12 +175,14 @@ class GaussianDiffusion(BaseModel):
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample(self, x, t, cond, clip_denoised=True, repeat_noise=False):
+    def p_sample(
+        self, x, t, cond, noise_fn=torch.randn, clip_denoised=True, repeat_noise=False
+    ):
         b, *_, device = *x.shape, x.device
         model_mean, _, model_log_variance = self.p_mean_variance(
             x=x, t=t, cond=cond, clip_denoised=clip_denoised
         )
-        noise = noise_like(x.shape, device, repeat_noise)
+        noise = noise_like(x.shape, noise_fn, device, repeat_noise)
         # no noise when t == 0
         nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
         return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
