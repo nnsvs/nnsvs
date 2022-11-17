@@ -8,12 +8,6 @@ from nnsvs.base import BaseModel, PredictionType
 from tqdm import tqdm
 
 
-def default(val, d):
-    if val is not None:
-        return val
-    return d() if isfunction(d) else d
-
-
 def extract(a, t, x_shape):
     b, *_ = t.shape
     out = a.gather(-1, t)
@@ -243,7 +237,8 @@ class GaussianDiffusion(BaseModel):
         return x_prev
 
     def q_sample(self, x_start, t, noise=None):
-        noise = default(noise, lambda: torch.randn_like(x_start))
+        if noise is None:
+            noise = torch.randn_like(x_start)
         return (
             extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
             + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
@@ -273,14 +268,13 @@ class GaussianDiffusion(BaseModel):
         x = y
         x = x.transpose(1, 2)[:, None, :, :]  # [B, 1, M, T]
 
-        noise = default(None, lambda: torch.randn_like(x))
+        noise = torch.randn_like(x)
         x_noisy = self.q_sample(x_start=x, t=t, noise=noise)
         x_recon = self.denoise_fn(x_noisy, t, cond)
 
         noise = noise.squeeze(1).transpose(1, 2)
         x_recon = x_recon.squeeze(1).transpose(1, 2)
 
-        # return noise, x_noisy, x_recon
         return noise, x_recon
 
     def inference(self, cond, lengths=None):
