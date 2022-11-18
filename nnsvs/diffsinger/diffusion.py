@@ -130,6 +130,14 @@ class GaussianDiffusion(BaseModel):
             ),
         )
 
+    # NOTE: since the original impl. assume the data is distributed in [-1, 1]
+    # let us (roughly) convert N(0,1) noramlized to data to [-1, 1]
+    def _norm(self, x, a_max=10):
+        return x / a_max
+
+    def _denorm(self, x, a_max=10):
+        return x * a_max
+
     def prediction_type(self):
         return PredictionType.DIFFUSION
 
@@ -265,7 +273,7 @@ class GaussianDiffusion(BaseModel):
         cond = cond.transpose(1, 2)
 
         t = torch.randint(0, self.K_step, (B,), device=device).long()
-        x = y
+        x = self._norm(y)
         x = x.transpose(1, 2)[:, None, :, :]  # [B, 1, M, T]
 
         noise = torch.randn_like(x)
@@ -310,5 +318,5 @@ class GaussianDiffusion(BaseModel):
                 x = self.p_sample(
                     x, torch.full((B,), i, device=device, dtype=torch.long), cond
                 )
-        x = x[:, 0].transpose(1, 2)
+        x = self._denorm(x[:, 0].transpose(1, 2))
         return x
