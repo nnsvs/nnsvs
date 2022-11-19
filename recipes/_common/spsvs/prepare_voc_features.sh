@@ -31,6 +31,14 @@ else
     ext=""
 fi
 
+# TODO: should be documnented
+if [[ ${acoustic_features} == *"melf0"* ]]; then
+    feature_type="melf0"
+else
+    feature_type="world"
+fi
+ext="$ext --feature_type $feature_type"
+
 local_config_path=conf/prepare_static_features/acoustic/${acoustic_features}.yaml
 global_config_path=$NNSVS_ROOT/nnsvs/bin/conf/prepare_static_features/acoustic/${acoustic_features}.yaml
 if [ -e $local_config_path ]; then

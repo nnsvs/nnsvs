@@ -79,7 +79,7 @@ def my_app(config: DictConfig) -> None:
             mcep_aperiodicity_order=config.acoustic.mcep_aperiodicity_order,
         )
     elif config.acoustic.feature_type == "melf0":
-        stream_sizes = [80, 1, 1]
+        stream_sizes = [config.acoustic.num_mels, 1, 1]
     else:
         raise ValueError(f"Unknown feature type: {config.acoustic.feature_type}")
 
