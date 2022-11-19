@@ -86,3 +86,4 @@ win_length: 512
 fmin: 30
 fmax: 12000
 eps: 1e-6
+num_mels: 80

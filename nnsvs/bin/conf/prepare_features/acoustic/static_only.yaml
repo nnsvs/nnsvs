@@ -85,3 +85,4 @@ fft_size: 512
 hop_size: 120
 win_length: 480
 eps: 1e-10
+num_mels: 80

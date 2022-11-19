@@ -19,6 +19,9 @@ def get_parser():
     parser.add_argument("input_file", type=str, help="input file")
     parser.add_argument("out_dir", type=str, help="out directory")
     parser.add_argument("--sample_rate", type=int, default=48000, help="sampling rate")
+    parser.add_argument(
+        "--feature_type", type=str, default="world", help="world or melf0"
+    )
     parser.add_argument("--mgc_order", type=int, default=59, help="mgc order")
     parser.add_argument("--num_windows", type=int, default=3, help="number of windows")
     parser.add_argument("--vibrato_mode", type=str, default="none", help="vibrato mode")
@@ -43,6 +46,7 @@ if __name__ == "__main__":
     input_file = Path(args.input_file)
     scaler = joblib.load(input_file)
     assert isinstance(scaler, StandardScaler)
+    feature_type = args.feature_type
 
     if input_file.stem != "out_acoustic_scaler":
         raise ValueError(
@@ -57,9 +61,8 @@ if __name__ == "__main__":
     scale = scaler.scale_
     var = scaler.var_
 
-    # TODO:
-    if len(mean) == 82:
-        stream_sizes = [80, 1, 1]
+    if feature_type == "melf0":
+        stream_sizes = [len(mean) - 2, 1, 1]
     else:
         stream_sizes = get_world_stream_info(
             args.sample_rate,
@@ -69,6 +72,8 @@ if __name__ == "__main__":
             use_mcep_aperiodicity=args.use_mcep_aperiodicity,
             mcep_aperiodicity_order=args.mcep_aperiodicity_order,
         )
+        assert len(mean) == sum(stream_sizes)
+
     has_dynamic_features = [False] * len(stream_sizes)
 
     out_dir = Path(args.out_dir)
@@ -86,6 +91,8 @@ if __name__ == "__main__":
 
         # NOTE: use up to 4 streams
         # [mgc, lf0, bap, vuv]
+        # or
+        # (mel, lf0, vuv)
         streams = list(map(lambda x: x.reshape(-1), streams))[:4]
         lf0_params[name] = float(streams[1])
         out_feats = np.concatenate(streams)

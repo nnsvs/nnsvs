@@ -202,6 +202,7 @@ def my_app(config: DictConfig) -> None:
             fmin=config.acoustic.fmin,
             fmax=config.acoustic.fmax,
             eps=config.acoustic.eps,
+            num_mels=config.acoustic.num_mels,
         )
     else:
         raise ValueError(

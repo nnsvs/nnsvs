@@ -1358,16 +1358,17 @@ def load_vocoder(path, device, acoustic_config):
         vocoder.remove_weight_norm()
         vocoder = USFGANWrapper(vocoder_config, vocoder)
 
+        stream_sizes = get_static_stream_sizes(
+            acoustic_config.stream_sizes,
+            acoustic_config.has_dynamic_features,
+            acoustic_config.num_windows,
+        )
+
         # Extract scaler params for [mgc, bap]
         if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
             mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
             var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
             scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
-            stream_sizes = get_static_stream_sizes(
-                acoustic_config.stream_sizes,
-                acoustic_config.has_dynamic_features,
-                acoustic_config.num_windows,
-            )
             mgc_end_dim = stream_sizes[0]
             bap_start_dim = sum(stream_sizes[:3])
             bap_end_dim = sum(stream_sizes[:4])
@@ -1379,10 +1380,11 @@ def load_vocoder(path, device, acoustic_config):
                 ),
             )
         else:
+            mel_dim = stream_sizes[0]
             vocoder_in_scaler = StandardScaler(
-                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:80],
-                np.load(model_dir / "in_vocoder_scaler_var.npy")[:80],
-                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:80],
+                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:mel_dim],
+                np.load(model_dir / "in_vocoder_scaler_var.npy")[:mel_dim],
+                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:mel_dim],
             )
     else:
         vocoder = load_model(path, config=vocoder_config).to(device)
