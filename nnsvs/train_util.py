@@ -1903,6 +1903,15 @@ def eval_mel_model(
             )
 
 
+def _colorbar_wrap(fig, mesh, ax, format="%+2.f dB"):
+    try:
+        fig.colorbar(mesh, ax=ax, format=format)
+    except IndexError as e:
+        # In _quantile_ureduce_func:
+        # IndexError: index -1 is out of bounds for axis 0 with size 0
+        print(str(e))
+
+
 @torch.no_grad()
 def plot_spsvs_params(
     step,
@@ -2054,7 +2063,7 @@ def plot_spsvs_params(
         cmap="viridis",
         ax=ax[0],
     )
-    fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[0])
     if use_world_codec:
         if pred_sp is not None:
             pred_spectrogram = pred_sp.T
@@ -2075,7 +2084,7 @@ def plot_spsvs_params(
         cmap="viridis",
         ax=ax[1],
     )
-    fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[1])
     for a in ax:
         a.set_ylim(0, sr // 2)
     plt.tight_layout()
@@ -2099,7 +2108,7 @@ def plot_spsvs_params(
         cmap="viridis",
         ax=ax[0],
     )
-    fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[0])
     if use_mcep_aperiodicity:
         pred_aperiodicity = pysptk.mc2sp(
             np.ascontiguousarray(pred_bap), fftlen=fftlen, alpha=alpha
@@ -2117,7 +2126,7 @@ def plot_spsvs_params(
         cmap="viridis",
         ax=ax[1],
     )
-    fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[1])
     for a in ax:
         a.set_ylim(0, sr // 2)
     plt.tight_layout()
@@ -2267,7 +2276,7 @@ def plot_mel_params(
         cmap="viridis",
         ax=ax[0],
     )
-    fig.colorbar(mesh, ax=ax[0], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[0])
     mesh = librosa.display.specshow(
         pred_logmel.T,
         sr=sr,
@@ -2277,7 +2286,7 @@ def plot_mel_params(
         cmap="viridis",
         ax=ax[1],
     )
-    fig.colorbar(mesh, ax=ax[1], format="%+2.f dB")
+    _colorbar_wrap(fig, mesh, ax[1])
     for a in ax:
         a.set_ylim(0, sr // 2)
     plt.tight_layout()
