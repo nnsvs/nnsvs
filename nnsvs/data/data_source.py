@@ -571,6 +571,7 @@ class MelF0AcousticSource(FileDataSource):
         fmin=30,
         fmax=None,
         eps=1e-10,
+        num_mels=80,
     ):
         self.utt_list = utt_list
         self.wav_root = wav_root
@@ -599,6 +600,7 @@ class MelF0AcousticSource(FileDataSource):
             fmax = sample_rate // 2
         self.fmax = fmax
         self.eps = eps
+        self.num_mels = num_mels
 
     def collect_files(self):
         wav_paths = _collect_files(self.wav_root, self.utt_list, ".wav")
@@ -768,6 +770,7 @@ class MelF0AcousticSource(FileDataSource):
             fmin=self.fmin,
             fmax=self.fmax,
             eps=self.eps,
+            num_mels=self.num_mels,
         )
 
         # Adjust lengths

@@ -120,21 +120,29 @@ if __name__ == "__main__":
             ),
         }
     elif args.feature_type == "melf0":
-        stream_sizes = [80, 1, 1]
-        assert len(scaler.mean_.reshape(-1)) == sum(stream_sizes)
+        stream_sizes = [len(scaler.mean_) - 2, 1, 1]
         feat_types = ["f0", "contf0", "logmsp"]
+        mel_dim = stream_sizes[0]
         usfgan_scaler = {
             "logmsp": StandardScaler(
-                scaler.mean_[0:80], scaler.var_[0:80], scaler.scale_[0:80]
+                scaler.mean_[0:mel_dim],
+                scaler.var_[0:mel_dim],
+                scaler.scale_[0:mel_dim],
             ),
             "f0": StandardScaler(
-                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+                scaler.mean_[mel_dim : mel_dim + 1],
+                scaler.var_[mel_dim : mel_dim + 1],
+                scaler.scale_[mel_dim : mel_dim + 1],
             ),
             "contf0": StandardScaler(
-                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+                scaler.mean_[mel_dim : mel_dim + 1],
+                scaler.var_[mel_dim : mel_dim + 1],
+                scaler.scale_[mel_dim : mel_dim + 1],
             ),
             "cf0": StandardScaler(
-                scaler.mean_[80:81], scaler.var_[80:81], scaler.scale_[80:81]
+                scaler.mean_[mel_dim : mel_dim + 1],
+                scaler.var_[mel_dim : mel_dim + 1],
+                scaler.scale_[mel_dim : mel_dim + 1],
             ),
         }
     else:
