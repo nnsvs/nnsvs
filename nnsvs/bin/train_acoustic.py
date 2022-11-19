@@ -260,6 +260,7 @@ def train_loop(
     use_mlflow,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
 ):
     out_dir = Path(to_absolute_path(config.train.out_dir))
     best_dev_loss = torch.finfo(torch.float32).max
@@ -345,6 +346,7 @@ def train_loop(
                         use_world_codec=config.data.use_world_codec,
                         vocoder=vocoder,
                         vocoder_in_scaler=vocoder_in_scaler,
+                        vocoder_config=vocoder_config,
                         max_num_eval_utts=config.train.max_num_eval_utts,
                     )
                     evaluated = True
@@ -459,9 +461,11 @@ def my_app(config: DictConfig) -> None:
     path = config.train.pretrained_vocoder_checkpoint
     if path is not None and len(path) > 0:
         logger.info(f"Loading pretrained vocoder checkpoint from {path}")
-        vocoder, vocoder_in_scaler = load_vocoder(path, device)
+        vocoder, vocoder_in_scaler, vocoder_config = load_vocoder(
+            path, device, config.model
+        )
     else:
-        vocoder, vocoder_in_scaler = None, None
+        vocoder, vocoder_in_scaler, vocoder_config = None, None, None
 
     check_resf0_config(logger, model, config, in_scaler, out_scaler)
 
@@ -492,6 +496,7 @@ def my_app(config: DictConfig) -> None:
                 use_mlflow=use_mlflow,
                 vocoder=vocoder,
                 vocoder_in_scaler=vocoder_in_scaler,
+                vocoder_config=vocoder_config,
             )
     else:
         save_configs(config)
@@ -511,6 +516,7 @@ def my_app(config: DictConfig) -> None:
             use_mlflow=use_mlflow,
             vocoder=vocoder,
             vocoder_in_scaler=vocoder_in_scaler,
+            vocoder_config=vocoder_config,
         )
     return last_dev_loss
 

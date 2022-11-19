@@ -1328,7 +1328,7 @@ def eval_pitch_model(
             plt.close()
 
 
-def load_vocoder(path, device):
+def load_vocoder(path, device, acoustic_config):
     if not _pwg_available:
         raise RuntimeError(
             "parallel_wavegan is required to load pre-trained checkpoint."
@@ -1338,20 +1338,63 @@ def load_vocoder(path, device):
     if (model_dir / "vocoder_model.yaml").exists():
         # packed model
         vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
-    else:
+    elif (model_dir / "config.yml").exists():
         # PWG checkpoint
         vocoder_config = OmegaConf.load(model_dir / "config.yml")
+    else:
+        # usfgan
+        vocoder_config = OmegaConf.load(model_dir / "config.yaml")
 
-    vocoder = load_model(path, config=vocoder_config).to(device)
-    vocoder.remove_weight_norm()
-    vocoder_in_scaler = StandardScaler(
-        np.load(model_dir / "in_vocoder_scaler_mean.npy"),
-        np.load(model_dir / "in_vocoder_scaler_var.npy"),
-        np.load(model_dir / "in_vocoder_scaler_scale.npy"),
-    )
+    if "generator" in vocoder_config and "discriminator" in vocoder_config:
+        # usfgan
+        checkpoint = torch.load(
+            path,
+            map_location=lambda storage, loc: storage,
+        )
+        from nnsvs.usfgan import USFGANWrapper
+
+        vocoder = hydra.utils.instantiate(vocoder_config.generator).to(device)
+        vocoder.load_state_dict(checkpoint["model"]["generator"])
+        vocoder.remove_weight_norm()
+        vocoder = USFGANWrapper(vocoder_config, vocoder)
+
+        # Extract scaler params for [mgc, bap]
+        if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
+            mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
+            var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
+            scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
+            stream_sizes = get_static_stream_sizes(
+                acoustic_config.stream_sizes,
+                acoustic_config.has_dynamic_features,
+                acoustic_config.num_windows,
+            )
+            mgc_end_dim = stream_sizes[0]
+            bap_start_dim = sum(stream_sizes[:3])
+            bap_end_dim = sum(stream_sizes[:4])
+            vocoder_in_scaler = StandardScaler(
+                np.concatenate([mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]),
+                np.concatenate([var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]),
+                np.concatenate(
+                    [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
+                ),
+            )
+        else:
+            vocoder_in_scaler = StandardScaler(
+                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:80],
+                np.load(model_dir / "in_vocoder_scaler_var.npy")[:80],
+                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:80],
+            )
+    else:
+        vocoder = load_model(path, config=vocoder_config).to(device)
+        vocoder.remove_weight_norm()
+        vocoder_in_scaler = StandardScaler(
+            np.load(model_dir / "in_vocoder_scaler_mean.npy"),
+            np.load(model_dir / "in_vocoder_scaler_var.npy"),
+            np.load(model_dir / "in_vocoder_scaler_scale.npy"),
+        )
     vocoder.eval()
 
-    return vocoder, vocoder_in_scaler
+    return vocoder, vocoder_in_scaler, vocoder_config
 
 
 def synthesize(
@@ -1365,21 +1408,67 @@ def synthesize(
     vuv_threshold=0.3,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
 ):
     if vocoder is not None:
+        is_usfgan = "generator" in vocoder_config and "discriminator" in vocoder_config
         assert vocoder_in_scaler is not None
-        # NOTE: So far vocoder models are trained on binary V/UV features
-        vuv = (vuv > vuv_threshold).astype(np.float32)
-        voc_inp = (
-            torch.from_numpy(
-                vocoder_in_scaler.transform(
-                    np.concatenate([mgc, lf0, vuv, bap], axis=-1)
+        if not is_usfgan:
+            # NOTE: So far vocoder models are trained on binary V/UV features
+            vuv = (vuv > vuv_threshold).astype(np.float32)
+            voc_inp = (
+                torch.from_numpy(
+                    vocoder_in_scaler.transform(
+                        np.concatenate([mgc, lf0, vuv, bap], axis=-1)
+                    )
                 )
+                .float()
+                .to(device)
             )
-            .float()
-            .to(device)
-        )
-        wav = vocoder.inference(voc_inp).view(-1).to("cpu").numpy()
+            wav = vocoder.inference(voc_inp).view(-1).to("cpu").numpy()
+        else:
+            fftlen = pyworld.get_cheaptrick_fft_size(sr)
+            use_mcep_aperiodicity = bap.shape[-1] > 5
+            if use_mcep_aperiodicity:
+                mcep_aperiodicity_order = bap.shape[-1] - 1
+                alpha = pysptk.util.mcepalpha(sr)
+                aperiodicity = pysptk.mc2sp(
+                    np.ascontiguousarray(bap).astype(np.float64),
+                    fftlen=fftlen,
+                    alpha=alpha,
+                )
+            else:
+                aperiodicity = pyworld.decode_aperiodicity(
+                    np.ascontiguousarray(bap).astype(np.float64), sr, fftlen
+                )
+            # fill aperiodicity with ones for unvoiced regions
+            aperiodicity[vuv.reshape(-1) < vuv_threshold, 0] = 1.0
+            # WORLD fails catastrophically for out of range aperiodicity
+            aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
+            # back to bap
+            if use_mcep_aperiodicity:
+                bap = pysptk.sp2mc(
+                    aperiodicity,
+                    order=mcep_aperiodicity_order,
+                    alpha=alpha,
+                )
+            else:
+                bap = pyworld.code_aperiodicity(aperiodicity, sr).astype(np.float32)
+
+            aux_feats = (
+                torch.from_numpy(
+                    vocoder_in_scaler.transform(np.concatenate([mgc, bap], axis=-1))
+                )
+                .float()
+                .to(device)
+            )
+            contf0 = np.exp(lf0)
+            if vocoder_config.data.sine_f0_type in ["contf0", "cf0"]:
+                f0_inp = contf0
+            elif vocoder_config.data.sine_f0_type == "f0":
+                f0_inp = contf0
+                f0_inp[vuv < vuv_threshold] = 0
+            wav = vocoder.inference(f0_inp, aux_feats).view(-1).to("cpu").numpy()
     else:
         # Fallback to WORLD
         f0, spectrogram, aperiodicity = gen_world_params(
@@ -1404,19 +1493,37 @@ def synthesize_from_mel(
     vuv_threshold=0.3,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
 ):
     if vocoder is not None:
+        is_usfgan = "generator" in vocoder_config and "discriminator" in vocoder_config
         assert vocoder_in_scaler is not None
-        # NOTE: So far vocoder models are trained on binary V/UV features
-        vuv = (vuv > vuv_threshold).astype(np.float32)
-        voc_inp = (
-            torch.from_numpy(
-                vocoder_in_scaler.transform(np.concatenate([logmel, lf0, vuv], axis=-1))
+        if not is_usfgan:
+            # NOTE: So far vocoder models are trained on binary V/UV features
+            vuv = (vuv > vuv_threshold).astype(np.float32)
+            voc_inp = (
+                torch.from_numpy(
+                    vocoder_in_scaler.transform(
+                        np.concatenate([logmel, lf0, vuv], axis=-1)
+                    )
+                )
+                .float()
+                .to(device)
             )
-            .float()
-            .to(device)
-        )
-        wav = vocoder.inference(voc_inp).view(-1).to("cpu").numpy()
+            wav = vocoder.inference(voc_inp).view(-1).to("cpu").numpy()
+        else:
+            # NOTE: So far vocoder models are trained on binary V/UV features
+            vuv = (vuv > vuv_threshold).astype(np.float32)
+            aux_feats = (
+                torch.from_numpy(vocoder_in_scaler.transform(logmel)).float().to(device)
+            )
+            contf0 = np.exp(lf0)
+            if vocoder_config.data.sine_f0_type in ["contf0", "cf0"]:
+                f0_inp = contf0
+            elif vocoder_config.data.sine_f0_type == "f0":
+                f0_inp = contf0
+                f0_inp[vuv < vuv_threshold] = 0
+            wav = vocoder.inference(f0_inp, aux_feats).view(-1).to("cpu").numpy()
     else:
         raise RuntimeError("Not supported")
 
@@ -1442,6 +1549,7 @@ def eval_model(
     use_world_codec=False,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
     vuv_threshold=0.3,
     max_num_eval_utts=10,
 ):
@@ -1464,6 +1572,7 @@ def eval_model(
             use_world_codec=use_world_codec,
             vocoder=vocoder,
             vocoder_in_scaler=vocoder_in_scaler,
+            vocoder_config=vocoder_config,
             vuv_threshold=vuv_threshold,
             max_num_eval_utts=max_num_eval_utts,
         )
@@ -1482,6 +1591,7 @@ def eval_model(
             lf0_score_denorm=lf0_score_denorm,
             vocoder=vocoder,
             vocoder_in_scaler=vocoder_in_scaler,
+            vocoder_config=vocoder_config,
             vuv_threshold=vuv_threshold,
             max_num_eval_utts=max_num_eval_utts,
         )
@@ -1506,6 +1616,7 @@ def eval_spss_model(
     use_world_codec=False,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
     vuv_threshold=0.3,
     max_num_eval_utts=10,
 ):
@@ -1575,6 +1686,7 @@ def eval_spss_model(
             vuv_threshold=vuv_threshold,
             vocoder=vocoder,
             vocoder_in_scaler=vocoder_in_scaler,
+            vocoder_config=vocoder_config,
         )
         group = f"{phase}_utt{np.abs(utt_idx)}_reference"
         wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
@@ -1700,6 +1812,7 @@ def eval_spss_model(
                 vuv_threshold=vuv_threshold,
                 vocoder=vocoder,
                 vocoder_in_scaler=vocoder_in_scaler,
+                vocoder_config=vocoder_config,
             )
             wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
             if idx == 1:
@@ -1742,6 +1855,7 @@ def eval_mel_model(
     lf0_score_denorm=None,
     vocoder=None,
     vocoder_in_scaler=None,
+    vocoder_config=None,
     vuv_threshold=0.3,
     max_num_eval_utts=10,
 ):
@@ -1792,6 +1906,7 @@ def eval_mel_model(
                 vuv_threshold=vuv_threshold,
                 vocoder=vocoder,
                 vocoder_in_scaler=vocoder_in_scaler,
+                vocoder_config=vocoder_config,
             )
             wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
             writer.add_audio(group, wav, step, sr)
@@ -1884,6 +1999,7 @@ def eval_mel_model(
                     vuv_threshold=vuv_threshold,
                     vocoder=vocoder,
                     vocoder_in_scaler=vocoder_in_scaler,
+                    vocoder_config=vocoder_config,
                 )
                 wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
                 writer.add_audio(group, wav, step, sr)
