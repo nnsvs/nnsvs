@@ -178,35 +178,37 @@ def train_step(
         loss_pitch = torch.tensor(0.0).to(in_feats.device)
 
     loss = loss_feats + pitch_reg_weight * loss_pitch
-    with torch.no_grad():
-        if prediction_type == PredictionType.MULTISTREAM_HYBRID:
-            if len(pred_out_feats) == 4:
-                pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
-                if isinstance(pred_mgc, tuple):
-                    pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-                if isinstance(pred_bap, tuple):
-                    pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
-                pred_out_feats_ = torch.cat(
-                    [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
-                )
-            elif len(pred_out_feats) == 3:
-                pred_mel, pred_lf0, pred_vuv = pred_out_feats
-                if isinstance(pred_mel, tuple):
-                    pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
-                pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
-            else:
-                raise RuntimeError("not supported")
+    if not train:
+        with torch.no_grad():
+            if prediction_type == PredictionType.MULTISTREAM_HYBRID:
+                if len(pred_out_feats) == 4:
+                    pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
+                    if isinstance(pred_mgc, tuple):
+                        pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
+                    if isinstance(pred_bap, tuple):
+                        pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+                    pred_out_feats_ = torch.cat(
+                        [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
+                    )
+                elif len(pred_out_feats) == 3:
+                    pred_mel, pred_lf0, pred_vuv = pred_out_feats
+                    if isinstance(pred_mel, tuple):
+                        pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
+                    pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
+                else:
+                    raise RuntimeError("not supported")
 
-        elif prediction_type == PredictionType.PROBABILISTIC:
-            pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
-        else:
-            if isinstance(pred_out_feats, list):
-                pred_out_feats_ = pred_out_feats[-1]
+            elif prediction_type == PredictionType.PROBABILISTIC:
+                pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
             else:
-                pred_out_feats_ = pred_out_feats
-        distortions = compute_distortions(
-            pred_out_feats_, out_feats, lengths, out_scaler, model_config
-        )
+                if isinstance(pred_out_feats, list):
+                    pred_out_feats_ = pred_out_feats[-1]
+                else:
+                    pred_out_feats_ = pred_out_feats
+            distortions = compute_distortions(
+                pred_out_feats_, out_feats, lengths, out_scaler, model_config
+            )
+            log_metrics.update(distortions)
 
     if train:
         if grad_scaler is not None:
@@ -232,7 +234,6 @@ def train_step(
                 log_metrics["GradNorm"] = grad_norm
                 optimizer.step()
 
-    log_metrics.update(distortions)
     log_metrics.update(
         {
             "Loss": loss.item(),
