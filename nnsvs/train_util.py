@@ -1844,24 +1844,30 @@ def eval_spss_model(
             else:
                 group = f"{phase}_utt{np.abs(utt_idx)}_forward"
             writer.add_audio(group, wav, step, sr)
-            plot_spsvs_params(
-                step,
-                writer,
-                mgc,
-                lf0,
-                vuv,
-                bap,
-                pred_mgc,
-                pred_lf0,
-                pred_vuv,
-                pred_bap,
-                lf0_score=lf0_score_denorm_,
-                group=group,
-                sr=sr,
-                use_world_codec=use_world_codec,
-                sp=sp,
-                pred_sp=pred_sp,
-            )
+
+            try:
+                plot_spsvs_params(
+                    step,
+                    writer,
+                    mgc,
+                    lf0,
+                    vuv,
+                    bap,
+                    pred_mgc,
+                    pred_lf0,
+                    pred_vuv,
+                    pred_bap,
+                    lf0_score=lf0_score_denorm_,
+                    group=group,
+                    sr=sr,
+                    use_world_codec=use_world_codec,
+                    sp=sp,
+                    pred_sp=pred_sp,
+                )
+            except IndexError as e:
+                # In _quantile_ureduce_func:
+                # IndexError: index -1 is out of bounds for axis 0 with size 0
+                print(str(e))
 
 
 @torch.no_grad()
@@ -2030,19 +2036,24 @@ def eval_mel_model(
                 wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
                 writer.add_audio(group, wav, step, sr)
 
-            plot_mel_params(
-                step,
-                writer,
-                logmel,
-                lf0,
-                vuv,
-                pred_logmel,
-                pred_lf0,
-                pred_vuv,
-                lf0_score=lf0_score_denorm_,
-                group=group,
-                sr=sr,
-            )
+            try:
+                plot_mel_params(
+                    step,
+                    writer,
+                    logmel,
+                    lf0,
+                    vuv,
+                    pred_logmel,
+                    pred_lf0,
+                    pred_vuv,
+                    lf0_score=lf0_score_denorm_,
+                    group=group,
+                    sr=sr,
+                )
+            except IndexError as e:
+                # In _quantile_ureduce_func:
+                # IndexError: index -1 is out of bounds for axis 0 with size 0
+                print(str(e))
 
 
 def _colorbar_wrap(fig, mesh, ax, format="%+2.f dB"):
