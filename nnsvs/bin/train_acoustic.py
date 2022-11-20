@@ -23,7 +23,7 @@ from nnsvs.train_util import (
     save_configs,
     setup,
 )
-from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
+from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask, make_pad_mask
 from omegaconf import DictConfig
 from torch import nn
 from torch.cuda.amp import autocast
@@ -74,7 +74,8 @@ def train_step(
             pred_out_feats, lf0_residual = outs, None
 
     # Mask (B, T, 1)
-    mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
+    with torch.no_grad():
+        mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
     # Compute loss
     if prediction_type == PredictionType.MULTISTREAM_HYBRID:
@@ -160,7 +161,7 @@ def train_step(
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    if lf0_residual is not None:
+    if pitch_reg_weight > 0.0 and lf0_residual is not None:
         with autocast(enabled=grad_scaler is not None):
             if isinstance(lf0_residual, list):
                 loss_pitch = 0
@@ -178,35 +179,37 @@ def train_step(
         loss_pitch = torch.tensor(0.0).to(in_feats.device)
 
     loss = loss_feats + pitch_reg_weight * loss_pitch
-    with torch.no_grad():
-        if prediction_type == PredictionType.MULTISTREAM_HYBRID:
-            if len(pred_out_feats) == 4:
-                pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
-                if isinstance(pred_mgc, tuple):
-                    pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-                if isinstance(pred_bap, tuple):
-                    pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
-                pred_out_feats_ = torch.cat(
-                    [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
-                )
-            elif len(pred_out_feats) == 3:
-                pred_mel, pred_lf0, pred_vuv = pred_out_feats
-                if isinstance(pred_mel, tuple):
-                    pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
-                pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
-            else:
-                raise RuntimeError("not supported")
+    if not train:
+        with torch.no_grad():
+            if prediction_type == PredictionType.MULTISTREAM_HYBRID:
+                if len(pred_out_feats) == 4:
+                    pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
+                    if isinstance(pred_mgc, tuple):
+                        pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
+                    if isinstance(pred_bap, tuple):
+                        pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+                    pred_out_feats_ = torch.cat(
+                        [pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1
+                    )
+                elif len(pred_out_feats) == 3:
+                    pred_mel, pred_lf0, pred_vuv = pred_out_feats
+                    if isinstance(pred_mel, tuple):
+                        pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
+                    pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)
+                else:
+                    raise RuntimeError("not supported")
 
-        elif prediction_type == PredictionType.PROBABILISTIC:
-            pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
-        else:
-            if isinstance(pred_out_feats, list):
-                pred_out_feats_ = pred_out_feats[-1]
+            elif prediction_type == PredictionType.PROBABILISTIC:
+                pred_out_feats_ = mdn_get_most_probable_sigma_and_mu(pi, sigma, mu)[1]
             else:
-                pred_out_feats_ = pred_out_feats
-        distortions = compute_distortions(
-            pred_out_feats_, out_feats, lengths, out_scaler, model_config
-        )
+                if isinstance(pred_out_feats, list):
+                    pred_out_feats_ = pred_out_feats[-1]
+                else:
+                    pred_out_feats_ = pred_out_feats
+            distortions = compute_distortions(
+                pred_out_feats_, out_feats, lengths, out_scaler, model_config
+            )
+            log_metrics.update(distortions)
 
     if train:
         if grad_scaler is not None:
@@ -232,7 +235,6 @@ def train_step(
                 log_metrics["GradNorm"] = grad_norm
                 optimizer.step()
 
-    log_metrics.update(distortions)
     log_metrics.update(
         {
             "Loss": loss.item(),
@@ -309,13 +311,6 @@ def train_loop(
             for in_feats, out_feats, lengths in tqdm(
                 data_loaders[phase], desc=f"{phase} iter", leave=False
             ):
-                # NOTE: This is needed for pytorch's PackedSequence
-                lengths, indices = torch.sort(lengths, dim=0, descending=True)
-                in_feats, out_feats = (
-                    in_feats[indices].to(device),
-                    out_feats[indices].to(device),
-                )
-
                 # Compute denormalized log-F0 in the musical scores
                 with torch.no_grad():
                     lf0_score_denorm = (
@@ -323,12 +318,24 @@ def train_loop(
                     ) / in_scaler.scale_[in_lf0_idx]
                     # Fill zeros for rest and padded frames
                     lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
-                    for idx, length in enumerate(lengths):
-                        lf0_score_denorm[idx, length:] = 0
+                    lf0_score_denorm[make_pad_mask(lengths)] = 0
+
                     # Compute time-variant pitch regularization weight vector
-                    pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
-                        lf0_score_denorm, decay_size=config.train.pitch_reg_decay_size
-                    )
+                    # NOTE: the current impl. is very slow
+                    if pitch_reg_weight > 0.0:
+                        pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
+                            lf0_score_denorm,
+                            decay_size=config.train.pitch_reg_decay_size,
+                        )
+                    else:
+                        pitch_reg_dyn_ws = 1.0
+
+                # NOTE: This is needed for pytorch's PackedSequence
+                lengths, indices = torch.sort(lengths, dim=0, descending=True)
+                in_feats, out_feats = (
+                    in_feats[indices].to(device),
+                    out_feats[indices].to(device),
+                )
 
                 if (not train) and (not evaluated):
                     eval_model(
