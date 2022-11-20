@@ -4,6 +4,7 @@ import shutil
 import sys
 import types
 from glob import glob
+from multiprocessing import Manager
 from os.path import join
 from pathlib import Path
 
@@ -233,12 +234,17 @@ class Dataset(data_utils.Dataset):  # type: ignore
         out_paths (list): List of paths to output files
     """
 
-    def __init__(self, in_paths, out_paths, lengths, shuffle=False):
+    def __init__(self, in_paths, out_paths, lengths, shuffle=False, allow_cache=True):
         self.in_paths = in_paths
         self.out_paths = out_paths
         self.lengths = lengths
         self.sort_by_len = True
         self.shuffle = shuffle
+        self.allow_cache = allow_cache
+        if allow_cache:
+            self.manager = Manager()
+            self.caches = self.manager.list()
+            self.caches += [() for _ in range(len(in_paths))]
 
     def __getitem__(self, idx):
         """Get a pair of input and target
@@ -249,7 +255,13 @@ class Dataset(data_utils.Dataset):  # type: ignore
         Returns:
             tuple: input and target in numpy format
         """
-        return np.load(self.in_paths[idx]), np.load(self.out_paths[idx])
+        if self.allow_cache and len(self.caches[idx]) != 0:
+            return self.caches[idx]
+        x, y = np.load(self.in_paths[idx]), np.load(self.out_paths[idx])
+        if self.allow_cache:
+            self.caches[idx] = (x, y)
+
+        return x, y
 
     def num_tokens(self, index):
         return self.lengths[index]
@@ -448,7 +460,13 @@ def get_data_loaders(data_config, collate_fn, logger):
             logger.debug(
                 f"Dynamic batch size with batch_max_frames={data_config.batch_max_frames}"
             )
-            dataset = Dataset(in_files, out_files, lengths, shuffle=train)
+            dataset = Dataset(
+                in_files,
+                out_files,
+                lengths,
+                shuffle=train,
+                allow_cache=data_config.allow_cache,
+            )
             if dist.is_initialized():
                 required_batch_size_multiple = dist.get_world_size()
             else:

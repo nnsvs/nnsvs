@@ -16,6 +16,8 @@ pin_memory: true
 # If specified, batch sizes are dynamically adjusted based on the number of frames
 # NOTE: `batch_size` will be ignored if ``batch_max_frames`` is specified
 batch_max_frames: 20000
+# Keep all the data in memory or load files from disk every iteration
+allow_cache: true
 
 sample_rate: 48000
 

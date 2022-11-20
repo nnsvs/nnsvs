@@ -38,7 +38,10 @@ class ZoneOutCell(nn.Module):
 
     def _apply_zoneout(self, h, next_h, prob):
         if self.training:
-            mask = h.new(*h.size()).bernoulli_(prob)
+            if prob > 0.0:
+                mask = h.new(*h.size()).bernoulli_(prob)
+            else:
+                mask = 0
             return mask * h + (1 - mask) * next_h
         else:
             return prob * h + (1 - prob) * next_h
