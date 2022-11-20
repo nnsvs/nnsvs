@@ -716,10 +716,8 @@ class FFTBlocks(nn.Module):
         :param padding_mask: [B, T]
         :return: [B, T, C] or [L, B, T, C]
         """
-        if isinstance(lengths, list):
-            lengths = torch.tensor(lengths).to(x.device)
         if padding_mask is None:
-            padding_mask = make_pad_mask(lengths)
+            padding_mask = make_pad_mask(lengths).to(x.device)
 
         # padding_mask = x.abs().sum(-1).eq(0).data if padding_mask is None else padding_mask
         nonpadding_mask_TB = (
