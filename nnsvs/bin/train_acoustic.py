@@ -23,7 +23,7 @@ from nnsvs.train_util import (
     save_configs,
     setup,
 )
-from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
+from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask, make_pad_mask
 from omegaconf import DictConfig
 from torch import nn
 from torch.cuda.amp import autocast
@@ -74,7 +74,8 @@ def train_step(
             pred_out_feats, lf0_residual = outs, None
 
     # Mask (B, T, 1)
-    mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
+    with torch.no_grad():
+        mask = make_non_pad_mask(lengths).unsqueeze(-1).to(in_feats.device)
 
     # Compute loss
     if prediction_type == PredictionType.MULTISTREAM_HYBRID:
@@ -160,7 +161,7 @@ def train_step(
     # Pitch regularization
     # NOTE: l1 loss seems to be better than mse loss in my experiments
     # we could use l2 loss as suggested in the sinsy's paper
-    if lf0_residual is not None:
+    if pitch_reg_weight > 0.0 and lf0_residual is not None:
         with autocast(enabled=grad_scaler is not None):
             if isinstance(lf0_residual, list):
                 loss_pitch = 0
@@ -310,13 +311,6 @@ def train_loop(
             for in_feats, out_feats, lengths in tqdm(
                 data_loaders[phase], desc=f"{phase} iter", leave=False
             ):
-                # NOTE: This is needed for pytorch's PackedSequence
-                lengths, indices = torch.sort(lengths, dim=0, descending=True)
-                in_feats, out_feats = (
-                    in_feats[indices].to(device),
-                    out_feats[indices].to(device),
-                )
-
                 # Compute denormalized log-F0 in the musical scores
                 with torch.no_grad():
                     lf0_score_denorm = (
@@ -324,12 +318,24 @@ def train_loop(
                     ) / in_scaler.scale_[in_lf0_idx]
                     # Fill zeros for rest and padded frames
                     lf0_score_denorm *= (in_feats[:, :, in_rest_idx] <= 0).float()
-                    for idx, length in enumerate(lengths):
-                        lf0_score_denorm[idx, length:] = 0
+                    lf0_score_denorm[make_pad_mask(lengths)] = 0
+
                     # Compute time-variant pitch regularization weight vector
-                    pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
-                        lf0_score_denorm, decay_size=config.train.pitch_reg_decay_size
-                    )
+                    # NOTE: the current impl. is very slow
+                    if pitch_reg_weight > 0.0:
+                        pitch_reg_dyn_ws = compute_batch_pitch_regularization_weight(
+                            lf0_score_denorm,
+                            decay_size=config.train.pitch_reg_decay_size,
+                        )
+                    else:
+                        pitch_reg_dyn_ws = 1.0
+
+                # NOTE: This is needed for pytorch's PackedSequence
+                lengths, indices = torch.sort(lengths, dim=0, descending=True)
+                in_feats, out_feats = (
+                    in_feats[indices].to(device),
+                    out_feats[indices].to(device),
+                )
 
                 if (not train) and (not evaluated):
                     eval_model(
