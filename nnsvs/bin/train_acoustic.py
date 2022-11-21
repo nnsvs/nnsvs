@@ -311,6 +311,12 @@ def train_loop(
             for in_feats, out_feats, lengths in tqdm(
                 data_loaders[phase], desc=f"{phase} iter", leave=False
             ):
+                # NOTE: This is needed for pytorch's PackedSequence
+                lengths, indices = torch.sort(lengths, dim=0, descending=True)
+                in_feats, out_feats = (
+                    in_feats[indices].to(device),
+                    out_feats[indices].to(device),
+                )
                 # Compute denormalized log-F0 in the musical scores
                 with torch.no_grad():
                     lf0_score_denorm = (
@@ -329,13 +335,6 @@ def train_loop(
                         )
                     else:
                         pitch_reg_dyn_ws = 1.0
-
-                # NOTE: This is needed for pytorch's PackedSequence
-                lengths, indices = torch.sort(lengths, dim=0, descending=True)
-                in_feats, out_feats = (
-                    in_feats[indices].to(device),
-                    out_feats[indices].to(device),
-                )
 
                 if (not train) and (not evaluated):
                     eval_model(
