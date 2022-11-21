@@ -58,7 +58,7 @@ def predict_lf0_with_residual(
 
 
 def pad_inference(
-    model, x, lengths, reduction_factor, mode="constant", y=None, mdn=False
+    model, x, lengths, reduction_factor, mode="replicate", y=None, mdn=False
 ):
     mod = max(lengths) % reduction_factor
     pad = reduction_factor - mod
