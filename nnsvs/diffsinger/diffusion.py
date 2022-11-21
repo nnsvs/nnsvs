@@ -1,6 +1,5 @@
 from collections import deque
 from functools import partial
-from inspect import isfunction
 
 import numpy as np
 import torch

@@ -195,6 +195,11 @@ def train_step(
             if prediction_type == PredictionType.MULTISTREAM_HYBRID:
                 if len(pred_out_feats) == 4:
                     pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
+                    if isinstance(pred_lf0, tuple) and len(pred_lf0) == 3:
+                        pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
+                    elif isinstance(pred_lf0, tuple) and len(pred_lf0) == 2:
+                        # Diffusion case: noise
+                        pred_lf0 = pred_lf0[1]
                     if isinstance(pred_mgc, tuple) and len(pred_mgc) == 3:
                         pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
                     elif isinstance(pred_mgc, tuple) and len(pred_mgc) == 2:
@@ -210,6 +215,11 @@ def train_step(
                     )
                 elif len(pred_out_feats) == 3:
                     pred_mel, pred_lf0, pred_vuv = pred_out_feats
+                    if isinstance(pred_lf0, tuple) and len(pred_lf0) == 3:
+                        pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
+                    elif isinstance(pred_lf0, tuple) and len(pred_lf0) == 2:
+                        # Diffusion case: noise
+                        pred_lf0 = pred_lf0[1]
                     if isinstance(pred_mel, tuple) and len(pred_mel) == 3:
                         pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
                     elif isinstance(pred_mel, tuple) and len(pred_mel) == 2:

@@ -484,12 +484,15 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
         # Predict continuous log-F0 first
         if is_inference:
             lf0, lf0_residual = self.lf0_model.inference(x, lengths), None
+            if self.lf0_model.prediction_type() == PredictionType.PROBABILISTIC:
+                lf0_cond = lf0[0]
+            else:
+                lf0_cond = lf0
         else:
             lf0, lf0_residual = self.lf0_model(x, lengths, y_lf0)
-
         # Predict spectral parameters
         if is_inference:
-            mgc_inp = torch.cat([x, lf0], dim=-1)
+            mgc_inp = torch.cat([x, lf0_cond], dim=-1)
             mgc = self.mgc_model.inference(mgc_inp, lengths)
         else:
             mgc_inp = torch.cat([x, y_lf0], dim=-1)
@@ -497,7 +500,7 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
 
         # Predict aperiodic parameters
         if is_inference:
-            bap_inp = torch.cat([x, lf0], dim=-1)
+            bap_inp = torch.cat([x, lf0_cond], dim=-1)
             bap = self.bap_model.inference(bap_inp, lengths)
         else:
             bap_inp = torch.cat([x, y_lf0], dim=-1)
@@ -513,17 +516,21 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
             if self.vuv_model_bap0_conditioning:
                 bap_cond = bap_cond[:, :, 0:1]
 
-            vuv_inp = torch.cat([x, lf0, bap_cond], dim=-1)
+            vuv_inp = torch.cat([x, lf0_cond, bap_cond], dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
             if self.vuv_model_bap0_conditioning:
                 y_bap_cond = y_bap[:, :, 0:1]
             else:
                 y_bap_cond = y_bap
-            vuv_inp = torch.cat([x, lf0, y_bap_cond], dim=-1)
+            vuv_inp = torch.cat([x, y_lf0, y_bap_cond], dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
+            if self.lf0_model.prediction_type() == PredictionType.PROBABILISTIC:
+                lf0_ = lf0[0]
+            else:
+                lf0_ = lf0
             if self.bap_model.prediction_type() == PredictionType.PROBABILISTIC:
                 bap_ = bap[0]
             else:
@@ -532,7 +539,7 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
                 mgc_ = mgc[0]
             else:
                 mgc_ = mgc
-            out = torch.cat([mgc_, lf0, vuv, bap_], dim=-1)
+            out = torch.cat([mgc_, lf0_, vuv, bap_], dim=-1)
             assert out.shape[-1] == self.out_dim
             # TODO: better design
             return out, out
@@ -806,12 +813,16 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
         # Predict continuous log-F0 first
         if is_inference:
             lf0, lf0_residual = self.lf0_model.inference(x, lengths), None
+            if self.lf0_model.prediction_type() == PredictionType.PROBABILISTIC:
+                lf0_cond = lf0[0]
+            else:
+                lf0_cond = lf0
         else:
             lf0, lf0_residual = self.lf0_model(x, lengths, y_lf0)
 
         # Predict mel
         if is_inference:
-            mel_inp = torch.cat([x, lf0], dim=-1)
+            mel_inp = torch.cat([x, lf0_cond], dim=-1)
             mel = self.mel_model.inference(mel_inp, lengths)
         else:
             mel_inp = torch.cat([x, y_lf0], dim=-1)
@@ -824,18 +835,22 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
             else:
                 mel_cond = mel
 
-            vuv_inp = torch.cat([x, lf0, mel_cond], dim=-1)
+            vuv_inp = torch.cat([x, lf0_cond, mel_cond], dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
-            vuv_inp = torch.cat([x, lf0, y_mel], dim=-1)
+            vuv_inp = torch.cat([x, y_lf0, y_mel], dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
+            if self.lf0_model.prediction_type() == PredictionType.PROBABILISTIC:
+                lf0_ = lf0[0]
+            else:
+                lf0_ = lf0
             if self.mel_model.prediction_type() == PredictionType.PROBABILISTIC:
                 mel_ = mel[0]
             else:
                 mel_ = mel
-            out = torch.cat([mel_, lf0, vuv], dim=-1)
+            out = torch.cat([mel_, lf0_, vuv], dim=-1)
             assert out.shape[-1] == self.out_dim
             # TODO: better design
             return out, out
