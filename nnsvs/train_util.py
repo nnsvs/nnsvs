@@ -1726,6 +1726,8 @@ def eval_spss_model(
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_mgc, pred_lf0, pred_vuv, pred_bap = outs
+            if isinstance(pred_lf0, tuple):
+                pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
             if isinstance(pred_mgc, tuple):
                 pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
             if isinstance(pred_bap, tuple):
@@ -1944,6 +1946,8 @@ def eval_mel_model(
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_logmel, pred_lf0, pred_vuv = outs
+            if isinstance(pred_lf0, tuple):
+                pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
             if isinstance(pred_logmel, tuple):
                 pred_logmel = mdn_get_most_probable_sigma_and_mu(*pred_logmel)[1]
             pred_out_feats = torch.cat([pred_logmel, pred_lf0, pred_vuv], dim=-1)
