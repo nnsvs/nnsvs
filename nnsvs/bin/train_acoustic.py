@@ -184,6 +184,8 @@ def train_step(
             if prediction_type == PredictionType.MULTISTREAM_HYBRID:
                 if len(pred_out_feats) == 4:
                     pred_mgc, pred_lf0, pred_vuv, pred_bap = pred_out_feats
+                    if isinstance(pred_lf0, tuple):
+                        pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
                     if isinstance(pred_mgc, tuple):
                         pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
                     if isinstance(pred_bap, tuple):
@@ -193,6 +195,8 @@ def train_step(
                     )
                 elif len(pred_out_feats) == 3:
                     pred_mel, pred_lf0, pred_vuv = pred_out_feats
+                    if isinstance(pred_lf0, tuple):
+                        pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
                     if isinstance(pred_mel, tuple):
                         pred_mel = mdn_get_most_probable_sigma_and_mu(*pred_mel)[1]
                     pred_out_feats_ = torch.cat([pred_mel, pred_lf0, pred_vuv], dim=-1)

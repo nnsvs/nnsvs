@@ -167,8 +167,9 @@ def test_resf0_variance_predictor(num_gaussians):
 
 @pytest.mark.parametrize("reduction_factor", [1, 2])
 @pytest.mark.parametrize("num_gaussians", [1, 2, 4])
+@pytest.mark.parametrize("use_mdn_lf0", [False, True])
 def test_hybrid_multistream_mel_model_vuv_pred_from_mel(
-    reduction_factor, num_gaussians
+    reduction_factor, num_gaussians, use_mdn_lf0
 ):
     params = {
         "in_dim": 300,
@@ -183,6 +184,8 @@ def test_hybrid_multistream_mel_model_vuv_pred_from_mel(
             num_layers=1,
             in_lf0_idx=-1,
             out_lf0_idx=0,
+            use_mdn=use_mdn_lf0,
+            num_gaussians=num_gaussians,
         ),
         # Decoders
         "mel_model": MDN(
@@ -251,8 +254,9 @@ def test_multistream_mel_model(reduction_factor):
 
 @pytest.mark.parametrize("num_gaussians", [1, 2, 4])
 @pytest.mark.parametrize("vuv_model_bap0_conditioning", [False, True])
+@pytest.mark.parametrize("use_mdn_lf0", [False, True])
 def test_npss_mdn_multistream_parametric_model(
-    num_gaussians, vuv_model_bap0_conditioning
+    num_gaussians, vuv_model_bap0_conditioning, use_mdn_lf0
 ):
     params = {
         "in_dim": 300,
@@ -267,7 +271,8 @@ def test_npss_mdn_multistream_parametric_model(
             num_layers=1,
             in_lf0_idx=-1,
             out_lf0_idx=0,
-            use_mdn=False,
+            use_mdn=use_mdn_lf0,
+            num_gaussians=num_gaussians,
         ),
         # Decoders
         "mgc_model": MDN(
