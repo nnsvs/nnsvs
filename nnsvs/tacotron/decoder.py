@@ -105,6 +105,7 @@ class NonAttentiveDecoder(BaseModel):
         attention_conv_channel (int) : number of attention convolution channels
         attention_conv_kernel_size (int) : kernel size of attention convolution
         downsample_by_conv (bool) : if True, downsample by convolution
+        initial_value (float) : initial value for the autoregressive decoder.
     """
 
     def __init__(
@@ -122,12 +123,14 @@ class NonAttentiveDecoder(BaseModel):
         init_type="none",
         eval_dropout=True,
         prenet_noise_std=0.0,
+        initial_value=0.0,
     ):
         super().__init__()
         self.out_dim = out_dim
         self.reduction_factor = reduction_factor
         self.prenet_dropout = prenet_dropout
         self.prenet_noise_std = prenet_noise_std
+        self.initial_value = initial_value
 
         if prenet_layers > 0:
             self.prenet = Prenet(
@@ -210,7 +213,10 @@ class NonAttentiveDecoder(BaseModel):
             h_list.append(self._zero_state(encoder_outs))
             c_list.append(self._zero_state(encoder_outs))
 
-        go_frame = encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
+        go_frame = (
+            encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
+            + self.initial_value
+        )
         prev_out = go_frame
 
         if not is_inference and self.prenet is not None:
@@ -278,6 +284,7 @@ class MDNNonAttentiveDecoder(BaseModel):
         sampling_mode (str): sampling mode
         init_type (str): initialization type
         eval_dropout (bool): if True, use dropout in evaluation
+        initial_value (float) : initial value for the autoregressive decoder.
     """
 
     def __init__(
@@ -297,6 +304,7 @@ class MDNNonAttentiveDecoder(BaseModel):
         init_type="none",
         eval_dropout=True,
         prenet_noise_std=0.0,
+        initial_value=0.0,
     ):
         super().__init__()
         self.out_dim = out_dim
@@ -306,6 +314,7 @@ class MDNNonAttentiveDecoder(BaseModel):
         self.num_gaussians = num_gaussians
         self.sampling_mode = sampling_mode
         assert sampling_mode in ["mean", "random"]
+        self.initial_value = initial_value
 
         if prenet_layers > 0:
             self.prenet = Prenet(
@@ -386,7 +395,10 @@ class MDNNonAttentiveDecoder(BaseModel):
             h_list.append(self._zero_state(encoder_outs))
             c_list.append(self._zero_state(encoder_outs))
 
-        go_frame = encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
+        go_frame = (
+            encoder_outs.new_zeros(encoder_outs.size(0), self.out_dim)
+            + self.initial_value
+        )
         prev_out = go_frame
 
         if not is_inference and self.prenet is not None:

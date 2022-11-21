@@ -21,6 +21,14 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
 
     Duration-informed Tacotron :cite:t:`okamoto2019tacotron`.
 
+    .. note::
+
+        if the target features of the decoder is normalized to N(0, 1), consider
+        setting the initial value carefully so that it roughly matches the value of
+        silence. e.g., -4 to -10.
+        ``initial_value=0`` works okay for large databases but I found that -4 or
+        lower worked better for smaller databases such as nit-song070.
+
     Args:
         in_dim (int): Input dimension.
         out_dim (int): Output dimension.
@@ -38,6 +46,7 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
         postnet_dropout (float): Dropout rate of postnet.
         init_type (str): Initialization type.
         eval_dropout (bool): If True, dropout is applied in evaluation.
+        initial_value (float) : initial value for the autoregressive decoder.
     """
 
     def __init__(
@@ -59,6 +68,7 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
         init_type="none",
         eval_dropout=True,
         prenet_noise_std=0.0,
+        initial_value=0.0,
     ):
         super().__init__(
             in_dim=in_dim,
@@ -73,6 +83,7 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
             downsample_by_conv=downsample_by_conv,
             eval_dropout=eval_dropout,
             prenet_noise_std=prenet_noise_std,
+            initial_value=initial_value,
         )
         if postnet_layers > 0:
             self.postnet = TacotronPostnet(
@@ -133,6 +144,7 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
         embed_dim (int): Embedding dimension.
         init_type (str): Initialization type.
         eval_dropout (bool): If True, dropout is applied in evaluation.
+        initial_value=0.0,
     """
 
     def __init__(
@@ -161,6 +173,7 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
         init_type="none",
         eval_dropout=True,
         prenet_noise_std=0.0,
+        initial_value=0.0,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -230,6 +243,7 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
             downsample_by_conv=downsample_by_conv,
             eval_dropout=eval_dropout,
             prenet_noise_std=prenet_noise_std,
+            initial_value=initial_value,
         )
 
         if postnet_layers > 0:
@@ -320,6 +334,7 @@ class BiLSTMMDNNonAttentiveDecoder(BaseModel):
         embed_dim (int): Embedding dimension.
         init_type (str): Initialization type.
         eval_dropout (bool): If True, dropout is applied in evaluation.
+        initial_value (float) : initial value for the autoregressive decoder.
     """
 
     def __init__(
@@ -346,6 +361,7 @@ class BiLSTMMDNNonAttentiveDecoder(BaseModel):
         init_type="none",
         eval_dropout=True,
         prenet_noise_std=0,
+        initial_value=0.0,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -417,6 +433,7 @@ class BiLSTMMDNNonAttentiveDecoder(BaseModel):
             sampling_mode=sampling_mode,
             eval_dropout=eval_dropout,
             prenet_noise_std=prenet_noise_std,
+            initial_value=initial_value,
         )
         init_weights(self, init_type)
 

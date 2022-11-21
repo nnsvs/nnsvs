@@ -460,6 +460,7 @@ def test_tacotron_decoder_mdn(
         "downsample_by_conv": downsample_by_conv,
         "num_gaussians": 8,
         "sampling_mode": sampling_mode,
+        "initial_value": 0.0,
     }
     model = MDNNonAttentiveDecoder(**params)
     assert model.prediction_type() == PredictionType.PROBABILISTIC
@@ -505,6 +506,7 @@ def test_tacotron_decoder(reduction_factor, downsample_by_conv, prenet_layers):
         "zoneout": 0.1,
         "reduction_factor": reduction_factor,
         "downsample_by_conv": downsample_by_conv,
+        "initial_value": 0.0,
     }
     model = NonAttentiveDecoder(**params)
     assert model.prediction_type() == PredictionType.DETERMINISTIC
