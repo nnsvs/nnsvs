@@ -465,7 +465,7 @@ def get_data_loaders(data_config, collate_fn, logger):
                 out_files,
                 lengths,
                 shuffle=train,
-                allow_cache=data_config.allow_cache,
+                allow_cache=data_config.get("allow_cache", False),
             )
             if dist.is_initialized():
                 required_batch_size_multiple = dist.get_world_size()
