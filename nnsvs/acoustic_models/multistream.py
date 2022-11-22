@@ -234,8 +234,8 @@ class NPSSMultistreamParametricModel(BaseModel):
         self.out_dim = out_dim
         self.stream_sizes = stream_sizes
         self.reduction_factor = reduction_factor
-        self.npss_style_conditioning = npss_style_conditioning
         self.vuv_model_bap0_conditioning = vuv_model_bap0_conditioning
+        assert not npss_style_conditioning, "Not supported"
 
         assert len(stream_sizes) in [4]
 
@@ -307,38 +307,26 @@ class NPSSMultistreamParametricModel(BaseModel):
 
         # Predict aperiodic parameters
         if is_inference:
-            if self.npss_style_conditioning:
-                bap_inp = torch.cat([x, mgc, lf0], dim=-1)
-            else:
-                bap_inp = torch.cat([x, lf0], dim=-1)
+            bap_inp = torch.cat([x, lf0], dim=-1)
             bap = self.bap_model.inference(bap_inp, lengths)
         else:
-            if self.npss_style_conditioning:
-                bap_inp = torch.cat([x, y_mgc, y_lf0], dim=-1)
-            else:
-                bap_inp = torch.cat([x, y_lf0], dim=-1)
+            bap_inp = torch.cat([x, y_lf0], dim=-1)
             bap = self.bap_model(bap_inp, lengths, y_bap)
 
         # Predict V/UV
         if is_inference:
-            if self.npss_style_conditioning:
-                vuv_inp = torch.cat([x, mgc, bap, lf0], dim=-1)
+            if self.vuv_model_bap0_conditioning:
+                bap_inp = bap[:, :, 0:1]
             else:
-                if self.vuv_model_bap0_conditioning:
-                    bap_inp = bap[:, :, 0:1]
-                else:
-                    bap_inp = bap
-                vuv_inp = torch.cat([x, bap_inp, lf0], dim=-1)
+                bap_inp = bap
+            vuv_inp = torch.cat([x, bap_inp, lf0], dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
-            if self.npss_style_conditioning:
-                vuv_inp = torch.cat([x, y_mgc, y_bap, y_lf0], dim=-1)
+            if self.vuv_model_bap0_conditioning:
+                y_bap_inp = y_bap[:, :, 0:1]
             else:
-                if self.vuv_model_bap0_conditioning:
-                    y_bap_inp = y_bap[:, :, 0:1]
-                else:
-                    y_bap_inp = y_bap
-                vuv_inp = torch.cat([x, y_bap_inp, y_lf0], dim=-1)
+                y_bap_inp = y_bap
+            vuv_inp = torch.cat([x, y_bap_inp, y_lf0], dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         # make a concatenated stream
