@@ -43,7 +43,7 @@ for s in ${testsets[@]}; do
             ground_truth_duration=true
         fi
 
-        xrun python $NNSVS_ROOT/nnsvs_contrib/bin/synthesis.py $ext \
+        xrun python $NNSVS_ROOT/nnsvs/bin/synthesis.py $ext \
             synthesis=$synthesis \
             synthesis.sample_rate=$sample_rate \
             synthesis.qst=$question_path \

@@ -21,7 +21,7 @@ Once you convert a ENUNU model to NNSVS's format, you can create an SVS engine a
 
 .. code-block:: python
 
-    from nnsvs_contrib.svs import SPSVS
+    from nnsvs.svs import SPSVS
     engine = SPSVS("/path/to/output_directory")
 
 Please check :doc:`notebooks/Demos` for more details.

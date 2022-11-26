@@ -392,8 +392,11 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
+        vuv_model_bap_conditioning (bool): If True, use  BAP features for V/UV prediction.
         vuv_model_bap0_conditioning (bool): If True, use only 0-th coef. of BAP
             for V/UV prediction.
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
+        vuv_model_mgc_conditioning (bool): If True, use MGC features for V/UV prediction.
     """
 
     def __init__(
@@ -414,16 +417,20 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
         out_lf0_idx=60,
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
+        vuv_model_bap_conditioning=True,
         vuv_model_bap0_conditioning=False,
         vuv_model_lf0_conditioning=True,
+        vuv_model_mgc_conditioning=False,
     ):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.stream_sizes = stream_sizes
         self.reduction_factor = reduction_factor
+        self.vuv_model_bap_conditioning = vuv_model_bap_conditioning
         self.vuv_model_bap0_conditioning = vuv_model_bap0_conditioning
         self.vuv_model_lf0_conditioning = vuv_model_lf0_conditioning
+        self.vuv_model_mgc_conditioning = vuv_model_mgc_conditioning
 
         assert len(stream_sizes) in [4]
 
@@ -510,24 +517,38 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
                 bap_cond = bap[0]
             else:
                 bap_cond = bap
+            if self.mgc_model.prediction_type() == PredictionType.PROBABILISTIC:
+                mgc_cond = mgc[0]
+            else:
+                mgc_cond = mgc
 
             if self.vuv_model_bap0_conditioning:
                 bap_cond = bap_cond[:, :, 0:1]
 
+            # full cond: (x, mgc, lf0, bap)
+            vuv_inp = [x]
+            if self.vuv_model_mgc_conditioning:
+                vuv_inp.append(mgc_cond)
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, lf0_cond, bap_cond], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, bap_cond], dim=-1)
+                vuv_inp.append(lf0_cond)
+            if self.vuv_model_bap_conditioning:
+                vuv_inp.append(bap_cond)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
             if self.vuv_model_bap0_conditioning:
                 y_bap_cond = y_bap[:, :, 0:1]
             else:
                 y_bap_cond = y_bap
+
+            vuv_inp = [x]
+            if self.vuv_model_mgc_conditioning:
+                vuv_inp.append(y_mgc)
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, y_lf0, y_bap_cond], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, y_bap_cond], dim=-1)
+                vuv_inp.append(y_lf0)
+            if self.vuv_model_bap_conditioning:
+                vuv_inp.append(y_bap_cond)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
@@ -736,6 +757,8 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
+        vuv_model_mel_conditioning (bool): If True, use mel features for V/UV prediction.
     """
 
     def __init__(
@@ -756,6 +779,7 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
         vuv_model_lf0_conditioning=True,
+        vuv_model_mel_conditioning=True,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -763,6 +787,7 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
         self.stream_sizes = stream_sizes
         self.reduction_factor = reduction_factor
         self.vuv_model_lf0_conditioning = vuv_model_lf0_conditioning
+        self.vuv_model_mel_conditioning = vuv_model_mel_conditioning
 
         assert len(stream_sizes) in [3]
 
@@ -841,16 +866,21 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
             else:
                 mel_cond = mel
 
+            # full cond: (x, lf0, mel)
+            vuv_inp = [x]
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, lf0_cond, mel_cond], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, mel_cond], dim=-1)
+                vuv_inp.append(lf0_cond)
+            if self.vuv_model_mel_conditioning:
+                vuv_inp.append(mel_cond)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
+            vuv_inp = [x]
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, y_lf0, y_mel], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, y_mel], dim=-1)
+                vuv_inp.append(y_lf0)
+            if self.vuv_model_mel_conditioning:
+                vuv_inp.append(y_mel)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         if is_inference:
