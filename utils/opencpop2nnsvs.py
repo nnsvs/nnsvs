@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 from nnmnkwii.io import hts
-from nnsvs_contrib.io.hts import get_note_indices
+from nnsvs.io.hts import get_note_indices
 from tqdm.auto import tqdm
 
 
