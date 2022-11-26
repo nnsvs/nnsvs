@@ -343,7 +343,25 @@ def test_npss_mdn_multistream_parametric_model(
 
 
 @pytest.mark.parametrize("vuv_model_bap0_conditioning", [False, True])
-def test_nonmdn_npss_multistream_parametric_model(vuv_model_bap0_conditioning):
+@pytest.mark.parametrize("vuv_model_bap_conditioning", [False, True])
+@pytest.mark.parametrize("vuv_model_lf0_conditioning", [False, True])
+@pytest.mark.parametrize("vuv_model_mgc_conditioning", [False, True])
+def test_nonmdn_npss_multistream_parametric_model(
+    vuv_model_bap0_conditioning,
+    vuv_model_bap_conditioning,
+    vuv_model_lf0_conditioning,
+    vuv_model_mgc_conditioning,
+):
+    vuv_in_dim = 300
+    if vuv_model_lf0_conditioning:
+        vuv_in_dim += 1
+    if vuv_model_mgc_conditioning:
+        vuv_in_dim += 60
+    if vuv_model_bap_conditioning:
+        if vuv_model_bap0_conditioning:
+            vuv_in_dim += 1
+        else:
+            vuv_in_dim += 5
     params = {
         "in_dim": 300,
         "out_dim": 67,
@@ -371,11 +389,14 @@ def test_nonmdn_npss_multistream_parametric_model(vuv_model_bap0_conditioning):
             out_dim=5,
         ),
         "vuv_model": FFN(
-            in_dim=302 if vuv_model_bap0_conditioning else 306,
+            in_dim=vuv_in_dim,
             hidden_dim=5,
             out_dim=1,
         ),
+        "vuv_model_bap_conditioning": vuv_model_bap_conditioning,
         "vuv_model_bap0_conditioning": vuv_model_bap0_conditioning,
+        "vuv_model_lf0_conditioning": vuv_model_lf0_conditioning,
+        "vuv_model_mgc_conditioning": vuv_model_mgc_conditioning,
         # dummy
         "in_lf0_idx": 0,
         "in_lf0_min": 5.3936276,
