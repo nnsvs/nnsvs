@@ -203,8 +203,11 @@ class NPSSMultistreamParametricModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
+        vuv_model_bap_conditioning (bool): If True, use  BAP features for V/UV prediction.
         vuv_model_bap0_conditioning (bool): If True, use only 0-th coef. of BAP
             for V/UV prediction.
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
+        vuv_model_mgc_conditioning (bool): If True, use MGC features for V/UV prediction.
 
     """
 
@@ -227,16 +230,20 @@ class NPSSMultistreamParametricModel(BaseModel):
         out_lf0_mean=5.953093881972361,
         out_lf0_scale=0.23435173188961034,
         npss_style_conditioning=False,
+        vuv_model_bap_conditioning=True,
         vuv_model_bap0_conditioning=False,
         vuv_model_lf0_conditioning=True,
+        vuv_model_mgc_conditioning=False,
     ):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.stream_sizes = stream_sizes
         self.reduction_factor = reduction_factor
+        self.vuv_model_bap_conditioning = vuv_model_bap_conditioning
         self.vuv_model_bap0_conditioning = vuv_model_bap0_conditioning
         self.vuv_model_lf0_conditioning = vuv_model_lf0_conditioning
+        self.vuv_model_mgc_conditioning = vuv_model_mgc_conditioning
         assert not npss_style_conditioning, "Not supported"
 
         assert len(stream_sizes) in [4]
@@ -318,23 +325,32 @@ class NPSSMultistreamParametricModel(BaseModel):
         # Predict V/UV
         if is_inference:
             if self.vuv_model_bap0_conditioning:
-                bap_inp = bap[:, :, 0:1]
+                bap_cond = bap[:, :, 0:1]
             else:
-                bap_inp = bap
+                bap_cond = bap
+            # full cond: (x, mgc, lf0, bap)
+            vuv_inp = [x]
+            if self.vuv_model_mgc_conditioning:
+                vuv_inp.append(mgc)
+            if self.vuv_model_bap_conditioning:
+                vuv_inp.append(bap_cond)
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, bap_inp, lf0], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, bap_inp], dim=-1)
+                vuv_inp.append(lf0)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model.inference(vuv_inp, lengths)
         else:
             if self.vuv_model_bap0_conditioning:
-                y_bap_inp = y_bap[:, :, 0:1]
+                y_bap_cond = y_bap[:, :, 0:1]
             else:
-                y_bap_inp = y_bap
+                y_bap_cond = y_bap
+            vuv_inp = [x]
+            if self.vuv_model_mgc_conditioning:
+                vuv_inp.append(y_mgc)
+            if self.vuv_model_bap_conditioning:
+                vuv_inp.append(y_bap_cond)
             if self.vuv_model_lf0_conditioning:
-                vuv_inp = torch.cat([x, y_bap_inp, y_lf0], dim=-1)
-            else:
-                vuv_inp = torch.cat([x, y_bap_inp], dim=-1)
+                vuv_inp.append(y_lf0)
+            vuv_inp = torch.cat(vuv_inp, dim=-1)
             vuv = self.vuv_model(vuv_inp, lengths, y_vuv)
 
         # make a concatenated stream
