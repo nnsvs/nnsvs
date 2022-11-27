@@ -55,6 +55,20 @@ class PredictionType(Enum):
     """
 
     DIFFUSION = 4
+    """Diffusion model's prediction
+
+    NOTE: may subject to change in the future
+
+    Pseudo code:
+
+    .. code-block::
+
+        # training
+        noise, x_recon = model(x)
+
+        # inference
+        y = model.inference(x)
+    """
 
 
 class BaseModel(nn.Module):
