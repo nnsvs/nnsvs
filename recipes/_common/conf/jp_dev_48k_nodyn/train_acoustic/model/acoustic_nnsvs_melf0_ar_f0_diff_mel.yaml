@@ -43,7 +43,7 @@ netG:
   # put the sil-or-not phonetic context on the first item of your hed file.
   in_rest_idx: 0 # NOTE: need to be changed for each hed file
   in_lf0_idx: 51 # NOTE: need to be changed for each hed file
-  out_lf0_idx: 60
+  out_lf0_idx: 80
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.
   in_lf0_min: null
