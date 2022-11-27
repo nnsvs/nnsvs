@@ -74,7 +74,7 @@ trajectory_smoothing_cutoff: 50
 # NOTE: *_model: model definition, *_train: general train configs,
 # *_data: data configs (e.g., batch size)
 
-timelag_model: timelag_mdn
+timelag_model: timelag_vp_mdn
 timelag_train: myconfig
 timelag_data: myconfig
 
@@ -84,7 +84,7 @@ duration_data: myconfig
 
 acoustic_model: acoustic_nnsvs_world_multi_ar_f0
 acoustic_train: myconfig
-acoustic_data: myconfig
+acoustic_data: world
 
 postfilter_model: postfilter_mgc
 postfilter_train: mgc
@@ -110,7 +110,7 @@ acoustic_hydra_optuna_sweeper_n_trials: 100
 ###########################################################
 #                SYNTHESIS SETTING                        #
 ###########################################################
-# conf/synthesis/synthesis/${synthesis}
+# If you use uSFGAN or SiFi-GAN, please set `world_gv_usfgan`
 synthesis: world_gv
 
 # latest.pth or best.pth
