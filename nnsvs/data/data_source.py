@@ -21,6 +21,7 @@ from nnsvs.pitch import (
     hz_to_cent_based_c4,
     lowpass_filter,
 )
+from nnsvs.util import init_seed
 from parallel_wavegan.bin.preprocess import logmelfilterbank
 from scipy.signal import firwin, lfilter
 
@@ -653,6 +654,10 @@ class MelF0AcousticSource(FileDataSource):
             x = librosa.resample(
                 x, orig_sr=fs, target_sr=self.sample_rate, res_type=self.res_type
             )
+            if self.sample_rate > fs:
+                # NOTE: add a tiny white noise to compensate missing frequency bands
+                init_seed(len(x))
+                x = x + np.random.randn(len(x)) * 1e-7
             fs = self.sample_rate
 
         if self.f0_extractor == "parselmouth":
