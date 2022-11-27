@@ -1,3 +1,21 @@
+# This is a config file for the NNSVS's best acoustic model as of 2022/09
+# with some small improvements.
+# Paper: https://arxiv.org/abs/2210.15987
+# All the features are modeled by autoregressive models except for V/UV.
+# NOTE: autoregressive models tend to require more data and training iterations
+# to converge. It is recommencded to try pre-training if you database does not
+# have enough amount of data (> 1h).
+# NOTE: in_ph_start_idx (start index of current-phoneme context) and
+# in_ph_end_idx (end index of current-phoneme context) are hed-specific parameters
+# and used for *optional* phoneme embedding (with embedding size of `embed_dim`).
+# If you want to use this config with you hed file, there are two options:
+#   1. Set `embed_dim` to -1 to disable phoneme embedding (the easiest way)
+#   2. Find start and end indices of current-phoneme contexts in your hed file
+#      and set them to `in_ph_start_idx` and `in_ph_end_idx` respectively.
+# Using phoneme embedding may improve intelligiblity a little, but it is OK
+# not to use it based on our experiments.
+# Please carefully check hed-specific configurations.
+
 # (mgc, lf0, vuv, bap)
 stream_sizes: [60, 1, 1, 5]
 has_dynamic_features: [false, false, false, false]
@@ -6,16 +24,23 @@ stream_weights:
 
 netG:
   _target_: nnsvs.acoustic_models.NPSSMultistreamParametricModel
-  in_dim: 86
+  # The number of total input phonetic/musical context features.
+  in_dim: 86 # NOTE: need to be changed for each hed file
   out_dim: 67
 
+  # Must be set as the same as the above stream_sizes
   stream_sizes: [60, 1, 1, 5]
+  # This is an imporant parameter to control the modeling capability of
+  # autoregressive models. Don't change this unless if you are sure what you do.
+  # The reduction factor of 4 was chosen empirecally.
   reduction_factor: 4
 
-  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
-  # otherwise the model does't work at all
-  in_rest_idx: 0
-  in_lf0_idx: 51
+  # You MUST set in_rest_idx, in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all.
+  # Please configure your hed file so that in_rest_idx to be zero. i.e.,
+  # put the sil-or-not phonetic context on the first item of your hed file.
+  in_rest_idx: 0 # NOTE: need to be changed for each hed file
+  in_lf0_idx: 51 # NOTE: need to be changed for each hed file
   out_lf0_idx: 60
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.
@@ -24,15 +49,25 @@ netG:
   out_lf0_mean: null
   out_lf0_scale: null
 
-  npss_style_conditioning: false
+  # Flags to control conditioning features for V/UV prediction
+  # If all true, [mgc, lf0, bap] are used for V/UV prediction.
+  # IMPORTANT: not optimized yet
+  vuv_model_bap_conditioning: false
+  # if true, only 0-th dim of bap is used
+  vuv_model_bap0_conditioning: false
+  vuv_model_lf0_conditioning: true
+  vuv_model_mgc_conditioning: true
 
   # A separate model for modeling continuous log-F0
   lf0_model:
     _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
-    in_dim: 86
+    # in_dim must be equal to netG.in_dim
+    in_dim: 86 # NOTE: need to be changed for each hed file
+    # out_dim must be equsl to the dimension of log-F0
     out_dim: 1
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
+    # Set to -1 to disable phoneme embedding
     embed_dim: 256
     ff_hidden_dim: 256
     conv_hidden_dim: 128
@@ -45,10 +80,14 @@ netG:
     prenet_dropout: 0.5
     scaled_tanh: true
     zoneout: 0.0
+    # This must be the same as netG.reduction_factor. Don't change
     reduction_factor: 4
     downsample_by_conv: true
-    in_lf0_idx: 51
+    # This must be the same as netG.in_lf0_idx
+    in_lf0_idx: 51 # NOTE: need to be changed for each hed file
+    # This must be 0. Don't change
     out_lf0_idx: 0
+    # OK to leave unspecified
     in_lf0_min: null
     in_lf0_max: null
     out_lf0_mean: null
@@ -57,10 +96,13 @@ netG:
   # Spectral parameter prediction model
   mgc_model:
     _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
-    in_dim: 87 # (x, lf0)
+    # in_dim must be equal to netG.in_dim + dimension of log-F0
+    in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
+    # out_dim must be equal to the dimension of MGC
     out_dim: 60
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
+    # Set to -1 to disable phoneme embedding
     embed_dim: 256
     ff_hidden_dim: 1024
     conv_hidden_dim: 512
@@ -72,6 +114,7 @@ netG:
     prenet_hidden_dim: 192
     prenet_dropout: 0.5
     zoneout: 0.0
+    # Can be 4 or 2, but don't change unless if you are sure what you do.
     reduction_factor: 2
     downsample_by_conv: true
     postnet_layers: 5
@@ -79,15 +122,17 @@ netG:
     postnet_kernel_size: 5
     postnet_dropout: 0.0
     init_type: "kaiming_normal"
-    initial_value: -7.0
+    initial_value: -10.0
 
   # Aperiodic parameter prediction model
   bap_model:
     _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
-    in_dim: 87 # (x, lf0)
+    # in_dim must be equal to netG.in_dim + dimension of log-F0
+    in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
     out_dim: 5
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
+    # Set to -1 to disable phoneme embedding
     embed_dim: 256
     ff_hidden_dim: 1024
     conv_hidden_dim: 512
@@ -99,6 +144,7 @@ netG:
     prenet_hidden_dim: 192
     prenet_dropout: 0.5
     zoneout: 0.0
+    # Can be 4 or 2, but don't change unless if you are sure what you do.
     reduction_factor: 2
     downsample_by_conv: true
     postnet_layers: 5
@@ -106,14 +152,14 @@ netG:
     postnet_kernel_size: 5
     postnet_dropout: 0.0
     init_type: "kaiming_normal"
-    initial_value: -7.0
+    initial_value: -10.0
 
   # V/UV prediction model
   vuv_model:
     _target_: nnsvs.model.FFConvLSTM
-    in_dim: 92 # (x, lf0, bap)
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    in_dim: 147 # (x, lf0, mgc) # NOTE: need to be changed for each hed file
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
     embed_dim: 256
     ff_hidden_dim: 256
     conv_hidden_dim: 128

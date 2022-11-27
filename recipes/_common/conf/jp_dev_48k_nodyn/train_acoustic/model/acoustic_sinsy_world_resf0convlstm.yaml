@@ -1,3 +1,6 @@
+# Sinsy-based acoustic model config
+# https://arxiv.org/abs/2108.02776
+
 # (mgc, lf0, vuv, bap)
 stream_sizes: [60, 1, 1, 5]
 has_dynamic_features: [false, false, false, false]
@@ -7,7 +10,7 @@ stream_weights:
 
 netG:
   _target_: nnsvs.model.ResSkipF0FFConvLSTM
-  in_dim: 86
+  in_dim: 86 # NOTE: need to be changed for each hed file
   out_dim: 67
   ff_hidden_dim: 2048
   conv_hidden_dim: 1024
@@ -22,7 +25,7 @@ netG:
   dim_wise: true
   # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
   # otherwise the model does't work at all
-  in_lf0_idx: 51
+  in_lf0_idx: 51 # NOTE: need to be changed for each hed file
   out_lf0_idx: 60
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.

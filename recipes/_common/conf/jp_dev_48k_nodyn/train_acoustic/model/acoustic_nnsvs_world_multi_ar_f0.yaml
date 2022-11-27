@@ -1,3 +1,24 @@
+# Multi-stream acoustic model with a separate log-F0 prediction model.
+# Specifically, this multi-stream model consists of the following modules:
+#   - A log-F0 prediction model based on autoregressive model
+#   - A shared encoder for MGC and BAP
+#   - MGC/BAP/VUV prediction models
+# The detailed design of MGC/BAP/VUV prediction models can be arbitrary,
+# but this config adopts a Sinsy-like non-autoregressive model architecture as
+# it has been verified to be effective for singing voice synthesis tasks.
+# NOTE: autoregressive models tend to require more data and training iterations
+# to converge.
+# NOTE: in_ph_start_idx (start index of current-phoneme context) and
+# in_ph_end_idx (end index of current-phoneme context) are hed-specific parameters
+# and used for *optional* phoneme embedding (with embedding size of `embed_dim`).
+# If you want to use this config with you hed file, there are two options:
+#   1. Set `embed_dim` to -1 to disable phoneme embedding (the easiest way)
+#   2. Find start and end indices of current-phoneme contexts in your hed file
+#      and set them to `in_ph_start_idx` and `in_ph_end_idx` respectively.
+# Using phoneme embedding may improve intelligiblity a little, but it is OK
+# not to use it based on our experiments.
+# Please carefully check hed-specific configurations.
+
 # (mgc, lf0, vuv, bap)
 stream_sizes: [60, 1, 1, 5]
 has_dynamic_features: [false, false, false, false]
@@ -6,17 +27,25 @@ stream_weights:
 
 netG:
   _target_: nnsvs.acoustic_models.MultistreamSeparateF0ParametricModel
-  in_dim: 86
+  # The number of total input phonetic/musical context features.
+  in_dim: 86 # NOTE: need to be changed for each hed file
   out_dim: 67
 
+  # Must be set as the same as the above stream_sizes (sorry for the dup. of the same parameter)
   stream_sizes: [60, 1, 1, 5]
+  # This is an imporant parameter to control the modeling capability of
+  # autoregressive models. Don't change this unless if you are sure what you do.
+  # The reduction factor of 4 was chosen empirecally.
   reduction_factor: 4
 
-  # NOTE: you MUST set in_lf0_idx and out_lf0_idx correctly
-  # otherwise the model does't work at all
-  in_rest_idx: 0
-  in_lf0_idx: 51
+  # You MUST set in_rest_idx, in_lf0_idx and out_lf0_idx correctly
+  # otherwise the model does't work at all.
+  # Please configure your hed file so that in_rest_idx to be zero. i.e.,
+  # put the sil-or-not phonetic context on the first item of your hed file.
+  in_rest_idx: 0 # NOTE: need to be changed for each hed file
+  in_lf0_idx: 51 # NOTE: need to be changed for each hed file
   out_lf0_idx: 60
+
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.
   in_lf0_min: null
@@ -27,10 +56,13 @@ netG:
   # A separate model for modeling continuous log-F0
   lf0_model:
     _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
-    in_dim: 86
+    # in_dim must be equal to netG.in_dim
+    in_dim: 86 # NOTE: need to be changed for each hed file
+    # out_dim must be equal to the dimension of log-F0
     out_dim: 1
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
+    # Set to -1 to disable phoneme embedding
     embed_dim: 256
     ff_hidden_dim: 256
     conv_hidden_dim: 128
@@ -43,10 +75,14 @@ netG:
     prenet_dropout: 0.5
     scaled_tanh: true
     zoneout: 0.0
+    # This must be the same as netG.reduction_factor. Don't change
     reduction_factor: 4
     downsample_by_conv: true
-    in_lf0_idx: 51
+    # This must be the same as netG.in_lf0_idx
+    in_lf0_idx: 51 # NOTE: need to be changed for each hed file
+    # This must be 0. Don't change
     out_lf0_idx: 0
+    # OK to leave unspecified
     in_lf0_min: null
     in_lf0_max: null
     out_lf0_mean: null
@@ -55,9 +91,10 @@ netG:
   # Shared encoder
   encoder:
     _target_: nnsvs.model.LSTMEncoder
-    in_dim: 86
-    in_ph_start_idx: 3
-    in_ph_end_idx: 50
+    # in_dim must be equal to netG.in_dim
+    in_dim: 86 # NOTE: need to be changed for each hed file
+    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
     embed_dim: 256
     hidden_dim: 512
     out_dim: 1024
@@ -69,36 +106,43 @@ netG:
   # Decoders for the rest of streams
   mgc_model:
     _target_: nnsvs.model.FFConvLSTM
+    # This must be equal to netG.encoder.out_dim + 2
     in_dim: 1026
     ff_hidden_dim: 1024
     conv_hidden_dim: 512
     lstm_hidden_dim: 256
     num_lstm_layers: 2
     bidirectional: true
+    # This must be equal to dimension of MGC
     out_dim: 60
     dropout: 0.1
 
   vuv_model:
     _target_: nnsvs.model.FFConvLSTM
+    # This must be equal to netG.encoder.out_dim + 2
     in_dim: 1026
     ff_hidden_dim: 256
     conv_hidden_dim: 128
     lstm_hidden_dim: 64
     num_lstm_layers: 2
     bidirectional: true
+    # This must be equal to dimension of VUV
     out_dim: 1
     dropout: 0.1
 
   bap_model:
     _target_: nnsvs.model.FFConvLSTM
+    # This must be equal to netG.encoder.out_dim + 2
     in_dim: 1026
     ff_hidden_dim: 256
     conv_hidden_dim: 128
     lstm_hidden_dim: 62
     num_lstm_layers: 2
     bidirectional: true
+    # This must be equal to dimension of BAP
     out_dim: 5
     dropout: 0.0
 
+  # Deprecated
   vib_model: null
   vib_flags_model: null
