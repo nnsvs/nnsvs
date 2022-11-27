@@ -5,7 +5,7 @@ Recipe of the [Opencpop corpus](https://wenet.org.cn/opencpop/).
 ## How to use
 
 You must first agree to the Opencpop's lincense to download the database.
-Please follow the offical guide: https://wenet.org.cn/opencpop/download/.
+Please follow the official guide: https://wenet.org.cn/opencpop/download/.
 
 After downloading the database, please run the following command to convert the corpus to NNSVS's structure:
 
