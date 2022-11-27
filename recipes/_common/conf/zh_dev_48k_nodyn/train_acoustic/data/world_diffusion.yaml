@@ -1,3 +1,6 @@
+# Config for diffusion-based models with WORLD features
+# NOTE: larger batch size is preferred for training stability
+
 # training set
 train_no_dev:
   in_dir:

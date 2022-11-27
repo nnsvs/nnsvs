@@ -1,3 +1,6 @@
+# Training config for diffusion-based acoustic models.
+# NOTE: longer training iterations are preferred to improve quality
+
 out_dir: exp
 log_dir: tensorboard/exp
 
