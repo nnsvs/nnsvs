@@ -67,6 +67,7 @@ def apply_normalization_dir2dir(
                     feature_path,
                     scaler,
                     inverse,
+                    clipping_threshold,
                 )
             )
         )
