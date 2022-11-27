@@ -135,6 +135,12 @@ netG:
     _target_: nnsvs.diffsinger.GaussianDiffusion
     in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
     out_dim: 5
+    # Parameter to convert mean-var normalized data (~ N(0, 1)) to [-1, 1].
+    # may need to adjust in 5 to 10.
+    # assuming that the absolute maximum value of the normalized data is smaller than
+    # `norm_scale` so the data (~ N(0,1); 99.9% are in [-norm_scale, norm_scale]) is
+    # property scaled to [-1, 1]
+    norm_scale: 10
     # The encoder processes the phonetic/musical contexts into hidden representations
     encoder:
        _target_: nnsvs.model.FFConvLSTM

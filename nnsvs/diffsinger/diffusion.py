@@ -62,6 +62,7 @@ class GaussianDiffusion(BaseModel):
         betas=None,
         schedule_type="linear",
         scheduler_params=None,
+        norm_scale=10,
         pndm_speedup=None,
     ):
         super().__init__()
@@ -71,6 +72,7 @@ class GaussianDiffusion(BaseModel):
         self.K_step = K_step
         self.pndm_speedup = pndm_speedup
         self.encoder = encoder
+        self.norm_scale = norm_scale
         if scheduler_params is None:
             if schedule_type == "linear":
                 scheduler_params = {"max_beta": 0.06}
@@ -285,7 +287,7 @@ class GaussianDiffusion(BaseModel):
         cond = cond.transpose(1, 2)
 
         t = torch.randint(0, self.K_step, (B,), device=device).long()
-        x = self._norm(y)
+        x = self._norm(y, self.norm_scale)
         x = x.transpose(1, 2)[:, None, :, :]  # [B, 1, M, T]
 
         noise = torch.randn_like(x)
@@ -330,5 +332,5 @@ class GaussianDiffusion(BaseModel):
                 x = self.p_sample(
                     x, torch.full((B,), i, device=device, dtype=torch.long), cond
                 )
-        x = self._denorm(x[:, 0].transpose(1, 2))
+        x = self._denorm(x[:, 0].transpose(1, 2), self.norm_scale)
         return x
