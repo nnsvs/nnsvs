@@ -1,5 +1,4 @@
 import pytest
-import torch
 from nnsvs.acoustic_models import (
     BiLSTMMDNNonAttentiveDecoder,
     BiLSTMNonAttentiveDecoder,

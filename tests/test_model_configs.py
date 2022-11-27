@@ -9,9 +9,9 @@ import torch
 from nnsvs.util import init_seed
 from omegaconf import OmegaConf
 
-RECIPE_DIR = Path(__file__).parent.parent / "recipes"
-
 from .util import _test_model_impl
+
+RECIPE_DIR = Path(__file__).parent.parent / "recipes"
 
 
 def _test_postfilter_impl(model, model_config):
