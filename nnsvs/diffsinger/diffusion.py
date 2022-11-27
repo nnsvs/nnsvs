@@ -61,7 +61,7 @@ class GaussianDiffusion(BaseModel):
         K_step=100,
         betas=None,
         schedule_type="linear",
-        scheduler_params={"max_beta": 0.06},
+        scheduler_params=None,
         pndm_speedup=None,
     ):
         super().__init__()
@@ -71,6 +71,11 @@ class GaussianDiffusion(BaseModel):
         self.K_step = K_step
         self.pndm_speedup = pndm_speedup
         self.encoder = encoder
+        if scheduler_params is None:
+            if schedule_type == "linear":
+                scheduler_params = {"max_beta": 0.06}
+            elif schedule_type == "cosine":
+                scheduler_params = {"s": 0.008}
 
         if encoder is not None:
             assert encoder.in_dim == in_dim, "encoder input dim must match in_dim"

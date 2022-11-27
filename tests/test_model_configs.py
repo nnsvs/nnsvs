@@ -175,6 +175,14 @@ def test_train_acoustic_model_config_recipes(model_config):
         if key in model_config.netG and "embed_dim" in model_config.netG[key]:
             model_config.netG[key].embed_dim = None
 
+        # For GaussianDiffusion that includes encoder in its implementation
+        if (
+            key in model_config.netG
+            and "encoder" in model_config.netG[key]
+            and "embed_dim" in model_config.netG[key]["encoder"]
+        ):
+            model_config.netG[key]["encoder"].embed_dim = None
+
     model = hydra.utils.instantiate(model_config.netG)
     _test_model_impl(model, model_config.netG.in_dim, model_config.netG.out_dim)
 
