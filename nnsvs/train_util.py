@@ -1209,7 +1209,7 @@ def eval_pitch_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         if prediction_type == PredictionType.PROBABILISTIC:
@@ -1720,18 +1720,24 @@ def eval_spss_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_mgc, pred_lf0, pred_vuv, pred_bap = outs
-            if isinstance(pred_lf0, tuple):
+            if isinstance(pred_lf0, tuple) and len(pred_lf0) == 3:
                 pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
-            if isinstance(pred_mgc, tuple):
+            elif isinstance(pred_lf0, tuple) and len(pred_lf0) == 2:
+                pred_lf0 = pred_lf0[1]
+            if isinstance(pred_mgc, tuple) and len(pred_mgc) == 3:
                 pred_mgc = mdn_get_most_probable_sigma_and_mu(*pred_mgc)[1]
-            if isinstance(pred_bap, tuple):
+            elif isinstance(pred_mgc, tuple) and len(pred_mgc) == 2:
+                pred_mgc = pred_mgc[1]
+            if isinstance(pred_bap, tuple) and len(pred_bap) == 3:
                 pred_bap = mdn_get_most_probable_sigma_and_mu(*pred_bap)[1]
+            elif isinstance(pred_bap, tuple) and len(pred_bap) == 2:
+                pred_bap = pred_bap[1]
             pred_out_feats = torch.cat([pred_mgc, pred_lf0, pred_vuv, pred_bap], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs
@@ -1842,24 +1848,30 @@ def eval_spss_model(
             else:
                 group = f"{phase}_utt{np.abs(utt_idx)}_forward"
             writer.add_audio(group, wav, step, sr)
-            plot_spsvs_params(
-                step,
-                writer,
-                mgc,
-                lf0,
-                vuv,
-                bap,
-                pred_mgc,
-                pred_lf0,
-                pred_vuv,
-                pred_bap,
-                lf0_score=lf0_score_denorm_,
-                group=group,
-                sr=sr,
-                use_world_codec=use_world_codec,
-                sp=sp,
-                pred_sp=pred_sp,
-            )
+
+            try:
+                plot_spsvs_params(
+                    step,
+                    writer,
+                    mgc,
+                    lf0,
+                    vuv,
+                    bap,
+                    pred_mgc,
+                    pred_lf0,
+                    pred_vuv,
+                    pred_bap,
+                    lf0_score=lf0_score_denorm_,
+                    group=group,
+                    sr=sr,
+                    use_world_codec=use_world_codec,
+                    sp=sp,
+                    pred_sp=pred_sp,
+                )
+            except IndexError as e:
+                # In _quantile_ureduce_func:
+                # IndexError: index -1 is out of bounds for axis 0 with size 0
+                print(str(e))
 
 
 @torch.no_grad()
@@ -1940,16 +1952,20 @@ def eval_mel_model(
         )
 
         # ResF0 case
-        if isinstance(outs, tuple) and len(outs) == 2:
+        if netG.has_residual_lf0_prediction():
             outs, _ = outs
 
         # Hybrid
         if prediction_type == PredictionType.MULTISTREAM_HYBRID:
             pred_logmel, pred_lf0, pred_vuv = outs
-            if isinstance(pred_lf0, tuple):
+            if isinstance(pred_lf0, tuple) and len(pred_lf0) == 3:
                 pred_lf0 = mdn_get_most_probable_sigma_and_mu(*pred_lf0)[1]
-            if isinstance(pred_logmel, tuple):
+            elif isinstance(pred_lf0, tuple) and len(pred_lf0) == 2:
+                pred_lf0 = pred_lf0[1]
+            if isinstance(pred_logmel, tuple) and len(pred_logmel) == 3:
                 pred_logmel = mdn_get_most_probable_sigma_and_mu(*pred_logmel)[1]
+            elif isinstance(pred_logmel, tuple) and len(pred_logmel) == 2:
+                pred_logmel = pred_logmel[1]
             pred_out_feats = torch.cat([pred_logmel, pred_lf0, pred_vuv], dim=-1)
         elif prediction_type == PredictionType.PROBABILISTIC:
             pi, sigma, mu = outs
@@ -2028,19 +2044,24 @@ def eval_mel_model(
                 wav = wav / np.abs(wav).max() if np.abs(wav).max() > 1.0 else wav
                 writer.add_audio(group, wav, step, sr)
 
-            plot_mel_params(
-                step,
-                writer,
-                logmel,
-                lf0,
-                vuv,
-                pred_logmel,
-                pred_lf0,
-                pred_vuv,
-                lf0_score=lf0_score_denorm_,
-                group=group,
-                sr=sr,
-            )
+            try:
+                plot_mel_params(
+                    step,
+                    writer,
+                    logmel,
+                    lf0,
+                    vuv,
+                    pred_logmel,
+                    pred_lf0,
+                    pred_vuv,
+                    lf0_score=lf0_score_denorm_,
+                    group=group,
+                    sr=sr,
+                )
+            except IndexError as e:
+                # In _quantile_ureduce_func:
+                # IndexError: index -1 is out of bounds for axis 0 with size 0
+                print(str(e))
 
 
 def _colorbar_wrap(fig, mesh, ax, format="%+2.f dB"):

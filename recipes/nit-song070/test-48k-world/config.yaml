@@ -83,6 +83,7 @@ acoustic_hydra_optuna_sweeper_n_trials: 100
 #                SYNTHESIS SETTING                        #
 ###########################################################
 # conf/synthesis/synthesis/${synthesis}
+# If you use uSFGAN or SiFi-GAN, please set `world_gv_usfgan`
 synthesis: world_gv
 
 # latest.pth or best.pth

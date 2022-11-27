@@ -18,8 +18,8 @@ dense_factors: [0.5, 1, 4, 8]    # Dense factor in PDCNNs.
 sine_amp: 0.1                    # Sine amplitude.
 noise_amp: 0.003                 # Noise amplitude.
 signal_types: ["sine"]           # List of input signal types for generator.
-sine_f0_type: "cf0"              # F0 type for sine signal ("f0" or "cf0").
-df_f0_type: "cf0"                # F0 type for dilation factor ("f0" or "cf0").
+sine_f0_type: "f0"               # F0 type for sine signal ("f0" or "cf0").
+df_f0_type: "f0"                 # F0 type for dilation factor ("f0" or "cf0").
 aux_feats: ["logmsp"]            # Auxiliary features.
                                  # "uv": V/UV binary.
                                  # "f0": descrete f0.

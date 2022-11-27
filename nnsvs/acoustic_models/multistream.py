@@ -386,6 +386,12 @@ class NPSSMultistreamParametricModel(BaseModel):
 class NPSSMDNMultistreamParametricModel(BaseModel):
     """NPSS-like cascaded multi-stream parametric model with mixture density networks.
 
+    .. note::
+
+        This class was originally designed to be used with MDNs. However, the internal
+        design was changed to make it work with non-MDN and diffusion models. For example,
+        you can use non-MDN models for MGC prediction.
+
     NPSS: :cite:t:`blaauw2017neural`
 
     acoustic features: [MGC, LF0, VUV, BAP]
@@ -756,6 +762,12 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
 
     Conditional dependency:
     p(MEL, LF0, VUV|C) = p(LF0|C) p(MEL|LF0, C) p(VUV|LF0, MEL, C)
+
+    .. note::
+
+        This class was originally designed to be used with MDNs. However, the internal
+        design was changed to make it work with non-MDN and diffusion models. For example,
+        you can use non-MDN models for mel prediction.
 
     Args:
         in_dim (int): Input dimension.

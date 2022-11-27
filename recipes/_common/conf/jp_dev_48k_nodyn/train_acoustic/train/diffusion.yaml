@@ -1,3 +1,6 @@
+# Training config for diffusion-based acoustic models.
+# NOTE: longer training iterations are preferred to improve quality
+
 out_dir: exp
 log_dir: tensorboard/exp
 
@@ -13,7 +16,7 @@ pretrained_vocoder_checkpoint: null
 
 # steps can either be specified by steps or epochs
 max_train_steps: -1
-nepochs: 50
+nepochs: 300
 checkpoint_epoch_interval: 50
 
 # mse (mean squared error; l2 loss) or mae (mean absolute error; l1 loss)
@@ -26,29 +29,29 @@ feats_criterion: l1
 # This is conceptually same as imposing a prior distribution of the residual F0
 # to be N(0, sigma) (if we use L2 loss)
 # https://arxiv.org/abs/2108.02776
-pitch_reg_weight: 0.1
+pitch_reg_weight: 0.0
 
 # decay_size * 0.005 sec. decay to compute pitch reg weights
 pitch_reg_decay_size: 60
 
-max_num_eval_utts: 10
+max_num_eval_utts: 5
 
 stream_wise_loss: false
 use_detect_anomaly: false
 
 optim:
   optimizer:
-    name: Adam
+    name: AdamW
     params:
-      lr: 0.0001
-      betas: [0.9, 0.999]
+      lr: 0.001
+      betas: [0.9, 0.98]
       weight_decay: 0.0
   lr_scheduler:
     name: StepLR
     params:
-      step_size: 20
+      step_size: 100
       gamma: 0.5
-  clip_norm: 1.0
+  clip_norm: 10.0
 
 resume:
   checkpoint:

@@ -1,9 +1,12 @@
-# This is a config file for the NNSVS's best acoustic model as of 2022/09
-# with some small improvements.
-# Paper: https://arxiv.org/abs/2210.15987
-# All the features are modeled by autoregressive models except for V/UV.
-# NOTE: autoregressive models tend to require more data and training iterations
-# to converge. It is recommencded to try pre-training if you database does not
+# This is a config file for a diffusion-based NNSVS's multi-stream acoustic model
+# with mel-spectrogram-based acoustic features.
+# Compared to WORLD version, it may provide less buzzy and more natural synthetic
+# speech with a loss of pitch-robustness.
+# NOTE: training is very slow but the trained model can achieve signifincatlly
+# better naturalness compared to NNSVS-WORLD v4.
+# NOTE: consider using larger batch size for training stability and longer training
+# iteration to get better performance. Convergence is slower than the other models.
+# NOTE: It is recommencded to try pre-training if you database does not
 # have enough amount of data (> 1h).
 # NOTE: in_ph_start_idx (start index of current-phoneme context) and
 # in_ph_end_idx (end index of current-phoneme context) are hed-specific parameters
@@ -15,21 +18,20 @@
 # Using phoneme embedding may improve intelligiblity a little, but it is OK
 # not to use it based on our experiments.
 # Please carefully check hed-specific configurations.
-
-# (mgc, lf0, vuv, bap)
-stream_sizes: [60, 1, 1, 5]
-has_dynamic_features: [false, false, false, false]
+# (mel, lf0, vuv)
+stream_sizes: [80, 1, 1]
+has_dynamic_features: [false, false, false]
 num_windows: 1
 stream_weights:
 
 netG:
-  _target_: nnsvs.acoustic_models.NPSSMultistreamParametricModel
+  _target_: nnsvs.acoustic_models.MDNMultistreamSeparateF0MelModel
   # The number of total input phonetic/musical context features.
   in_dim: 86 # NOTE: need to be changed for each hed file
-  out_dim: 67
+  out_dim: 82
 
   # Must be set as the same as the above stream_sizes
-  stream_sizes: [60, 1, 1, 5]
+  stream_sizes: [80, 1, 1]
   # This is an imporant parameter to control the modeling capability of
   # autoregressive models. Don't change this unless if you are sure what you do.
   # The reduction factor of 4 was chosen empirecally.
@@ -41,7 +43,7 @@ netG:
   # put the sil-or-not phonetic context on the first item of your hed file.
   in_rest_idx: 0 # NOTE: need to be changed for each hed file
   in_lf0_idx: 51 # NOTE: need to be changed for each hed file
-  out_lf0_idx: 60
+  out_lf0_idx: 80
   # Please leave the following parameters unspecified if you want to
   # find the corresponding values automatically from in/out scalers.
   in_lf0_min: null
@@ -50,20 +52,17 @@ netG:
   out_lf0_scale: null
 
   # Flags to control conditioning features for V/UV prediction
-  # If all true, [mgc, lf0, bap] are used for V/UV prediction.
+  # If all true, [mel, lf0] are used for V/UV prediction.
   # IMPORTANT: not optimized yet
-  vuv_model_bap_conditioning: false
-  # if true, only 0-th dim of bap is used
-  vuv_model_bap0_conditioning: false
   vuv_model_lf0_conditioning: true
-  vuv_model_mgc_conditioning: true
+  vuv_model_mel_conditioning: true
 
   # A separate model for modeling continuous log-F0
   lf0_model:
     _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
     # in_dim must be equal to netG.in_dim
     in_dim: 86 # NOTE: need to be changed for each hed file
-    # out_dim must be equsl to the dimension of log-F0
+    # out_dim must be equal to the dimension of log-F0
     out_dim: 1
     in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
     in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
@@ -94,70 +93,51 @@ netG:
     out_lf0_scale: null
 
   # Spectral parameter prediction model
-  mgc_model:
-    _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
-    # in_dim must be equal to netG.in_dim + dimension of log-F0
+  mel_model:
+    _target_: nnsvs.diffsinger.GaussianDiffusion
     in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
-    # out_dim must be equal to the dimension of MGC
-    out_dim: 60
-    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
-    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
-    # Set to -1 to disable phoneme embedding
-    embed_dim: 256
-    ff_hidden_dim: 1024
-    conv_hidden_dim: 512
-    lstm_hidden_dim: 256
-    num_lstm_layers: 3
-    decoder_layers: 2
-    decoder_hidden_dim: 1024
-    prenet_layers: 0
-    prenet_hidden_dim: 192
-    prenet_dropout: 0.5
-    zoneout: 0.0
-    # Can be 4 or 2, but don't change unless if you are sure what you do.
-    reduction_factor: 2
-    downsample_by_conv: true
-    postnet_layers: 5
-    postnet_channels: 512
-    postnet_kernel_size: 5
-    postnet_dropout: 0.0
-    init_type: "kaiming_normal"
-    initial_value: -10.0
-
-  # Aperiodic parameter prediction model
-  bap_model:
-    _target_: nnsvs.acoustic_models.BiLSTMNonAttentiveDecoder
-    # in_dim must be equal to netG.in_dim + dimension of log-F0
-    in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
-    out_dim: 5
-    in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
-    in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
-    # Set to -1 to disable phoneme embedding
-    embed_dim: 256
-    ff_hidden_dim: 1024
-    conv_hidden_dim: 512
-    lstm_hidden_dim: 256
-    num_lstm_layers: 3
-    decoder_layers: 2
-    decoder_hidden_dim: 256
-    prenet_layers: 0
-    prenet_hidden_dim: 192
-    prenet_dropout: 0.5
-    zoneout: 0.0
-    # Can be 4 or 2, but don't change unless if you are sure what you do.
-    reduction_factor: 2
-    downsample_by_conv: true
-    postnet_layers: 5
-    postnet_channels: 512
-    postnet_kernel_size: 5
-    postnet_dropout: 0.0
-    init_type: "kaiming_normal"
-    initial_value: -10.0
+    out_dim: 80
+    # Parameter to convert mean-var normalized data (~ N(0, 1)) to [-1, 1].
+    # may need to adjust in 5 to 10.
+    # assuming that the absolute maximum value of the normalized data is smaller than
+    # `norm_scale` so the data (~ N(0,1); 99.9% are in [-norm_scale, norm_scale]) is
+    # property scaled to [-1, 1]
+    norm_scale: 10
+    # The encoder processes the phonetic/musical contexts into hidden representations
+    encoder:
+       _target_: nnsvs.model.FFConvLSTM
+       # This must be equal to netG.mel_model.in_dim
+       in_dim: 87 # (x, lf0) # NOTE: need to be changed for each hed file
+       in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
+       in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
+       embed_dim: 256
+       ff_hidden_dim: 512
+       conv_hidden_dim: 256
+       lstm_hidden_dim: 128
+       num_lstm_layers: 2
+       bidirectional: true
+       dropout: 0.0
+       out_dim: 256
+    K_step: 100
+    betas: null
+    # Beta scheduler
+    schedule_type: linear
+    scheduler_params:
+      max_beta: 0.06
+    # Denoiser (noise -> output features)
+    denoise_fn:
+      _target_: nnsvs.diffsinger.DiffNet
+      # in_dim must be equal to netG.mel_model.out_dim
+      in_dim: 80
+      encoder_hidden_dim: 256
+      residual_layers: 20
+      residual_channels: 256
+      dilation_cycle_length: 4
 
   # V/UV prediction model
   vuv_model:
     _target_: nnsvs.model.FFConvLSTM
-    in_dim: 147 # (x, lf0, mgc) # NOTE: need to be changed for each hed file
+    in_dim: 167 # (x, mel, lf0) # NOTE: need to be changed for each hed file
     in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
     in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
     embed_dim: 256
