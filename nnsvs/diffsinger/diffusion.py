@@ -61,6 +61,7 @@ class GaussianDiffusion(BaseModel):
         K_step=100,
         betas=None,
         schedule_type="linear",
+        scheduler_params={"max_beta": 0.06},
         pndm_speedup=None,
     ):
         super().__init__()
@@ -71,6 +72,13 @@ class GaussianDiffusion(BaseModel):
         self.pndm_speedup = pndm_speedup
         self.encoder = encoder
 
+        if encoder is not None:
+            assert encoder.in_dim == in_dim, "encoder input dim must match in_dim"
+        assert out_dim == denoise_fn.in_dim, "denoise_fn input dim must match out_dim"
+
+        if pndm_speedup:
+            raise NotImplementedError("pndm_speedup is not implemented yet")
+
         if betas is not None:
             betas = (
                 betas.detach().cpu().numpy()
@@ -78,7 +86,7 @@ class GaussianDiffusion(BaseModel):
                 else betas
             )
         else:
-            betas = beta_schedule[schedule_type](K_step)
+            betas = beta_schedule[schedule_type](K_step, **scheduler_params)
 
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)

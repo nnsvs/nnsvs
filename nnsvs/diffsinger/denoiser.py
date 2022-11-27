@@ -76,6 +76,7 @@ class DiffNet(nn.Module):
         dilation_cycle_length=4,
     ):
         super().__init__()
+        self.in_dim = in_dim
 
         self.input_projection = Conv1d(in_dim, residual_channels, 1)
         self.diffusion_embedding = SinusoidalPosEmb(residual_channels)
