@@ -12,7 +12,7 @@
 # in_ph_end_idx (end index of current-phoneme context) are hed-specific parameters
 # and used for *optional* phoneme embedding (with embedding size of `embed_dim`).
 # If you want to use this config with you hed file, there are two options:
-#   1. Set `embed_dim` to -1 to disable phoneme embedding (the easiest way)
+#   1. Set `embed_dim` to null to disable phoneme embedding (the easiest way)
 #   2. Find start and end indices of current-phoneme contexts in your hed file
 #      and set them to `in_ph_start_idx` and `in_ph_end_idx` respectively.
 # Using phoneme embedding may improve intelligiblity a little, but it is OK
@@ -66,7 +66,7 @@ netG:
     out_dim: 1
     in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
     in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
-    # Set to -1 to disable phoneme embedding
+    # set to null to disable phoneme embedding
     embed_dim: 256
     ff_hidden_dim: 256
     conv_hidden_dim: 128
