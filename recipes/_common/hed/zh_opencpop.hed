@@ -1,0 +1,83 @@
+# This is the latest hed file for development (by r9y9)
+# Note that this hed file is meant to be used for experimental purposes and is subject to change.
+# feature dim:: 72 for acoustic model, 68 for duration/timelag
+# in_rest_idx: 0
+# in_lf0_idx: 62
+
+QS "C-Phone_Muon"     {*-sil+*,*-pau+*,*-AP+*,*-SP+*,*-br+*}
+
+QS "C-Phone_sil"   {*-sil+*}
+QS "C-Phone_pau"   {*-pau+*}
+QS "C-Phone_br"   {*-br+*}
+QS "C-Phone_a"   {*-a+*}
+QS "C-Phone_ai"   {*-ai+*}
+QS "C-Phone_an"   {*-an+*}
+QS "C-Phone_ang"   {*-ang+*}
+QS "C-Phone_ao"   {*-ao+*}
+QS "C-Phone_b"   {*-b+*}
+QS "C-Phone_c"   {*-c+*}
+QS "C-Phone_ch"   {*-ch+*}
+QS "C-Phone_d"   {*-d+*}
+QS "C-Phone_e"   {*-e+*}
+QS "C-Phone_ei"   {*-ei+*}
+QS "C-Phone_en"   {*-en+*}
+QS "C-Phone_eng"   {*-eng+*}
+QS "C-Phone_er"   {*-er+*}
+QS "C-Phone_f"   {*-f+*}
+QS "C-Phone_g"   {*-g+*}
+QS "C-Phone_h"   {*-h+*}
+QS "C-Phone_i"   {*-i+*}
+QS "C-Phone_ia"   {*-ia+*}
+QS "C-Phone_ian"   {*-ian+*}
+QS "C-Phone_iang"   {*-iang+*}
+QS "C-Phone_iao"   {*-iao+*}
+QS "C-Phone_ie"   {*-ie+*}
+QS "C-Phone_in"   {*-in+*}
+QS "C-Phone_ing"   {*-ing+*}
+QS "C-Phone_iong"   {*-iong+*}
+QS "C-Phone_iu"   {*-iu+*}
+QS "C-Phone_j"   {*-j+*}
+QS "C-Phone_k"   {*-k+*}
+QS "C-Phone_l"   {*-l+*}
+QS "C-Phone_m"   {*-m+*}
+QS "C-Phone_n"   {*-n+*}
+QS "C-Phone_o"   {*-o+*}
+QS "C-Phone_ong"   {*-ong+*}
+QS "C-Phone_ou"   {*-ou+*}
+QS "C-Phone_p"   {*-p+*}
+QS "C-Phone_q"   {*-q+*}
+QS "C-Phone_r"   {*-r+*}
+QS "C-Phone_s"   {*-s+*}
+QS "C-Phone_sh"   {*-sh+*}
+QS "C-Phone_t"   {*-t+*}
+QS "C-Phone_u"   {*-u+*}
+QS "C-Phone_ua"   {*-ua+*}
+QS "C-Phone_uai"   {*-uai+*}
+QS "C-Phone_uan"   {*-uan+*}
+QS "C-Phone_uang"   {*-uang+*}
+QS "C-Phone_ui"   {*-ui+*}
+QS "C-Phone_un"   {*-un+*}
+QS "C-Phone_uo"   {*-uo+*}
+QS "C-Phone_v"   {*-v+*}
+QS "C-Phone_van"   {*-van+*}
+QS "C-Phone_ve"   {*-ve+*}
+QS "C-Phone_vn"   {*-vn+*}
+QS "C-Phone_w"   {*-w+*}
+QS "C-Phone_x"   {*-x+*}
+QS "C-Phone_y"   {*-y+*}
+QS "C-Phone_z"   {*-z+*}
+QS "C-Phone_zh"   {*-zh+*}
+
+# absolute pitch (C/L/R)
+CQS "e1" {/E:(\NOTE)]}
+CQS "d1" {/D:(\NOTE)!}
+CQS "f1" {/F:(\NOTE)#}
+
+# phoneme-level positional features (C)
+CQS "p12" {-(\d+)!}
+
+# length of current note (C)
+CQS "e7" {@(\d+)#}
+
+# whether slur or not (C)
+CQS "e26" {|(\d+)]}

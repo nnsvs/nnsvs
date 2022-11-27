@@ -1,0 +1,15 @@
+stream_sizes: [1]
+has_dynamic_features: [false]
+stream_weights: [1]
+
+netG:
+  _target_: nnsvs.model.VariancePredictor
+  in_dim: 68
+  out_dim: 1
+  hidden_dim: 256
+  num_layers: 5
+  kernel_size: 5
+  dropout: 0.5
+  use_mdn: true
+  num_gaussians: 4
+  init_type: "kaiming_normal"

@@ -1,0 +1,52 @@
+# Config for diffusion-based models with WORLD features
+# NOTE: larger batch size is preferred for training stability
+
+# training set
+train_no_dev:
+  in_dir:
+  out_dir:
+
+# development set
+dev:
+  in_dir:
+  out_dir:
+
+# data loader
+num_workers: 8
+batch_size: 0
+pin_memory: true
+# Number of maximum frames to be loaded in a single mini-batch
+# If specified, batch sizes are dynamically adjusted based on the number of frames
+# NOTE: `batch_size` will be ignored if ``batch_max_frames`` is specified
+batch_max_frames: 40000
+# Keep all the data in memory or load files from disk every iteration
+allow_cache: true
+
+sample_rate: 48000
+
+# Filter long segments that easily cause OOM error
+filter_long_segments: true
+# If a segment is longer than this value, it will not be used for training
+# 30 [sec] / 0.005 [sec] = 6000 [frames]
+filter_num_frames: 6000
+filter_min_num_frames: 0
+
+# mini-batch sampling
+# If max_time_frames is specified, (max_time_frames) frames are randomly sampled
+# to create a mini-batch. Otherwise, all frames are used.
+# consider setting the value (e.g., 256 or 512) to avoid GPU OOM.
+max_time_frames: -1
+
+in_scaler_path: null
+out_scaler_path: null
+
+# NOTE: the following parameters must be carefully set
+# log-F0 and rest parameter indices in the input features
+# it depends on the hed file
+in_lf0_idx: 62
+in_rest_idx: 0
+# The log-F0 index in the output features
+out_lf0_idx: 60
+
+# Use world codec for spectral envelope or not
+use_world_codec: true
