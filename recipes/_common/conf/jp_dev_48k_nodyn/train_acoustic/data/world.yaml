@@ -1,3 +1,5 @@
+# Generic config for WORLD-based features
+
 # training set
 train_no_dev:
   in_dir:
@@ -15,7 +17,7 @@ pin_memory: true
 # Number of maximum frames to be loaded in a single mini-batch
 # If specified, batch sizes are dynamically adjusted based on the number of frames
 # NOTE: `batch_size` will be ignored if ``batch_max_frames`` is specified
-batch_max_frames: 30000
+batch_max_frames: 20000
 # Keep all the data in memory or load files from disk every iteration
 allow_cache: true
 
