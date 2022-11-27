@@ -153,6 +153,7 @@ def test_duration_model_config_recipes(model_config):
     "model_config", RECIPE_DIR.glob("**/_common/conf/**/train_acoustic/model/*.yaml")
 )
 def test_train_acoustic_model_config_recipes(model_config):
+    print(model_config)
     model_config = OmegaConf.load(model_config)
 
     # Dummy
