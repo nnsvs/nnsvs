@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 from nnmnkwii.io import hts
 from nnsvs.io.hts import get_note_indices
+from scipy.io import wavfile
 from tqdm.auto import tqdm
 
 
@@ -16,6 +17,12 @@ def get_parser():
     )
     parser.add_argument("in_dir", type=str, help="Path to input dir")
     parser.add_argument("out_dir", type=str, help="Output directory")
+    parser.add_argument(
+        "--long_sil_threshold",
+        type=float,
+        default=1000,
+        help="Long silence threshold (sec)",
+    )
     return parser
 
 
@@ -58,6 +65,10 @@ def create_label_score(phs, notes, note_durs, ph_durs, is_slurs, round=False):
         e1 = note
         # next pitch
         f1 = notes[idx + 1] if idx < len(notes) - 1 else "xx"
+
+        if e1 != "xx" and ph in ["sil", "pau", "br", "SP", "AP"]:
+            print("Warning: phoneme is sil or br, but note is not xx")
+            print(f"{utt_id}: ph={ph}, note={note}, note_dur={note_dur}")
 
         # p3,p12,d1,e1,e7,f1,e26
         context = f"xx@xx^xx-{ph}+xx=xx_xx%-{p12}!/D:{d1}!/E:{e1}]@{int(note_dur_001sec)}#|{is_slur}]/F:{f1}#/J:xx~xx@xx"  # noqa
@@ -134,6 +145,7 @@ if __name__ == "__main__":
     args = get_parser().parse_args(sys.argv[1:])
     in_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
+    long_sil_threshold = args.long_sil_threshold
 
     in_wav_dir = in_dir / "wavs"
     transcriptions_txt = in_dir / "transcriptions.txt"
@@ -193,13 +205,40 @@ if __name__ == "__main__":
 
         assert len(phs) == len(notes) == len(note_durs) == len(ph_durs) == len(is_slurs)
 
+        sils = [s in ["sil", "pau", "br"] for s in phs]
+
+        is_long_sil = np.array(note_durs)[sils] > long_sil_threshold
+        sil_remove_regions = []
+        if is_long_sil.any():
+            start = 0
+            new_note_durs = []
+            new_ph_durs = []
+            prev_note_dur = None
+            for ph, note_dur, ph_dur in zip(phs, note_durs, ph_durs):
+                # NOTE: assuming single phones are assigned to a single note
+                if ph in ["sil", "pau", "br"] and note_dur > long_sil_threshold:
+                    cut_length = note_dur - long_sil_threshold
+                    center = start + note_dur / 2
+                    sil_remove_regions.append(
+                        (center - cut_length / 2, center + cut_length / 2)
+                    )
+                    new_note_durs.append(long_sil_threshold)
+                    new_ph_durs.append(long_sil_threshold)
+                else:
+                    new_note_durs.append(note_dur)
+                    new_ph_durs.append(ph_dur)
+                if prev_note_dur is not None and note_dur != prev_note_dur:
+                    start += note_dur
+                prev_note_dur = note_dur
+            note_durs = new_note_durs
+            ph_durs = new_ph_durs
+
         # label_score
         label_score = create_label_score(phs, notes, note_durs, ph_durs, is_slurs)
         # label_align
         label_align = create_label_align(phs, notes, note_durs, ph_durs, is_slurs)
 
         assert len(label_score) == len(label_align)
-
         # Labels for time-lag model
         # NOTE: since opencpop's annotations in MIDI format, there's no time lag between
         # MIDI and recordings.
@@ -214,22 +253,20 @@ if __name__ == "__main__":
         with open(acoustic_label_align_dir / f"{utt_id}.lab", "w") as f:
             f.write(str(label_align))
 
-        import shutil
-
-        from scipy.io import wavfile
-
         sr, x = wavfile.read(in_wav_dir / f"{utt_id}.wav")
-        d = len(x) / sr
-        # 6.92
-        if d > 4.42 and d < 4.45:
-            print(utt_id)
-            shutil.copy(in_wav_dir / f"{utt_id}.wav", Path("debug") / f"{utt_id}.wav")
-            # import ipdb; ipdb.set_trace()
-            pass
 
-        shutil.copyfile(
-            in_wav_dir / f"{utt_id}.wav", acoustic_out_wav_dir / f"{utt_id}.wav"
-        )
+        if len(sil_remove_regions) > 0:
+            assert len(sil_remove_regions) == 1
+            print(f"{utt_id}: trim long silence to {long_sil_threshold} sec")
+            new_x = []
+            for start, end in sil_remove_regions:
+                start = int(start * sr)
+                end = int(end * sr)
+                new_x.append(x[:start])
+                new_x.append(x[end:])
+            x = np.concatenate(new_x)
+
+        wavfile.write(acoustic_out_wav_dir / f"{utt_id}.wav", sr, x)
         # Save data for duration
         with open(duration_label_align_dir / f"{utt_id}.lab", "w") as f:
             f.write(str(label_align))
