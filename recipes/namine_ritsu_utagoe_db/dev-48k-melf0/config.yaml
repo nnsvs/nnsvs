@@ -89,7 +89,7 @@ duration_train: myconfig
 duration_data: myconfig
 
 # NOTE: the following configs are for diffusion-based acoustic model
-# trainig is very slow.
+# training is very slow.
 acoustic_model: acoustic_nnsvs_melf0_ar_f0_diff_mel
 acoustic_train: diffusion
 acoustic_data: melf0_diffusion
