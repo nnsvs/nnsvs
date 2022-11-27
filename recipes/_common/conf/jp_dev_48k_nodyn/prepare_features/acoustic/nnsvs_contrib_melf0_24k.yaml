@@ -86,5 +86,5 @@ hop_size: 120
 win_length: 480
 fmin: 63
 fmax: 12000
-eps: 1e-10
+eps: 1e-6
 num_mels: 80
