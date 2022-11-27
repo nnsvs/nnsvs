@@ -122,7 +122,7 @@ netG:
     postnet_kernel_size: 5
     postnet_dropout: 0.0
     init_type: "kaiming_normal"
-    initial_value: -10.0
+    initial_value: -4.0
 
   # Aperiodic parameter prediction model
   bap_model:
@@ -152,7 +152,7 @@ netG:
     postnet_kernel_size: 5
     postnet_dropout: 0.0
     init_type: "kaiming_normal"
-    initial_value: -10.0
+    initial_value: -4.0
 
   # V/UV prediction model
   vuv_model:
