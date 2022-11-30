@@ -63,7 +63,7 @@ netG:
     _target_: nnsvs.acoustic_models.BiLSTMResF0NonAttentiveDecoder
     # in_dim must be equal to netG.in_dim
     in_dim: 86 # NOTE: need to be changed for each hed file
-    # out_dim must be equsl to the dimension of log-F0
+    # out_dim must be equal to the dimension of log-F0
     out_dim: 1
     in_ph_start_idx: 3 # NOTE: need to be changed for each hed file
     in_ph_end_idx: 50 # NOTE: need to be changed for each hed file
