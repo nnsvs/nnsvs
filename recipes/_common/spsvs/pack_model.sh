@@ -4,6 +4,11 @@
 # Hed file
 cp -v $question_path $dst_dir/qst.hed
 
+# Table file for utaupy
+if [[ ${utaupy_table_path+x} ]]; then
+    cp -v $utaupy_table_path $dst_dir/kana2phonemes.table
+fi
+
 # Stats
 for typ in "timelag" "duration" "acoustic"; do
     for inout in "in" "out"; do
