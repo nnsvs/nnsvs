@@ -727,17 +727,7 @@ def setup(config, device, collate_fn=collate_fn_default):
     )
 
     # Resume
-    if (
-        config.train.resume.checkpoint is not None
-        and len(config.train.resume.checkpoint) > 0
-    ):
-        logger.info("Load weights from %s", config.train.resume.checkpoint)
-        checkpoint = torch.load(to_absolute_path(config.train.resume.checkpoint))
-        model.load_state_dict(checkpoint["state_dict"])
-        if config.train.resume.load_optimizer:
-            logger.info("Load optimizer state")
-            optimizer.load_state_dict(checkpoint["optimizer_state"])
-            lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state"])
+    _resume(logger, config.train.resume, model, optimizer, lr_scheduler)
 
     if config.data_parallel:
         model = nn.DataParallel(model)
