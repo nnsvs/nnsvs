@@ -637,7 +637,18 @@ def _resume(logger, resume_config, model, optimizer, lr_scheduler):
     if resume_config.checkpoint is not None and len(resume_config.checkpoint) > 0:
         logger.info("Load weights from %s", resume_config.checkpoint)
         checkpoint = torch.load(to_absolute_path(resume_config.checkpoint))
-        model.load_state_dict(checkpoint["state_dict"])
+        state_dict = checkpoint["state_dict"]
+        model_dict = model.state_dict()
+        valid_state_dict = {k: v for k, v in state_dict.items() if k in model_dict}
+        non_valid_state_dict = {
+            k: v for k, v in state_dict.items() if k not in model_dict
+        }
+        if len(non_valid_state_dict) > 0:
+            for k, _ in non_valid_state_dict.items():
+                logger.warning(f"Skip loading {k} from checkpoint")
+        model_dict.update(valid_state_dict)
+        model.load_state_dict(model_dict)
+
         if resume_config.load_optimizer:
             logger.info("Load optimizer state")
             optimizer.load_state_dict(checkpoint["optimizer_state"])
