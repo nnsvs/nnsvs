@@ -24,11 +24,11 @@ def noise_like(shape, noise_fn, device, repeat=False):
         return noise_fn(*shape, device=device)
 
 
-def linear_beta_schedule(timesteps, max_beta=0.06):
+def linear_beta_schedule(timesteps, min_beta=1e-4, max_beta=0.06):
     """
     linear schedule
     """
-    betas = np.linspace(1e-4, max_beta, timesteps)
+    betas = np.linspace(min_beta, max_beta, timesteps)
     return betas
 
 
