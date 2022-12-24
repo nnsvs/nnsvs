@@ -639,9 +639,14 @@ def _resume(logger, resume_config, model, optimizer, lr_scheduler):
         checkpoint = torch.load(to_absolute_path(resume_config.checkpoint))
         state_dict = checkpoint["state_dict"]
         model_dict = model.state_dict()
-        valid_state_dict = {k: v for k, v in state_dict.items() if k in model_dict}
+        valid_state_dict = {
+            k: v
+            for k, v in state_dict.items()
+            if (k in model_dict) and (v.shape == model_dict[k].shape)
+        }
+
         non_valid_state_dict = {
-            k: v for k, v in state_dict.items() if k not in model_dict
+            k: v for k, v in state_dict.items() if k not in valid_state_dict
         }
         if len(non_valid_state_dict) > 0:
             for k, _ in non_valid_state_dict.items():
