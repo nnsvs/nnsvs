@@ -113,5 +113,5 @@ for those models should be the same. If you are using different data for trainin
 acoustic/vocoder models (e.g., training a vocoder model on a multiple DBs),
 you will likely need to set different F0 statistics for acoustic/vocoder models.
 
-If you use uSFGAN or SiFI-GAN vocoders, it is not necessary to manually set the F0 statistics."""
+If you use uSFGAN/SiFI-GAN, it is not necessary to manually set the F0 statistics."""
     )
