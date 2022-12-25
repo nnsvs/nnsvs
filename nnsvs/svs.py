@@ -789,7 +789,7 @@ Acoustic model: {acoustic_str}
             seg_labels.frame_shift = hts_frame_shift
             wav, states = synthesis_from_timings(
                 device=self.device,
-                duration_modified_labels=duration_modified_labels,
+                duration_modified_labels=seg_labels,
                 binary_dict=self.binary_dict,
                 numeric_dict=self.numeric_dict,
                 acoustic_model=self.acoustic_model,
