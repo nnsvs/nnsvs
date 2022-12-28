@@ -1184,6 +1184,8 @@ def eval_pitch_model(
 ):
     if dist.is_initialized() and dist.get_rank() != 0:
         return
+    if writer is None:
+        return
 
     # make sure to be in eval mode
     netG.eval()
@@ -1648,6 +1650,8 @@ def eval_spss_model(
 ):
     if dist.is_initialized() and dist.get_rank() != 0:
         return
+    if writer is None:
+        return
 
     # make sure to be in eval mode
     netG.eval()
@@ -1901,6 +1905,8 @@ def eval_mel_model(
 ):
     if dist.is_initialized() and dist.get_rank() != 0:
         return
+    if writer is None:
+        return
 
     # make sure to be in eval mode
     netG.eval()
@@ -2118,6 +2124,7 @@ def plot_spsvs_params(
     """
     if dist.is_initialized() and dist.get_rank() != 0:
         return
+    assert writer is not None
 
     fftlen = pyworld.get_cheaptrick_fft_size(sr)
     alpha = pysptk.util.mcepalpha(sr)
@@ -2343,6 +2350,7 @@ def plot_mel_params(
 ):
     if dist.is_initialized() and dist.get_rank() != 0:
         return
+    assert writer is not None
 
     hop_length = int(sr * 0.005)
 
