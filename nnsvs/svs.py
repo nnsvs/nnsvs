@@ -4,6 +4,7 @@ from warnings import warn
 
 import librosa
 import numpy as np
+import pyloudnorm as pyln
 import pysptk
 import pyworld
 import torch
@@ -436,6 +437,13 @@ def synthesis_from_timings(
                 "aperiodicity": aperiodicity,
             }
         )
+
+    # Normalize loudness to -20 dB for convenience
+    # NOTE: -20 dB is roughly the same as the NEURINO (NSF ver.)
+    meter = pyln.Meter(sample_rate)
+    loudness = meter.integrated_loudness(wav)
+    wav = pyln.normalize.loudness(wav, loudness, -20.0)
+
     return wav, states
 
 
