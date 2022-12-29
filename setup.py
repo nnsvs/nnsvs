@@ -35,6 +35,7 @@ setup(
         "tensorboard",
         "nnmnkwii",
         "pysinsy",
+        "pyloudnorm",
     ],
     extras_require={
         "dev": [
