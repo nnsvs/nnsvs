@@ -63,6 +63,8 @@ class Conv1dResnet(BaseModel):
         **kwargs,
     ):
         super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
         self.use_mdn = use_mdn
         self.in_ph_start_idx = in_ph_start_idx
         self.in_ph_end_idx = in_ph_end_idx
