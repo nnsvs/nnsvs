@@ -918,6 +918,9 @@ class VariancePredictor(BaseModel):
         use_mdn (bool): whether to use MDN or not
         num_gaussians (int): the number of gaussians
         dim_wise (bool): whether to use dim-wise or not
+        in_ph_start_idx (int): the start index of phoneme identity in a hed file
+        in_ph_end_idx (int): the end index of phoneme identity in a hed file
+        embed_dim (int): the dimension of the phoneme embedding
     """
 
     def __init__(
@@ -932,8 +935,18 @@ class VariancePredictor(BaseModel):
         use_mdn=False,
         num_gaussians=1,
         dim_wise=False,
+        in_ph_start_idx: int = 1,
+        in_ph_end_idx: int = 50,
+        embed_dim=None,
     ):
         super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.use_mdn = use_mdn
+        self.in_ph_start_idx = in_ph_start_idx
+        self.in_ph_end_idx = in_ph_end_idx
+        self.num_vocab = in_ph_end_idx - in_ph_start_idx
+        self.embed_dim = embed_dim
         self.use_mdn = use_mdn
 
         conv = nn.ModuleList()
@@ -981,6 +994,21 @@ class VariancePredictor(BaseModel):
         Returns:
             torch.Tensor: the output tensor
         """
+        if self.embed_dim is not None:
+            x_first, x_ph_onehot, x_last = torch.split(
+                x,
+                [
+                    self.in_ph_start_idx,
+                    self.num_vocab,
+                    self.in_dim - self.num_vocab - self.in_ph_start_idx,
+                ],
+                dim=-1,
+            )
+            x_ph = torch.argmax(x_ph_onehot, dim=-1)
+            # Make sure to have one-hot vector
+            assert (x_ph_onehot.sum(-1) <= 1).all()
+            x = self.emb(x_ph) + self.fc_in(torch.cat([x_first, x_last], dim=-1))
+
         out = self.conv(x.transpose(1, 2)).transpose(1, 2)
 
         if self.use_mdn:
