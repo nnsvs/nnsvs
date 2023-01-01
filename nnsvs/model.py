@@ -949,6 +949,12 @@ class VariancePredictor(BaseModel):
         self.embed_dim = embed_dim
         self.use_mdn = use_mdn
 
+        if self.embed_dim is not None:
+            assert in_dim > self.num_vocab
+            self.emb = nn.Embedding(self.num_vocab, embed_dim)
+            self.fc_in = nn.Linear(in_dim - self.num_vocab, embed_dim)
+            in_dim = embed_dim
+
         conv = nn.ModuleList()
         for idx in range(num_layers):
             in_channels = in_dim if idx == 0 else hidden_dim
