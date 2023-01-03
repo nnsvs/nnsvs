@@ -9,9 +9,10 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from omegaconf import OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():
@@ -47,8 +48,7 @@ def _scaler2numpy(input_file, out_dir):
 
 def _save_checkpoint(input_file, output_file):
     checkpoint = torch.load(
-        input_file,
-        map_location=torch.device("cpu")  # pylint: disable='no-member'
+        input_file, map_location=torch.device("cpu")  # pylint: disable='no-member'
     )
     size = os.path.getsize(input_file)
     print("Processisng:", input_file)
