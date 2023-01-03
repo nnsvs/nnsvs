@@ -9,10 +9,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from omegaconf import OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():
