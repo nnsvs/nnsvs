@@ -9,10 +9,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from omegaconf import OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():
@@ -47,7 +46,7 @@ def _scaler2numpy(input_file, out_dir):
 
 
 def _save_checkpoint(input_file, output_file):
-    checkpoint = torch.load(input_file, map_location=torch.device("cpu"))
+    checkpoint = torch.load(input_file, map_location=torch.device("cpu"))  # pylint: disable='no-member'
     size = os.path.getsize(input_file)
     print("Processisng:", input_file)
     print(f"File size (before): {size / 1024/1024:.3f} MB")
@@ -68,6 +67,8 @@ def _save_checkpoint(input_file, output_file):
 
 
 def main(enunu_dir, out_dir):
+    enunu_dir = Path(enunu_dir)
+    out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True, parents=True)
     enuconfig = OmegaConf.load(enunu_dir / "enuconfig.yaml")
 
@@ -122,5 +123,5 @@ acoustic:
 
 if __name__ == "__main__":
     args = get_parser().parse_args(sys.argv[1:])
-    main(Path(args.enunu_dir), Path(args.out_dir))
+    main(args.enunu_dir, args.out_dir)
     sys.exit(0)
