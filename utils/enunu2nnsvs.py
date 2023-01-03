@@ -9,9 +9,10 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from omegaconf import OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():
@@ -124,4 +125,3 @@ acoustic:
 if __name__ == "__main__":
     args = get_parser().parse_args(sys.argv[1:])
     main(args.enunu_dir, args.out_dir)
-    sys.exit(0)
