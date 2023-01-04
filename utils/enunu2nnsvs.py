@@ -46,7 +46,9 @@ def _scaler2numpy(input_file, out_dir):
 
 
 def _save_checkpoint(input_file, output_file):
-    checkpoint = torch.load(input_file, map_location=torch.device("cpu"))
+    checkpoint = torch.load(
+        input_file, map_location=torch.device("cpu")  # pylint: disable='no-member'
+    )
     size = os.path.getsize(input_file)
     print("Processisng:", input_file)
     print(f"File size (before): {size / 1024/1024:.3f} MB")
@@ -66,13 +68,10 @@ def _save_checkpoint(input_file, output_file):
     print(f"File size (after): {size / 1024/1024:.3f} MB")
 
 
-if __name__ == "__main__":
-    args = get_parser().parse_args(sys.argv[1:])
-
-    out_dir = Path(args.out_dir)
+def main(enunu_dir, out_dir):
+    enunu_dir = Path(enunu_dir)
+    out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True, parents=True)
-
-    enunu_dir = Path(args.enunu_dir)
     enuconfig = OmegaConf.load(enunu_dir / "enuconfig.yaml")
 
     # Hed
@@ -123,4 +122,7 @@ acoustic:
     with open(out_dir / "config.yaml", "w") as f:
         f.write(s)
 
-    sys.exit(0)
+
+if __name__ == "__main__":
+    args = get_parser().parse_args(sys.argv[1:])
+    main(args.enunu_dir, args.out_dir)
