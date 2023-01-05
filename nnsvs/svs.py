@@ -67,6 +67,92 @@ def extract_static_scaler(out_scaler, model_config):
     return static_scaler
 
 
+def load_vocoder(path, device, acoustic_config):
+    """Load vocoder model from a given checkpoint path
+
+    Note that the path needs to be a checkpoint of PWG or USFGAN.
+
+    Args:
+        path (str or Path): Path to the vocoder model
+        device (str): Device to load the model
+        acoustic_config (dict): Acoustic model config
+
+    Returns:
+        tuple: (vocoder, vocoder_in_scaler, vocoder_out_scaler)
+    """
+    if not _pwg_available:
+        raise RuntimeError(
+            "parallel_wavegan is required to load pre-trained checkpoint."
+        )
+    path = Path(path) if isinstance(path, str) else path
+    model_dir = path.parent
+    if (model_dir / "vocoder_model.yaml").exists():
+        # packed model
+        vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
+    elif (model_dir / "config.yml").exists():
+        # PWG checkpoint
+        vocoder_config = OmegaConf.load(model_dir / "config.yml")
+    else:
+        # usfgan
+        vocoder_config = OmegaConf.load(model_dir / "config.yaml")
+
+    if "generator" in vocoder_config and "discriminator" in vocoder_config:
+        # usfgan
+        checkpoint = torch.load(
+            path,
+            map_location=lambda storage, loc: storage,
+        )
+        from nnsvs.usfgan import USFGANWrapper
+
+        vocoder = instantiate(vocoder_config.generator).to(device)
+        vocoder.load_state_dict(checkpoint["model"]["generator"])
+        vocoder.remove_weight_norm()
+        vocoder = USFGANWrapper(vocoder_config, vocoder)
+
+        stream_sizes = get_static_stream_sizes(
+            acoustic_config.stream_sizes,
+            acoustic_config.has_dynamic_features,
+            acoustic_config.num_windows,
+        )
+
+        # Extract scaler params for [mgc, bap]
+        if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
+            # streams: (mgc, lf0, vuv, bap)
+            mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
+            var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
+            scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
+            mgc_end_dim = stream_sizes[0]
+            bap_start_dim = sum(stream_sizes[:3])
+            bap_end_dim = sum(stream_sizes[:4])
+            vocoder_in_scaler = StandardScaler(
+                np.concatenate([mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]),
+                np.concatenate([var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]),
+                np.concatenate(
+                    [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
+                ),
+            )
+        else:
+            # streams: (mel, lf0, vuv)
+            mel_dim = stream_sizes[0]
+            vocoder_in_scaler = StandardScaler(
+                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:mel_dim],
+                np.load(model_dir / "in_vocoder_scaler_var.npy")[:mel_dim],
+                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:mel_dim],
+            )
+    else:
+        # PWG
+        vocoder = load_model(path, config=vocoder_config).to(device)
+        vocoder.remove_weight_norm()
+        vocoder_in_scaler = StandardScaler(
+            np.load(model_dir / "in_vocoder_scaler_mean.npy"),
+            np.load(model_dir / "in_vocoder_scaler_var.npy"),
+            np.load(model_dir / "in_vocoder_scaler_scale.npy"),
+        )
+    vocoder.eval()
+
+    return vocoder, vocoder_in_scaler, vocoder_config
+
+
 @torch.no_grad()
 def predict_timings(
     device,
@@ -621,61 +707,10 @@ class SPSVS(object):
             self.postfilter_out_scaler = None
 
         # Vocoder model
-        if (model_dir / "vocoder_model.yaml").exists():
-            if not _pwg_available:
-                warn("parallel_wavegan is not installed. Vocoder model is disabled.")
-                self.vocoder = None
-            else:
-                self.vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
-
-                # usfgan
-                if (
-                    "generator" in self.vocoder_config
-                    and "discriminator" in self.vocoder_config
-                ):
-                    self.vocoder = instantiate(self.vocoder_config.generator).to(device)
-                    checkpoint = torch.load(
-                        model_dir / "vocoder_model.pth",
-                        map_location=device,
-                    )
-                    self.vocoder.load_state_dict(checkpoint["model"]["generator"])
-                    self.vocoder.remove_weight_norm()
-                    self.vocoder = USFGANWrapper(self.vocoder_config, self.vocoder)
-
-                    # Extract scaler params for [mgc, bap]
-                    mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
-                    var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
-                    scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
-                    stream_sizes = get_static_stream_sizes(
-                        self.acoustic_config.stream_sizes,
-                        self.acoustic_config.has_dynamic_features,
-                        self.acoustic_config.num_windows,
-                    )
-                    mgc_end_dim = stream_sizes[0]
-                    bap_start_dim = sum(stream_sizes[:3])
-                    bap_end_dim = sum(stream_sizes[:4])
-                    self.vocoder_in_scaler = StandardScaler(
-                        np.concatenate(
-                            [mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]
-                        ),
-                        np.concatenate(
-                            [var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]
-                        ),
-                        np.concatenate(
-                            [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
-                        ),
-                    )
-                else:
-                    self.vocoder = load_model(
-                        model_dir / "vocoder_model.pth", config=self.vocoder_config
-                    ).to(device)
-                    self.vocoder.remove_weight_norm()
-                    self.vocoder_in_scaler = StandardScaler(
-                        np.load(model_dir / "in_vocoder_scaler_mean.npy"),
-                        np.load(model_dir / "in_vocoder_scaler_var.npy"),
-                        np.load(model_dir / "in_vocoder_scaler_scale.npy"),
-                    )
-                self.vocoder.eval()
+        if (model_dir / "vocoder_model.pth").exists():
+            self.vocoder, self.vocoder_in_scaler, self.vocoder_config = load_vocoder(
+                model_dir / "vocoder_model.pth", device, self.acoustic_config
+            )
         else:
             self.vocoder = None
             self.vocoder_config = None

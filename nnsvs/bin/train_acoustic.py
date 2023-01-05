@@ -9,6 +9,7 @@ from hydra.utils import to_absolute_path
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu, mdn_loss
 from nnsvs.multistream import split_streams
+from nnsvs.svs import load_vocoder
 from nnsvs.train_util import (
     check_resf0_config,
     collate_fn_default,
@@ -17,7 +18,6 @@ from nnsvs.train_util import (
     compute_distortions,
     eval_model,
     get_stream_weight,
-    load_vocoder,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,

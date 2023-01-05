@@ -44,13 +44,6 @@ from torch.utils import data as data_utils
 from torch.utils.data.sampler import BatchSampler
 from torch.utils.tensorboard import SummaryWriter
 
-try:
-    from parallel_wavegan.utils import load_model
-
-    _pwg_available = True
-except ImportError:
-    _pwg_available = False
-
 plt.style.use("seaborn-whitegrid")
 
 
@@ -1352,77 +1345,6 @@ def eval_pitch_model(
             plt.tight_layout()
             writer.add_figure(f"{group}/F0", fig, step)
             plt.close()
-
-
-def load_vocoder(path, device, acoustic_config):
-    if not _pwg_available:
-        raise RuntimeError(
-            "parallel_wavegan is required to load pre-trained checkpoint."
-        )
-    path = Path(path) if isinstance(path, str) else path
-    model_dir = path.parent
-    if (model_dir / "vocoder_model.yaml").exists():
-        # packed model
-        vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
-    elif (model_dir / "config.yml").exists():
-        # PWG checkpoint
-        vocoder_config = OmegaConf.load(model_dir / "config.yml")
-    else:
-        # usfgan
-        vocoder_config = OmegaConf.load(model_dir / "config.yaml")
-
-    if "generator" in vocoder_config and "discriminator" in vocoder_config:
-        # usfgan
-        checkpoint = torch.load(
-            path,
-            map_location=lambda storage, loc: storage,
-        )
-        from nnsvs.usfgan import USFGANWrapper
-
-        vocoder = hydra.utils.instantiate(vocoder_config.generator).to(device)
-        vocoder.load_state_dict(checkpoint["model"]["generator"])
-        vocoder.remove_weight_norm()
-        vocoder = USFGANWrapper(vocoder_config, vocoder)
-
-        stream_sizes = get_static_stream_sizes(
-            acoustic_config.stream_sizes,
-            acoustic_config.has_dynamic_features,
-            acoustic_config.num_windows,
-        )
-
-        # Extract scaler params for [mgc, bap]
-        if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
-            mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
-            var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
-            scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
-            mgc_end_dim = stream_sizes[0]
-            bap_start_dim = sum(stream_sizes[:3])
-            bap_end_dim = sum(stream_sizes[:4])
-            vocoder_in_scaler = StandardScaler(
-                np.concatenate([mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]),
-                np.concatenate([var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]),
-                np.concatenate(
-                    [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
-                ),
-            )
-        else:
-            mel_dim = stream_sizes[0]
-            vocoder_in_scaler = StandardScaler(
-                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:mel_dim],
-                np.load(model_dir / "in_vocoder_scaler_var.npy")[:mel_dim],
-                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:mel_dim],
-            )
-    else:
-        vocoder = load_model(path, config=vocoder_config).to(device)
-        vocoder.remove_weight_norm()
-        vocoder_in_scaler = StandardScaler(
-            np.load(model_dir / "in_vocoder_scaler_mean.npy"),
-            np.load(model_dir / "in_vocoder_scaler_var.npy"),
-            np.load(model_dir / "in_vocoder_scaler_scale.npy"),
-        )
-    vocoder.eval()
-
-    return vocoder, vocoder_in_scaler, vocoder_config
 
 
 def synthesize(
