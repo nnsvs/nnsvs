@@ -1,564 +1,42 @@
 import json
 from pathlib import Path
-from warnings import warn
 
-import librosa
 import numpy as np
-import pyloudnorm as pyln
-import pysptk
-import pyworld
 import torch
 from hydra.utils import instantiate
-from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
-from nnmnkwii.postfilters import merlin_post_filter
-from nnsvs.dsp import bandpass_filter
 from nnsvs.gen import (
-    gen_spsvs_static_features,
-    gen_world_params,
+    postprocess_acoustic,
     postprocess_duration,
+    postprocess_waveform,
     predict_acoustic,
     predict_duration,
     predict_timelag,
+    predict_waveform,
 )
 from nnsvs.io.hts import get_pitch_index, get_pitch_indices, segment_labels
-from nnsvs.multistream import (
-    get_static_features,
-    get_static_stream_sizes,
-    split_streams,
-)
-from nnsvs.pitch import lowpass_filter
-from nnsvs.postfilters import variance_scaling
+from nnsvs.logger import getLogger
 from nnsvs.usfgan import USFGANWrapper
-from nnsvs.util import MinMaxScaler, StandardScaler
+from nnsvs.util import MinMaxScaler, StandardScaler, extract_static_scaler, load_vocoder
 from omegaconf import OmegaConf
-
-try:
-    from parallel_wavegan.utils import load_model
-
-    _pwg_available = True
-except ImportError:
-    _pwg_available = False
-
-
-def extract_static_scaler(out_scaler, model_config):
-    mean_ = get_static_features(
-        out_scaler.mean_.reshape(1, 1, out_scaler.mean_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    mean_ = np.concatenate(mean_, -1).reshape(1, -1)
-    var_ = get_static_features(
-        out_scaler.var_.reshape(1, 1, out_scaler.var_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    var_ = np.concatenate(var_, -1).reshape(1, -1)
-    scale_ = get_static_features(
-        out_scaler.scale_.reshape(1, 1, out_scaler.scale_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    scale_ = np.concatenate(scale_, -1).reshape(1, -1)
-    static_scaler = StandardScaler(mean_, var_, scale_)
-    return static_scaler
-
-
-def load_vocoder(path, device, acoustic_config):
-    """Load vocoder model from a given checkpoint path
-
-    Note that the path needs to be a checkpoint of PWG or USFGAN.
-
-    Args:
-        path (str or Path): Path to the vocoder model
-        device (str): Device to load the model
-        acoustic_config (dict): Acoustic model config
-
-    Returns:
-        tuple: (vocoder, vocoder_in_scaler, vocoder_out_scaler)
-    """
-    if not _pwg_available:
-        raise RuntimeError(
-            "parallel_wavegan is required to load pre-trained checkpoint."
-        )
-    path = Path(path) if isinstance(path, str) else path
-    model_dir = path.parent
-    if (model_dir / "vocoder_model.yaml").exists():
-        # packed model
-        vocoder_config = OmegaConf.load(model_dir / "vocoder_model.yaml")
-    elif (model_dir / "config.yml").exists():
-        # PWG checkpoint
-        vocoder_config = OmegaConf.load(model_dir / "config.yml")
-    else:
-        # usfgan
-        vocoder_config = OmegaConf.load(model_dir / "config.yaml")
-
-    if "generator" in vocoder_config and "discriminator" in vocoder_config:
-        # usfgan
-        checkpoint = torch.load(
-            path,
-            map_location=lambda storage, loc: storage,
-        )
-        from nnsvs.usfgan import USFGANWrapper
-
-        vocoder = instantiate(vocoder_config.generator).to(device)
-        vocoder.load_state_dict(checkpoint["model"]["generator"])
-        vocoder.remove_weight_norm()
-        vocoder = USFGANWrapper(vocoder_config, vocoder)
-
-        stream_sizes = get_static_stream_sizes(
-            acoustic_config.stream_sizes,
-            acoustic_config.has_dynamic_features,
-            acoustic_config.num_windows,
-        )
-
-        # Extract scaler params for [mgc, bap]
-        if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
-            # streams: (mgc, lf0, vuv, bap)
-            mean_ = np.load(model_dir / "in_vocoder_scaler_mean.npy")
-            var_ = np.load(model_dir / "in_vocoder_scaler_var.npy")
-            scale_ = np.load(model_dir / "in_vocoder_scaler_scale.npy")
-            mgc_end_dim = stream_sizes[0]
-            bap_start_dim = sum(stream_sizes[:3])
-            bap_end_dim = sum(stream_sizes[:4])
-            vocoder_in_scaler = StandardScaler(
-                np.concatenate([mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]),
-                np.concatenate([var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]),
-                np.concatenate(
-                    [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
-                ),
-            )
-        else:
-            # streams: (mel, lf0, vuv)
-            mel_dim = stream_sizes[0]
-            vocoder_in_scaler = StandardScaler(
-                np.load(model_dir / "in_vocoder_scaler_mean.npy")[:mel_dim],
-                np.load(model_dir / "in_vocoder_scaler_var.npy")[:mel_dim],
-                np.load(model_dir / "in_vocoder_scaler_scale.npy")[:mel_dim],
-            )
-    else:
-        # PWG
-        vocoder = load_model(path, config=vocoder_config).to(device)
-        vocoder.remove_weight_norm()
-        vocoder_in_scaler = StandardScaler(
-            np.load(model_dir / "in_vocoder_scaler_mean.npy"),
-            np.load(model_dir / "in_vocoder_scaler_var.npy"),
-            np.load(model_dir / "in_vocoder_scaler_scale.npy"),
-        )
-    vocoder.eval()
-
-    return vocoder, vocoder_in_scaler, vocoder_config
-
-
-@torch.no_grad()
-def predict_timings(
-    device,
-    labels,
-    binary_dict,
-    numeric_dict,
-    timelag_model,
-    timelag_config,
-    timelag_in_scaler,
-    timelag_out_scaler,
-    duration_model,
-    duration_config,
-    duration_in_scaler,
-    duration_out_scaler,
-    log_f0_conditioning=True,
-    allowed_range=None,
-    allowed_range_rest=None,
-    force_clip_input_features=True,
-    frame_period=5,
-):
-    hts_frame_shift = int(frame_period * 1e4)
-    labels.frame_shift = hts_frame_shift
-
-    pitch_indices = get_pitch_indices(binary_dict, numeric_dict)
-
-    # Time-lag
-    lag = predict_timelag(
-        device=device,
-        labels=labels,
-        timelag_model=timelag_model,
-        timelag_config=timelag_config,
-        timelag_in_scaler=timelag_in_scaler,
-        timelag_out_scaler=timelag_out_scaler,
-        binary_dict=binary_dict,
-        numeric_dict=numeric_dict,
-        pitch_indices=pitch_indices,
-        log_f0_conditioning=log_f0_conditioning,
-        allowed_range=allowed_range,
-        allowed_range_rest=allowed_range_rest,
-        force_clip_input_features=force_clip_input_features,
-        frame_period=frame_period,
-    )
-
-    # Duration predictions
-    durations = predict_duration(
-        device=device,
-        labels=labels,
-        duration_model=duration_model,
-        duration_config=duration_config,
-        duration_in_scaler=duration_in_scaler,
-        duration_out_scaler=duration_out_scaler,
-        binary_dict=binary_dict,
-        numeric_dict=numeric_dict,
-        pitch_indices=pitch_indices,
-        log_f0_conditioning=log_f0_conditioning,
-        force_clip_input_features=force_clip_input_features,
-        frame_period=frame_period,
-    )
-
-    # Normalize phoneme durations
-    duration_modified_labels = postprocess_duration(labels, durations, lag)
-    return duration_modified_labels
-
-
-@torch.no_grad()
-def synthesis_from_timings(
-    device,
-    duration_modified_labels,
-    binary_dict,
-    numeric_dict,
-    acoustic_model,
-    acoustic_config,
-    acoustic_in_scaler,
-    acoustic_out_scaler,
-    acoustic_out_static_scaler,
-    vocoder=None,
-    vocoder_config=None,
-    vocoder_in_scaler=None,
-    postfilter_model=None,
-    postfilter_config=None,
-    postfilter_out_scaler=None,
-    sample_rate=48000,
-    frame_period=5,
-    log_f0_conditioning=True,
-    subphone_features="coarse_coding",
-    use_world_codec=True,
-    force_clip_input_features=True,
-    relative_f0=False,
-    feature_type="world",
-    vocoder_type="world",
-    post_filter_type="merlin",
-    trajectory_smoothing=True,
-    trajectory_smoothing_cutoff=50,
-    trajectory_smoothing_cutoff_f0=20,
-    vuv_threshold=0.5,
-    pre_f0_shift_in_cent=0,
-    post_f0_shift_in_cent=0,
-    vibrato_scale=1.0,
-    force_fix_vuv=False,
-):
-    hts_frame_shift = int(frame_period * 1e4)
-    pitch_idx = get_pitch_index(binary_dict, numeric_dict)
-    pitch_indices = get_pitch_indices(binary_dict, numeric_dict)
-
-    # Predict acoustic features
-    acoustic_features = predict_acoustic(
-        device=device,
-        labels=duration_modified_labels,
-        acoustic_model=acoustic_model,
-        acoustic_config=acoustic_config,
-        acoustic_in_scaler=acoustic_in_scaler,
-        acoustic_out_scaler=acoustic_out_scaler,
-        binary_dict=binary_dict,
-        numeric_dict=numeric_dict,
-        subphone_features=subphone_features,
-        pitch_indices=pitch_indices,
-        log_f0_conditioning=log_f0_conditioning,
-        force_clip_input_features=force_clip_input_features,
-        f0_shift_in_cent=pre_f0_shift_in_cent,
-    )
-
-    static_stream_sizes = get_static_stream_sizes(
-        acoustic_config.stream_sizes,
-        acoustic_config.has_dynamic_features,
-        acoustic_config.num_windows,
-    )
-
-    if post_filter_type == "gv" or (
-        post_filter_type == "nnsvs" and feature_type == "world"
-    ):
-        linguistic_features = fe.linguistic_features(
-            duration_modified_labels,
-            binary_dict,
-            numeric_dict,
-            add_frame_features=True,
-            subphone_features=subphone_features,
-            frame_shift=hts_frame_shift,
-        )
-        # TODO: remove hardcode
-        in_rest_idx = 0
-        note_frame_indices = linguistic_features[:, in_rest_idx] <= 0
-
-        if feature_type == "world":
-            offset = 2
-        elif feature_type == "melf0":
-            # NOTE: set offset so that post-filter don't affect F0
-            mel_freq = librosa.mel_frequencies(
-                n_mels=80, fmin=63, fmax=sample_rate // 2
-            )
-            offset = np.argmax(mel_freq > 1200)
-
-        mgc_end_dim = static_stream_sizes[0]
-        acoustic_features[:, :mgc_end_dim] = variance_scaling(
-            acoustic_out_static_scaler.var_.reshape(-1)[:mgc_end_dim],
-            acoustic_features[:, :mgc_end_dim],
-            offset=offset,
-            note_frame_indices=note_frame_indices,
-        )
-
-    # Learned post-filter using nnsvs
-    if post_filter_type == "nnsvs" and postfilter_model is not None:
-        # (1) Raw spectrogram or (2) mgc
-        rawsp_output = postfilter_config.stream_sizes[0] >= 128
-
-        # If the post-filter output is raw spectrogrma, convert mgc to log spectrogram
-        if rawsp_output:
-            outs = split_streams(acoustic_features, static_stream_sizes)
-            assert len(outs) == 4
-            mgc, lf0, vuv, bap = outs
-            fft_size = pyworld.get_cheaptrick_fft_size(sample_rate)
-            sp = pyworld.decode_spectral_envelope(
-                mgc.astype(np.float64), sample_rate, fft_size
-            ).astype(np.float32)
-            sp = np.log(sp)
-            acoustic_features = np.concatenate([sp, lf0, vuv, bap], axis=-1)
-
-        in_feats = torch.from_numpy(acoustic_features).float().unsqueeze(0)
-        in_feats = postfilter_out_scaler.transform(in_feats).float().to(device)
-        # Run inference
-        out_feats = postfilter_model.inference(in_feats, [in_feats.shape[1]])
-        acoustic_features = (
-            postfilter_out_scaler.inverse_transform(out_feats.cpu()).squeeze(0).numpy()
-        )
-
-        # Convert log spectrogram to mgc
-        # NOTE: mgc is used to reduce possible artifacts
-        # Ref: https://bit.ly/3AHjstU
-        if rawsp_output:
-            sp, lf0, vuv, bap = split_streams(
-                acoustic_features, postfilter_config.stream_sizes
-            )
-            sp = np.exp(sp)
-            mgc = pyworld.code_spectral_envelope(
-                sp.astype(np.float64), sample_rate, 60
-            ).astype(np.float32)
-            acoustic_features = np.concatenate([mgc, lf0, vuv, bap], axis=-1)
-
-    # Generate WORLD parameters
-    if feature_type == "world":
-        mgc, lf0, vuv, bap = gen_spsvs_static_features(
-            labels=duration_modified_labels,
-            acoustic_features=acoustic_features,
-            binary_dict=binary_dict,
-            numeric_dict=numeric_dict,
-            stream_sizes=acoustic_config.stream_sizes,
-            has_dynamic_features=acoustic_config.has_dynamic_features,
-            subphone_features=subphone_features,
-            pitch_idx=pitch_idx,
-            num_windows=acoustic_config.num_windows,
-            frame_period=frame_period,
-            relative_f0=relative_f0,
-            vibrato_scale=vibrato_scale,
-            vuv_threshold=vuv_threshold,
-            force_fix_vuv=force_fix_vuv,
-        )
-    elif feature_type == "melf0":
-        mel, lf0, vuv = split_streams(acoustic_features, [80, 1, 1])
-    else:
-        raise ValueError(f"Unknown feature type: {feature_type}")
-
-    if post_f0_shift_in_cent != 0:
-        lf0_offset = post_f0_shift_in_cent * np.log(2) / 1200
-        lf0 = lf0 + lf0_offset
-
-    # NOTE: spectral enhancement based on the Merlin's post-filter implementation
-    if feature_type == "world" and post_filter_type == "merlin":
-        alpha = pysptk.util.mcepalpha(sample_rate)
-        mgc = merlin_post_filter(mgc, alpha)
-
-    # Remove high-frequency components of lf0/mgc/bap
-    # NOTE: Useful to reduce high-frequency artifacts
-    if trajectory_smoothing:
-        modfs = int(1 / (frame_period * 0.001))
-        lf0[:, 0] = lowpass_filter(
-            lf0[:, 0], modfs, cutoff=trajectory_smoothing_cutoff_f0
-        )
-        if feature_type == "world":
-            for d in range(mgc.shape[1]):
-                mgc[:, d] = lowpass_filter(
-                    mgc[:, d], modfs, cutoff=trajectory_smoothing_cutoff
-                )
-            for d in range(bap.shape[1]):
-                bap[:, d] = lowpass_filter(
-                    bap[:, d], modfs, cutoff=trajectory_smoothing_cutoff
-                )
-        elif feature_type == "melf0":
-            for d in range(mel.shape[1]):
-                mel[:, d] = lowpass_filter(
-                    mel[:, d], modfs, cutoff=trajectory_smoothing_cutoff
-                )
-    if feature_type == "world":
-        use_mcep_aperiodicity = bap.shape[-1] > 5
-    if feature_type == "world" and not use_mcep_aperiodicity:
-        bap = np.clip(bap, a_min=-60, a_max=0)
-
-    # Waveform generation by (1) WORLD or (2) neural vocoder
-    if vocoder_type == "world":
-        f0, spectrogram, aperiodicity = gen_world_params(
-            mgc,
-            lf0,
-            vuv,
-            bap,
-            sample_rate,
-            vuv_threshold=vuv_threshold,
-            use_world_codec=use_world_codec,
-        )
-        wav = pyworld.synthesize(
-            f0,
-            spectrogram,
-            aperiodicity,
-            sample_rate,
-            frame_period,
-        )
-    elif vocoder_type == "pwg":
-        # NOTE: So far vocoder models are trained on binary V/UV features
-        vuv = (vuv > vuv_threshold).astype(np.float32)
-        if feature_type == "world":
-            voc_inp = (
-                torch.from_numpy(
-                    vocoder_in_scaler.transform(
-                        np.concatenate([mgc, lf0, vuv, bap], axis=-1)
-                    )
-                )
-                .float()
-                .to(device)
-            )
-        elif feature_type == "melf0":
-            voc_inp = (
-                torch.from_numpy(
-                    vocoder_in_scaler.transform(
-                        np.concatenate([mel, lf0, vuv], axis=-1)
-                    )
-                )
-                .float()
-                .to(device)
-            )
-        wav = vocoder.inference(voc_inp).view(-1).to("cpu").numpy()
-    elif vocoder_type == "usfgan":
-        if feature_type == "world":
-            fftlen = pyworld.get_cheaptrick_fft_size(sample_rate)
-            if use_mcep_aperiodicity:
-                aperiodicity_order = bap.shape[-1] - 1
-                alpha = pysptk.util.mcepalpha(sample_rate)
-                aperiodicity = pysptk.mc2sp(
-                    np.ascontiguousarray(bap).astype(np.float64),
-                    fftlen=fftlen,
-                    alpha=alpha,
-                )
-            else:
-                aperiodicity = pyworld.decode_aperiodicity(
-                    np.ascontiguousarray(bap).astype(np.float64),
-                    sample_rate,
-                    fftlen,
-                )
-                # fill aperiodicity with ones for unvoiced regions
-            aperiodicity[vuv.reshape(-1) < vuv_threshold, 0] = 1.0
-            # WORLD fails catastrophically for out of range aperiodicity
-            aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
-
-            if use_mcep_aperiodicity:
-                bap = pysptk.sp2mc(
-                    aperiodicity,
-                    order=aperiodicity_order,
-                    alpha=alpha,
-                )
-            else:
-                bap = pyworld.code_aperiodicity(aperiodicity, sample_rate).astype(
-                    np.float32
-                )
-            aux_feats = [mgc, bap]
-        elif feature_type == "melf0":
-            aux_feats = [mel]
-
-        aux_feats = (
-            torch.from_numpy(
-                vocoder_in_scaler.transform(np.concatenate(aux_feats, axis=-1))
-            )
-            .float()
-            .to(device)
-        )
-
-        contf0 = np.exp(lf0)
-        if vocoder_config.data.sine_f0_type in ["contf0", "cf0"]:
-            f0_inp = contf0
-        elif vocoder_config.data.sine_f0_type == "f0":
-            f0_inp = contf0
-            f0_inp[vuv < vuv_threshold] = 0
-        wav = vocoder.inference(f0_inp, aux_feats).view(-1).to("cpu").numpy()
-
-    if feature_type == "world":
-        states = {
-            "mgc": mgc,
-            "lf0": lf0,
-            "vuv": vuv,
-            "bap": bap,
-        }
-    elif feature_type == "melf0":
-        states = {
-            "mel": mel,
-            "lf0": lf0,
-            "vuv": vuv,
-        }
-    if vocoder_type == "world":
-        states.update(
-            {
-                "f0": f0,
-                "spectrogram": spectrogram,
-                "aperiodicity": aperiodicity,
-            }
-        )
-
-    # Normalize loudness to -20 dB for convenience
-    # NOTE: -20 dB is roughly the same as the NEURINO (NSF ver.)
-    meter = pyln.Meter(sample_rate)
-    loudness = meter.integrated_loudness(wav)
-    wav = pyln.normalize.loudness(wav, loudness, -20.0)
-
-    return wav, states
-
-
-def post_process(wav, sample_rate):
-    wav = bandpass_filter(wav, sample_rate)
-
-    if np.max(wav) > 10:
-        if np.abs(wav).max() > 32767:
-            wav = wav / np.abs(wav).max()
-        # data is likely already in [-32768, 32767]
-        wav = wav.astype(np.int16)
-    else:
-        if np.abs(wav).max() > 1.0:
-            wav = wav / np.abs(wav).max()
-        wav = (wav * 32767.0).astype(np.int16)
-    return wav
 
 
 class SPSVS(object):
-    """Statistical parametric singing voice synthesis
+    """Statistical parametric singing voice synthesis (SPSVS)
 
-    .. note::
-        This class is designed to be language-independent. Therefore,
-        frontend functionality such as converting musicXML/UST to HTS labels
-        is not included.
+    This class is meant to be used for inference only. Use the ``svs`` method
+    for the simplest inference, or use the separated methods (e.g.,
+    ``predict_acoustic`` and ``predict_waveform``) to control each components
+    of the SVS system.
+
+    In addition, this class is designed to be language-independent. Therefore,
+    frontend functionality such as converting musicXML/UST to HTS labels
+    is not included.
 
     Args:
         model_dir (str): directory of the model
         device (str): cpu or cuda
+        verbose (int): verbosity level
 
     Examples:
 
@@ -574,37 +52,35 @@ class SPSVS(object):
         from nnsvs.util import example_xml_file
         import matplotlib.pyplot as plt
 
-        model_dir = retrieve_pretrained_model("r9y9/kiritan_latest")
+        # Instantiate the SVS engine
+        model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
         engine = SPSVS(model_dir)
 
+        # Extract HTS labels from a MusicXML file
         contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
         labels = hts.HTSLabelFile.create_from_contexts(contexts)
 
+        # Run inference
         wav, sr = engine.svs(labels)
 
+        # Plot the result
         fig, ax = plt.subplots(figsize=(8,2))
-        librosa.display.waveshow(wav.astype(np.float32), sr, ax=ax)
+        librosa.display.waveshow(wav.astype(np.float32), sr=sr, ax=ax)
 
 
-    With a trained post-filter:
+    With WORLD vocoder:
 
-    >>> wav, sr = engine.svs(labels, posft_filter_type="nnsvs")
+    >>> wav, sr = engine.svs(labels, vocoder_type="world")
 
-    With a trained neural vocoder:
+    With a uSFGAN or SiFiGAN vocoder:
 
-    >>> wav, sr = engine.svs(labels, vocoder_type="pwg")
-
-    With a global variance enhancement filter and a neural vocoder:
-
-    >>> wav, sr = engine.svs(labels, post_filter_type="gv", vocoder_type="pwg")
-
-    Default of the NNSVS v0.0.2 or earlier:
-
-    >>> wav, sr = engine.svs(labels, post_filter_type="merlin", vocoder_type="world")
+    >>> wav, sr = engine.svs(labels, vocoder_type="usfgan")
     """
 
-    def __init__(self, model_dir, device="cpu"):
+    def __init__(self, model_dir, device="cpu", verbose=0):
         self.device = device
+
+        self.logger = getLogger(verbose=verbose)
 
         if isinstance(model_dir, str):
             model_dir = Path(model_dir)
@@ -781,125 +257,243 @@ Acoustic model: {acoustic_str}
         self.postfilter_model.to(device) if self.postfilter_model is not None else None
         self.vocoder.to(device) if self.vocoder is not None else None
 
-    def synthesis_from_timings(
+    def predict_timelag(self, labels):
+        """Predict time-ag from HTS labels
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+
+        Returns:
+            ndarray: Predicted time-lag.
+        """
+        lag = predict_timelag(
+            self.device,
+            labels,
+            timelag_model=self.timelag_model,
+            timelag_config=self.timelag_config,
+            timelag_in_scaler=self.timelag_in_scaler,
+            timelag_out_scaler=self.timelag_out_scaler,
+            binary_dict=self.binary_dict,
+            numeric_dict=self.numeric_dict,
+            pitch_indices=self.pitch_indices,
+            log_f0_conditioning=self.config.log_f0_conditioning,
+            allowed_range=self.config.timelag.allowed_range,
+            allowed_range_rest=self.config.timelag.allowed_range_rest,
+            force_clip_input_features=self.config.timelag.force_clip_input_features,
+            frame_period=self.config.frame_period,
+        )
+        return lag
+
+    def predict_duration(self, labels):
+        """Predict durations from HTS labels
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+
+        Returns:
+            ndarray: Predicted durations.
+        """
+        durations = predict_duration(
+            self.device,
+            labels,
+            duration_model=self.duration_model,
+            duration_config=self.duration_config,
+            duration_in_scaler=self.duration_in_scaler,
+            duration_out_scaler=self.duration_out_scaler,
+            binary_dict=self.binary_dict,
+            numeric_dict=self.numeric_dict,
+            pitch_indices=self.pitch_indices,
+            log_f0_conditioning=self.config.log_f0_conditioning,
+            force_clip_input_features=self.config.duration.force_clip_input_features,
+            frame_period=self.config.frame_period,
+        )
+        return durations
+
+    def postprocess_duration(self, labels, pred_durations, lag):
+        """Post-process durations
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+            pred_durations (ndarray): Predicted durations.
+            lag (ndarray): Predicted time-lag.
+
+        Returns:
+            nnmnkwii.io.hts.HTSLabelFile: duration modified HTS labels.
+        """
+        duration_modified_labels = postprocess_duration(
+            labels, pred_durations, lag, frame_period=self.config.frame_period
+        )
+        return duration_modified_labels
+
+    def predict_acoustic(self, duration_modified_labels, f0_shift_in_cent=0):
+        """Predict acoustic features from HTS labels
+
+        Args:
+            duration_modified_labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+            f0_shift_in_cent (float): F0 shift in cent.
+
+        Returns:
+            ndarray: Predicted acoustic features.
+        """
+        acoustic_features = predict_acoustic(
+            device=self.device,
+            labels=duration_modified_labels,
+            acoustic_model=self.acoustic_model,
+            acoustic_config=self.acoustic_config,
+            acoustic_in_scaler=self.acoustic_in_scaler,
+            acoustic_out_scaler=self.acoustic_out_scaler,
+            binary_dict=self.binary_dict,
+            numeric_dict=self.numeric_dict,
+            subphone_features=self.acoustic_config.get(
+                "subphone_features", "coarse_coding"
+            ),
+            pitch_indices=self.pitch_indices,
+            log_f0_conditioning=self.config.log_f0_conditioning,
+            force_clip_input_features=self.acoustic_config.get(
+                "force_clip_input_features", True
+            ),
+            frame_period=self.config.frame_period,
+            f0_shift_in_cent=f0_shift_in_cent,
+        )
+        return acoustic_features
+
+    def postprocess_acoustic(
         self,
         duration_modified_labels,
-        vocoder_type="world",
-        post_filter_type="merlin",
+        acoustic_features,
+        post_filter_type="gv",
         trajectory_smoothing=True,
         trajectory_smoothing_cutoff=50,
         trajectory_smoothing_cutoff_f0=20,
         vuv_threshold=0.5,
-        pre_f0_shift_in_cent=0,
-        post_f0_shift_in_cent=0,
-        vibrato_scale=1.0,
-        return_states=False,
         force_fix_vuv=False,
-        segmented_synthesis=False,
+        f0_shift_in_cent=0,
     ):
-        """Synthesize waveform from HTS labels with timings.
+        """Post-process acoustic features
+
+        The function converts acoustic features in single ndarray to tuple of
+        multi-stream acoustic features.
+
+        e.g., array -> (mgc, lf0, vuv, bap)
+
+        If post_filter_type=``nnsvs`` is specified, learned post-filter is applied.
+        However, it is recommended to use ``gv`` in general.
 
         Args:
-            duration_modified_labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
-                with predicted timings.
-            vocoder_type (str): Vocoder type. ``world``, ``pwg`` and ``usfgan`` is supported.
-            post_filter_type (str): Post-filter type. ``merlin``, ``gv`` or ``nnsvs``
-                is supported.
-            trajectory_smoothing (bool): Whether to smooth acoustic feature trajectory.
-            trajectory_smoothing_cutoff (int): Cutoff frequency for trajectory smoothing.
-            trajectory_smoothing_cutoff_f0 (int): Cutoff frequency for trajectory
+            duration_modified_labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+            acoustic_features (ndarray): Predicted acoustic features.
+            post_filter_type (str): Post-filter type.
+                One of ``gv``, ``merlin`` or ``nnsvs``. Recommended to use ``gv``
+                for general purpose.
+            trajectory_smoothing (bool): Whether to apply trajectory smoothing.
+            trajectory_smoothing_cutoff (float): Cutoff frequency for trajectory smoothing
+                of spectral features.
+            trajectory_smoothing_cutoff_f0 (float): Cutoff frequency for trajectory
                 smoothing of f0.
-            vuv_threshold (float): Threshold for VUV.
-            f0_scale (float): Scale factor for f0.
-            vibrato_scale (float): Scale for vibrato. Only valid if the acoustic
-                features contain vibrato parameters.
-            return_states (bool): Whether to return the internal states (for debugging)
-            force_fix_vuv (bool): Whether to correct VUV.
-            segmneted_synthesis (bool): Whether to use segmented synthesis.
+            vuv_threshold (float): V/UV threshold.
+            f0_shift_in_cent (float): F0 shift in cent.
+            force_fix_vuv (bool): Force fix V/UV.
+
+        Returns:
+            tuple: Post-processed multi-stream acoustic features.
         """
-        if segmented_synthesis:
-            segmented_labels = segment_labels(duration_modified_labels)
-            from tqdm.auto import tqdm
-        else:
-            segmented_labels = [duration_modified_labels]
+        multistream_features = postprocess_acoustic(
+            device=self.device,
+            duration_modified_labels=duration_modified_labels,
+            acoustic_features=acoustic_features,
+            binary_dict=self.binary_dict,
+            numeric_dict=self.numeric_dict,
+            acoustic_config=self.acoustic_config,
+            acoustic_out_static_scaler=self.acoustic_out_static_scaler,
+            postfilter_model=self.postfilter_model,
+            postfilter_config=self.postfilter_config,
+            postfilter_out_scaler=self.postfilter_out_scaler,
+            sample_rate=self.config.sample_rate,
+            frame_period=self.config.frame_period,
+            relative_f0=self.config.acoustic.relative_f0,
+            feature_type=self.feature_type,
+            post_filter_type=post_filter_type,
+            trajectory_smoothing=trajectory_smoothing,
+            trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
+            trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
+            vuv_threshold=vuv_threshold,
+            f0_shift_in_cent=f0_shift_in_cent,
+            vibrato_scale=1.0,  # only valid for Sinsy-like models
+            force_fix_vuv=force_fix_vuv,
+        )
+        return multistream_features
 
-            def tqdm(x, **kwargs):
-                return x
+    def predict_waveform(
+        self,
+        multistream_features,
+        vocoder_type="world",
+        vuv_threshold=0.5,
+    ):
+        wav = predict_waveform(
+            device=self.device,
+            multistream_features=multistream_features,
+            vocoder=self.vocoder,
+            vocoder_config=self.vocoder_config,
+            vocoder_in_scaler=self.vocoder_in_scaler,
+            sample_rate=self.config.sample_rate,
+            frame_period=self.config.frame_period,
+            use_world_codec=self.config.get("use_world_codec", False),
+            feature_type=self.feature_type,
+            vocoder_type=vocoder_type,
+            vuv_threshold=vuv_threshold,
+        )
+        return wav
 
-        hts_frame_shift = int(self.config.frame_period * 1e4)
-        wavs = []
-        for seg_labels in tqdm(segmented_labels):
-            seg_labels.frame_shift = hts_frame_shift
-            wav, states = synthesis_from_timings(
-                device=self.device,
-                duration_modified_labels=seg_labels,
-                binary_dict=self.binary_dict,
-                numeric_dict=self.numeric_dict,
-                acoustic_model=self.acoustic_model,
-                acoustic_config=self.acoustic_config,
-                acoustic_in_scaler=self.acoustic_in_scaler,
-                acoustic_out_scaler=self.acoustic_out_scaler,
-                acoustic_out_static_scaler=self.acoustic_out_static_scaler,
-                vocoder=self.vocoder,
-                vocoder_config=self.vocoder_config,
-                vocoder_in_scaler=self.vocoder_in_scaler,
-                postfilter_model=self.postfilter_model,
-                postfilter_config=self.postfilter_config,
-                postfilter_out_scaler=self.postfilter_out_scaler,
-                sample_rate=self.config.sample_rate,
-                frame_period=self.config.frame_period,
-                log_f0_conditioning=self.config.log_f0_conditioning,
-                subphone_features=self.config.acoustic.subphone_features,
-                use_world_codec=self.config.get("use_world_codec", False),
-                force_clip_input_features=self.config.acoustic.force_clip_input_features,
-                relative_f0=self.config.acoustic.relative_f0,
-                feature_type=self.feature_type,
-                vocoder_type=vocoder_type,
-                post_filter_type=post_filter_type,
-                trajectory_smoothing=trajectory_smoothing,
-                trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
-                trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
-                vuv_threshold=vuv_threshold,
-                pre_f0_shift_in_cent=pre_f0_shift_in_cent,
-                post_f0_shift_in_cent=post_f0_shift_in_cent,
-                vibrato_scale=vibrato_scale,
-                force_fix_vuv=force_fix_vuv,
-            )
-            wavs.append(wav)
+    def postprocess_waveform(
+        self,
+        wav,
+        duration_modified_labels=None,
+        adjust_sil_gain=False,
+        dtype=np.int16,
+        peak_norm=False,
+        loudness_norm=False,
+        target_loudness=-20,
+    ):
+        wav = postprocess_waveform(
+            wav=wav,
+            sample_rate=self.config.sample_rate,
+            frame_period=self.config.frame_period,
+            binary_dict=self.binary_dict,
+            numeric_dict=self.numeric_dict,
+            duration_modified_labels=duration_modified_labels,
+            adjust_sil_gain=adjust_sil_gain,
+            dtype=dtype,
+            peak_norm=peak_norm,
+            loudness_norm=loudness_norm,
+            target_loudness=target_loudness,
+        )
+        return wav
 
-        # Concatenate segmented wavs
-        wav = np.concatenate(wavs, axis=0).reshape(-1)
-        wav = post_process(wav, self.config.sample_rate)
-
-        if return_states:
-            assert not segmented_synthesis
-            return wav, self.config.sample_rate, states
-
-        return wav, self.config.sample_rate
-
-    @torch.no_grad()
     def svs(
         self,
         labels,
         vocoder_type="world",
-        post_filter_type="merlin",
+        post_filter_type="gv",
         trajectory_smoothing=True,
         trajectory_smoothing_cutoff=50,
         trajectory_smoothing_cutoff_f0=20,
         vuv_threshold=0.5,
         pre_f0_shift_in_cent=0,
         post_f0_shift_in_cent=0,
-        vibrato_scale=1.0,
-        return_states=False,
         force_fix_vuv=False,
-        post_filter=None,
+        adjust_sil_gain=False,
+        dtype=np.int16,
+        peak_norm=False,
+        loudness_norm=False,
+        target_loudness=-20,
         segmented_synthesis=False,
     ):
         """Synthesize waveform from HTS labels.
 
         Args:
             labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
-            vocoder_type (str): Vocoder type. ``world``, ``pwg`` and ``usfgan`` is supported.
+            vocoder_type (str): Vocoder type. ``world``, ``pwg``, ``usfgan``, and ``auto``
+                is supported.
             post_filter_type (str): Post-filter type. ``merlin``, ``gv`` or ``nnsvs``
                 is supported.
             trajectory_smoothing (bool): Whether to smooth acoustic feature trajectory.
@@ -925,50 +519,99 @@ Acoustic model: {acoustic_str}
                 """Pre-trained vocodr model is not found.
 WORLD is only supported for waveform generation"""
             )
-        if post_filter is not None:
-            warn("post_filter is deprecated. Use post_filter_type instead.")
-            post_filter_type = "merlin" if post_filter else "none"
 
         if vocoder_type == "auto":
-            if self.vocoder is None:
-                vocoder_type = "world"
-            else:
+            if self.feature_type == "melf0":
+                assert self.vocoder is not None
                 vocoder_type = (
                     "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
                 )
+            elif self.feature_type == "world":
+                if self.vocoder is None:
+                    vocoder_type = "world"
+                else:
+                    vocoder_type = (
+                        "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
+                    )
 
-        duration_modified_labels = predict_timings(
-            device=self.device,
-            labels=labels,
-            binary_dict=self.binary_dict,
-            numeric_dict=self.numeric_dict,
-            timelag_model=self.timelag_model,
-            timelag_config=self.timelag_config,
-            timelag_in_scaler=self.timelag_in_scaler,
-            timelag_out_scaler=self.timelag_out_scaler,
-            duration_model=self.duration_model,
-            duration_config=self.duration_config,
-            duration_in_scaler=self.duration_in_scaler,
-            duration_out_scaler=self.duration_out_scaler,
-            log_f0_conditioning=self.config.log_f0_conditioning,
-            allowed_range=self.config.timelag.allowed_range,
-            allowed_range_rest=self.config.timelag.allowed_range_rest,
-            force_clip_input_features=self.config.timelag.force_clip_input_features,
-            frame_period=self.config.frame_period,
-        )
+        # Predict timinigs
+        lag = self.predict_timelag(labels)
+        durations = self.predict_duration(labels)
+        duration_modified_labels = self.postprocess_duration(labels, durations, lag)
 
-        return self.synthesis_from_timings(
+        # NOTE: segmented synthesis is not well tested. There MUST be better ways
+        # to do this.
+        if segmented_synthesis:
+            self.logger.warning(
+                "Segmented synthesis is not well tested. Use it on your own risk."
+            )
+            duration_modified_labels_segs = segment_labels(
+                duration_modified_labels,
+                # the following parameters are based on experiments in the NNSVS's paper
+                # tuned with Namine Ritsu's database
+                silence_threshold=0.1,
+                min_duration=5.0,
+                force_split_threshold=5.0,
+            )
+            from tqdm.auto import tqdm
+        else:
+            duration_modified_labels_segs = [duration_modified_labels]
+
+            def tqdm(x, **kwargs):
+                return x
+
+        # Run acoustic model and vocoder
+        hts_frame_shift = int(self.config.frame_period * 1e4)
+        wavs = []
+        for duration_modified_labels_seg in tqdm(
+            duration_modified_labels_segs,
+            desc="[segment]",
+            total=len(duration_modified_labels_segs),
+        ):
+            duration_modified_labels_seg.frame_shift = hts_frame_shift
+
+            # Predict acoustic features
+            # NOTE: if non-zero pre_f0_shift_in_cent is specified, the input pitch
+            # will be shifted before running the acoustic model
+            acoustic_features = self.predict_acoustic(
+                duration_modified_labels_seg,
+                f0_shift_in_cent=pre_f0_shift_in_cent,
+            )
+
+            # Post-processing for acoustic features
+            # NOTE: if non-zero post_f0_shift_in_cent is specified, the output pitch
+            # will be shifted as a part of post-processing
+            multistream_features = self.postprocess_acoustic(
+                acoustic_features=acoustic_features,
+                duration_modified_labels=duration_modified_labels_seg,
+                trajectory_smoothing=trajectory_smoothing,
+                trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
+                trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
+                force_fix_vuv=force_fix_vuv,
+                f0_shift_in_cent=post_f0_shift_in_cent,
+            )
+
+            # Generate waveform by vocoder
+            wav = self.predict_waveform(
+                multistream_features=multistream_features,
+                vocoder_type=vocoder_type,
+                vuv_threshold=vuv_threshold,
+            )
+
+            wavs.append(wav)
+
+        # Concatenate segmented waveforms
+        wav = np.concatenate(wavs, axis=0).reshape(-1)
+
+        # Post-processing for the output waveform
+        wav = self.postprocess_waveform(
+            wav,
             duration_modified_labels=duration_modified_labels,
-            vocoder_type=vocoder_type,
-            post_filter_type=post_filter_type,
-            trajectory_smoothing=trajectory_smoothing,
-            trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
-            trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
-            vuv_threshold=vuv_threshold,
-            pre_f0_shift_in_cent=pre_f0_shift_in_cent,
-            post_f0_shift_in_cent=post_f0_shift_in_cent,
-            vibrato_scale=vibrato_scale,
-            return_states=return_states,
-            force_fix_vuv=force_fix_vuv,
-            segmented_synthesis=segmented_synthesis,
+            adjust_sil_gain=adjust_sil_gain,
+            dtype=dtype,
+            peak_norm=peak_norm,
+            loudness_norm=loudness_norm,
+            target_loudness=target_loudness,
         )
+
+        return wav, self.config.sample_rate

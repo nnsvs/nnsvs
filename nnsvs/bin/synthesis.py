@@ -7,44 +7,18 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
-from nnsvs.logger import getLogger
-from nnsvs.multistream import get_static_features
-from nnsvs.svs import (
-    load_vocoder,
-    post_process,
+from nnsvs.gen import (
+    postprocess_acoustic,
+    postprocess_waveform,
+    predict_acoustic,
     predict_timings,
-    synthesis_from_timings,
+    predict_waveform,
 )
-from nnsvs.util import StandardScaler, init_seed, load_utt_list
+from nnsvs.logger import getLogger
+from nnsvs.util import extract_static_scaler, init_seed, load_utt_list, load_vocoder
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 from tqdm.auto import tqdm
-
-
-def extract_static_scaler(out_scaler, model_config):
-    mean_ = get_static_features(
-        out_scaler.mean_.reshape(1, 1, out_scaler.mean_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    mean_ = np.concatenate(mean_, -1).reshape(1, -1)
-    var_ = get_static_features(
-        out_scaler.var_.reshape(1, 1, out_scaler.var_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    var_ = np.concatenate(var_, -1).reshape(1, -1)
-    scale_ = get_static_features(
-        out_scaler.scale_.reshape(1, 1, out_scaler.scale_.shape[-1]),
-        model_config.num_windows,
-        model_config.stream_sizes,
-        model_config.has_dynamic_features,
-    )
-    scale_ = np.concatenate(scale_, -1).reshape(1, -1)
-    static_scaler = StandardScaler(mean_, var_, scale_)
-    return static_scaler
 
 
 @hydra.main(config_path="conf/synthesis", config_name="config")
@@ -152,39 +126,77 @@ def my_app(config: DictConfig) -> None:
                 frame_period=config.synthesis.frame_period,
             )
 
-        wav, _ = synthesis_from_timings(
+        # Predict acoustic features
+        acoustic_features = predict_acoustic(
             device=device,
-            duration_modified_labels=duration_modified_labels,
-            binary_dict=binary_dict,
-            numeric_dict=numeric_dict,
+            labels=duration_modified_labels,
             acoustic_model=acoustic_model,
             acoustic_config=acoustic_config,
             acoustic_in_scaler=acoustic_in_scaler,
             acoustic_out_scaler=acoustic_out_scaler,
+            binary_dict=binary_dict,
+            numeric_dict=numeric_dict,
+            subphone_features=config.synthesis.subphone_features,
+            log_f0_conditioning=config.synthesis.log_f0_conditioning,
+            force_clip_input_features=config.acoustic.force_clip_input_features,
+            f0_shift_in_cent=config.synthesis.pre_f0_shift_in_cent,
+        )
+
+        # NOTE: the output of this function is tuple of features
+        # e.g., (mgc, lf0, vuv, bap)
+        multistream_features = postprocess_acoustic(
+            device=device,
+            acoustic_features=acoustic_features,
+            duration_modified_labels=duration_modified_labels,
+            binary_dict=binary_dict,
+            numeric_dict=numeric_dict,
+            acoustic_config=acoustic_config,
             acoustic_out_static_scaler=acoustic_out_static_scaler,
-            vocoder=vocoder,
-            vocoder_config=vocoder_config,
-            vocoder_in_scaler=vocoder_in_scaler,
+            postfilter_model=None,  # NOTE: learned post-filter is not supported
+            postfilter_config=None,
+            postfilter_out_scaler=None,
             sample_rate=config.synthesis.sample_rate,
             frame_period=config.synthesis.frame_period,
-            log_f0_conditioning=config.synthesis.log_f0_conditioning,
-            subphone_features=config.synthesis.subphone_features,
-            use_world_codec=config.synthesis.use_world_codec,
-            force_clip_input_features=config.acoustic.force_clip_input_features,
             relative_f0=config.synthesis.relative_f0,
             feature_type=config.synthesis.feature_type,
-            vocoder_type=config.synthesis.vocoder_type,
             post_filter_type=config.synthesis.post_filter_type,
             trajectory_smoothing=config.synthesis.trajectory_smoothing,
             trajectory_smoothing_cutoff=config.synthesis.trajectory_smoothing_cutoff,
             trajectory_smoothing_cutoff_f0=config.synthesis.trajectory_smoothing_cutoff_f0,
             vuv_threshold=config.synthesis.vuv_threshold,
-            pre_f0_shift_in_cent=config.synthesis.pre_f0_shift_in_cent,
-            post_f0_shift_in_cent=config.synthesis.post_f0_shift_in_cent,
-            vibrato_scale=config.synthesis.vibrato_scale,
+            f0_shift_in_cent=config.synthesis.post_f0_shift_in_cent,
+            vibrato_scale=1.0,
             force_fix_vuv=config.synthesis.force_fix_vuv,
         )
-        wav = post_process(wav, config.synthesis.sample_rate)
+
+        # Generate waveform by vocoder
+        wav = predict_waveform(
+            device=device,
+            multistream_features=multistream_features,
+            vocoder=vocoder,
+            vocoder_config=vocoder_config,
+            vocoder_in_scaler=vocoder_in_scaler,
+            sample_rate=config.synthesis.sample_rate,
+            frame_period=config.synthesis.frame_period,
+            use_world_codec=config.synthesis.use_world_codec,
+            feature_type=config.synthesis.feature_type,
+            vocoder_type=config.synthesis.vocoder_type,
+            vuv_threshold=config.synthesis.vuv_threshold,
+        )
+
+        wav = postprocess_waveform(
+            wav=wav,
+            sample_rate=config.synthesis.sample_rate,
+            frame_period=config.synthesis.frame_period,
+            binary_dict=binary_dict,
+            numeric_dict=numeric_dict,
+            duration_modified_labels=duration_modified_labels,
+            adjust_sil_gain=False,
+            dtype=np.int16,
+            peak_norm=False,
+            loudness_norm=False,
+        )
+
         out_wav_path = join(out_dir, f"{utt_id}.wav")
         wavfile.write(
             out_wav_path, rate=config.synthesis.sample_rate, data=wav.astype(np.int16)
