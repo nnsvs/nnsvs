@@ -87,7 +87,7 @@ def compute_nosil_duration(labels, threshold=5.0):
 def segment_labels(
     labels,
     strict=True,
-    silence_threshold=0.5,
+    silence_threshold=0.1,
     min_duration=5.0,
     force_split_threshold=5.0,
 ):
