@@ -2,6 +2,25 @@ import numpy as np
 from nnmnkwii.io import hts
 
 
+def get_note_frame_indices(binary_dict, numeric_dict, in_feats):
+    """Get note frame indices from frame-level input features
+
+    Note that the F0 in the input features must be discrete F0.
+
+    Args:
+        binary_dict (dict): Dictionary of binary features
+        numeric_dict (dict): Dictionary of numeric features
+        in_feats (np.ndarray): Input features
+
+    Returns:
+        np.ndarray: Note frame indices
+    """
+    pitch_idx = get_pitch_index(binary_dict, numeric_dict)
+    score_f0 = in_feats[:, pitch_idx]
+    note_frame_indices = np.where(score_f0 > 0)[0]
+    return note_frame_indices
+
+
 def get_pitch_index(binary_dict, numeric_dict):
     idx = 0
     pitch_idx = len(binary_dict)
