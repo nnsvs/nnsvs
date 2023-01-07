@@ -550,6 +550,11 @@ WORLD is only supported for waveform generation"""
                 features contain vibrato parameters.
             return_states (bool): Whether to return the internal states (for debugging)
             force_fix_vuv (bool): Whether to correct VUV.
+            fill_silence_to_rest (bool): Fill silence to rest frames.
+            dtype (np.dtype): Data type of the output waveform.
+            peak_norm (bool): Whether to normalize the waveform by peak value.
+            loudness_norm (bool): Whether to normalize the waveform by loudness.
+            target_loudness (float): Target loudness in dB.
             segmneted_synthesis (bool): Whether to use segmented synthesis.
         """
         vocoder_type = vocoder_type.lower()
