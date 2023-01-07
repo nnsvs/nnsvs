@@ -1,0 +1,11 @@
+0 0 0 pau
+1 2930 1 n a, ts u, m o, ch i, k a, z u, k u, h a, ch i, j u, u, h a, ch i, y a
+2 12000 0 pau
+3 12545 1 n o, n i, m o, y a, m a, n i, m o br
+4 16805 1 w a, k a, b a, g a, sh i, g e, r u
+5 21600 0 pau
+6 22190 1 a, r e, n i, m i, e, r u, w a br
+7 26315 1 ch a, ts u, m i, j a, n a, i, k a br
+8 31785 1 a, k a, n e, d a, s u, k i, n i br
+9 35895 1 s u, g e, n o, k a, s a
+10 40200 0 pau

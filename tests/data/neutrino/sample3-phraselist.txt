@@ -1,0 +1,11 @@
+0 0 0 pau
+1 2205 1 s a, k u, r a br
+2 4625 1 s a, k u, r a br
+3 7160 1 y a, y o, i, n o, s o, r a, a, w a br
+4 11975 1 m i, w a, t a, s u, k a, g i, i, r i br
+5 16675 1 k a, s u, m i, k a, k u, m o, o, k a br
+6 21590 1 n i, o, i, z o, i, z u, u, r u br
+7 26380 1 i, z a, y a br
+8 28780 1 i, z a, y a br
+9 31150 1 m i, n i, y u, u, k a, N
+10 36000 0 pau
