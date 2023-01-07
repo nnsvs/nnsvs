@@ -43,6 +43,15 @@ def get_note_frame_indices(binary_dict, numeric_dict, in_feats):
 
 
 def get_pitch_index(binary_dict, numeric_dict):
+    """Get pitch index from binary and numeric feature dictionaries
+
+    Args:
+        binary_dict (dict): Dictionary of binary features
+        numeric_dict (dict): Dictionary of numeric features
+
+    Returns:
+        int: Pitch index
+    """
     idx = 0
     pitch_idx = len(binary_dict)
     while idx < len(numeric_dict):
@@ -54,6 +63,15 @@ def get_pitch_index(binary_dict, numeric_dict):
 
 
 def get_pitch_indices(binary_dict, numeric_dict):
+    """Get pitch indices from binary and numeric feature dictionaries
+
+    Args:
+        binary_dict (dict): Dictionary of binary features
+        numeric_dict (dict): Dictionary of numeric features
+
+    Returns:
+        list: Pitch indices
+    """
     idx = 0
     pitch_idx = len(binary_dict)
     assert np.any(
@@ -72,6 +90,14 @@ def get_pitch_indices(binary_dict, numeric_dict):
 
 
 def get_note_indices(labels):
+    """Get note start indices from HTS labels
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+    Returns:
+        list: Note start indices
+    """
     note_indices = [0]
     last_start_time = labels.start_times[0]
     for idx in range(1, len(labels)):
