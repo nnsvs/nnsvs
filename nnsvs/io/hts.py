@@ -1,5 +1,26 @@
+from copy import deepcopy
+
 import numpy as np
 from nnmnkwii.io import hts
+
+
+def full_to_mono(labels):
+    """Convert full-context labels to mono labels
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+    Returns:
+        nnmnkwii.io.hts.HTSLabelFile: Mono HTS labels
+    """
+    is_full_context = "@" in labels.contexts[0]
+    if not is_full_context:
+        return labels
+
+    mono_labels = deepcopy(labels)
+    mono_labels.contexts = [c.split("-")[1].split("+")[0] for c in labels.contexts]
+
+    return mono_labels
 
 
 def get_note_frame_indices(binary_dict, numeric_dict, in_feats):
@@ -76,6 +97,15 @@ def merge_sil(labels):
         else:
             f.append(labels[i], strict=False)
     return f
+
+
+def _is_br(label):
+    is_full_context = "@" in label
+    if is_full_context:
+        is_br = "-br" in label
+    else:
+        is_br = label == "br"
+    return is_br
 
 
 def _is_silence(label):
@@ -190,3 +220,130 @@ def segment_labels(
         segments.append(seg)
 
     return segments
+
+
+def _label2phrases_neutrino(labels):
+    """Segment HTS labels to phrases (NETRINO compatible)
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+    Returns:
+        list: phrases (i.e., list of HTS labels)
+    """
+    start_indices = []
+    end_indices = []
+
+    started = True
+    start_indices.append(0)
+    is_sil_phrase = _is_silence(labels.contexts[0])
+
+    for idx, (_, _, label) in enumerate(labels):
+        # sil or pau shouldn't be placed right before the br
+        if idx > 0 and _is_br(label):
+            assert not _is_silence(labels.contexts[idx - 1])
+
+        # we are in the same phrase group
+        if started:
+            if is_sil_phrase:
+                if _is_silence(label):
+                    continue
+            else:
+                if not _is_silence(label) and (
+                    idx > 0 and not _is_br(labels.contexts[idx - 1])
+                ):
+                    continue
+
+        # reached the end of phrase
+        end_indices.append(idx)
+        started = False
+
+        # start new phrase
+        if not started:
+            started = True
+            is_sil_phrase = _is_silence(label)
+            start_indices.append(idx)
+
+    # handle last phrase
+    if len(end_indices) == len(start_indices) - 1:
+        end_indices.append(len(labels))
+
+    # Make a list of HTS labels
+    phrases = [labels[s:e] for (s, e) in zip(start_indices, end_indices)]
+    return phrases, start_indices, end_indices
+
+
+def fix_label_offset_to_zero(labels):
+    """Fix label offset to zero
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+    Returns:
+        nnmnkwii.io.hts.HTSLabelFile: HTS labels with fixed offset
+    """
+    offset = labels.start_times[0]
+    if offset > 0:
+        labels.start_times = np.asarray(labels.start_times) - offset
+        labels.end_times = np.asarray(labels.end_times) - offset
+    return labels
+
+
+def _label2phoneme_for_phrases(labels, s, e, note_indices=None):
+    if s == e:
+        r = labels.contexts[s]
+    elif note_indices is None:
+        r = " ".join(labels[s:e].contexts)
+    else:
+        rs = []
+        for i in range(s, e):
+            if i not in [s, e] and i in note_indices:
+                rs.append(",")
+            rs.append(labels.contexts[i])
+        r = " ".join(rs).replace(" ,", ",")
+    return r
+
+
+def label2phrases_str(labels, note_indices):
+    """Convert labels to NEUTRINO-format phraselist
+
+    Note that timing labels should be used as input to get the same
+    output as the NEUTRINO.
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+        note_indices (list): indices of notes. This is needed to
+            insert ``,`` at note boundaries.
+
+    Returns:
+        str: NEUTRINO-format phraselist
+    """
+    _, start_indices, end_indices = _label2phrases_neutrino(labels)
+
+    out = ""
+    for idx in range(len(end_indices)):
+        s, e = start_indices[idx], end_indices[idx]
+        start_time = int(labels.start_times[s] // 10000)
+        ph = _label2phoneme_for_phrases(labels, s, e, note_indices)
+        is_voiced_phrase = not ("sil" in ph or "pau" in ph)
+        out += f"{idx} {start_time} {int(is_voiced_phrase)} {ph}\n"
+    return out
+
+
+def label2phrases(labels, fix_offset=True):
+    """Convert labels to phrases
+
+    The definision of a phrase is the same as NEUTRINO.
+    See https://studio-neutrino.com/332/ for details.
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+        fix_offset (bool): If True, fix label offset to zero
+
+    Returns:
+        list: phrases (i.e., list of HTS labels)
+    """
+    phrases = _label2phrases_neutrino(labels)[0]
+    if fix_offset:
+        phrases = [fix_label_offset_to_zero(p) for p in phrases]
+    return phrases
