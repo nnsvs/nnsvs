@@ -325,6 +325,22 @@ Acoustic model: {acoustic_str}
         )
         return duration_modified_labels
 
+    def predict_timing(self, labels):
+        """Predict timing from HTS labels
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels.
+
+        Returns:
+            nnmnkwii.io.hts.HTSLabelFile: duration modified HTS labels.
+        """
+        lag = self.predict_timelag(labels)
+        durations = self.predict_duration(labels)
+        duration_modified_full_labels = self.postprocess_duration(
+            labels, durations, lag
+        )
+        return duration_modified_full_labels
+
     def predict_acoustic(self, duration_modified_labels, f0_shift_in_cent=0):
         """Predict acoustic features from HTS labels
 
@@ -367,6 +383,7 @@ Acoustic model: {acoustic_str}
         trajectory_smoothing_cutoff_f0=20,
         vuv_threshold=0.5,
         force_fix_vuv=False,
+        fill_silence_to_rest=False,
         f0_shift_in_cent=0,
     ):
         """Post-process acoustic features
@@ -391,8 +408,9 @@ Acoustic model: {acoustic_str}
             trajectory_smoothing_cutoff_f0 (float): Cutoff frequency for trajectory
                 smoothing of f0.
             vuv_threshold (float): V/UV threshold.
-            f0_shift_in_cent (float): F0 shift in cent.
             force_fix_vuv (bool): Force fix V/UV.
+            fill_silence_to_rest (bool): Fill silence to rest frames.
+            f0_shift_in_cent (float): F0 shift in cent.
 
         Returns:
             tuple: Post-processed multi-stream acoustic features.
@@ -420,6 +438,7 @@ Acoustic model: {acoustic_str}
             f0_shift_in_cent=f0_shift_in_cent,
             vibrato_scale=1.0,  # only valid for Sinsy-like models
             force_fix_vuv=force_fix_vuv,
+            fill_silence_to_rest=fill_silence_to_rest,
         )
         return multistream_features
 
@@ -447,8 +466,6 @@ Acoustic model: {acoustic_str}
     def postprocess_waveform(
         self,
         wav,
-        duration_modified_labels=None,
-        adjust_sil_gain=False,
         dtype=np.int16,
         peak_norm=False,
         loudness_norm=False,
@@ -457,11 +474,6 @@ Acoustic model: {acoustic_str}
         wav = postprocess_waveform(
             wav=wav,
             sample_rate=self.config.sample_rate,
-            frame_period=self.config.frame_period,
-            binary_dict=self.binary_dict,
-            numeric_dict=self.numeric_dict,
-            duration_modified_labels=duration_modified_labels,
-            adjust_sil_gain=adjust_sil_gain,
             dtype=dtype,
             peak_norm=peak_norm,
             loudness_norm=loudness_norm,
@@ -481,7 +493,7 @@ Acoustic model: {acoustic_str}
         pre_f0_shift_in_cent=0,
         post_f0_shift_in_cent=0,
         force_fix_vuv=False,
-        adjust_sil_gain=False,
+        fill_silence_to_rest=False,
         dtype=np.int16,
         peak_norm=False,
         loudness_norm=False,
@@ -535,9 +547,7 @@ WORLD is only supported for waveform generation"""
                     )
 
         # Predict timinigs
-        lag = self.predict_timelag(labels)
-        durations = self.predict_duration(labels)
-        duration_modified_labels = self.postprocess_duration(labels, durations, lag)
+        duration_modified_labels = self.predict_timing(labels)
 
         # NOTE: segmented synthesis is not well tested. There MUST be better ways
         # to do this.
@@ -588,6 +598,7 @@ WORLD is only supported for waveform generation"""
                 trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
                 trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
                 force_fix_vuv=force_fix_vuv,
+                fill_silence_to_rest=fill_silence_to_rest,
                 f0_shift_in_cent=post_f0_shift_in_cent,
             )
 
@@ -606,8 +617,6 @@ WORLD is only supported for waveform generation"""
         # Post-processing for the output waveform
         wav = self.postprocess_waveform(
             wav,
-            duration_modified_labels=duration_modified_labels,
-            adjust_sil_gain=adjust_sil_gain,
             dtype=dtype,
             peak_norm=peak_norm,
             loudness_norm=loudness_norm,

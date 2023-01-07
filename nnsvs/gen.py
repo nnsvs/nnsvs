@@ -662,6 +662,7 @@ def postprocess_acoustic(
     f0_shift_in_cent=0,
     vibrato_scale=1.0,
     force_fix_vuv=False,
+    fill_silence_to_rest=False,
 ):
     """Post-process acoustic features
 
@@ -697,6 +698,7 @@ def postprocess_acoustic(
         f0_shift_in_cent (float): F0 shift in cents.
         vibrato_scale (float): Vibrato scale.
         force_fix_vuv (bool): If True, force to fix V/UV.
+        fill_silence_to_rest (bool): Fill silence to rest frames.
 
     Returns:
         tuple: Post-processed acoustic features.
@@ -710,21 +712,20 @@ def postprocess_acoustic(
         acoustic_config.num_windows,
     )
 
+    linguistic_features = fe.linguistic_features(
+        duration_modified_labels,
+        binary_dict,
+        numeric_dict,
+        add_frame_features=True,
+        frame_shift=hts_frame_shift,
+    )
     # GV post-filter
     if post_filter_type == "gv" or (
         post_filter_type == "nnsvs" and feature_type == "world"
     ):
-        linguistic_features = fe.linguistic_features(
-            duration_modified_labels,
-            binary_dict,
-            numeric_dict,
-            add_frame_features=True,
-            frame_shift=hts_frame_shift,
-        )
         note_frame_indices = get_note_frame_indices(
             binary_dict, numeric_dict, linguistic_features
         )
-
         if feature_type == "world":
             offset = 2
         elif feature_type == "melf0":
@@ -803,6 +804,15 @@ def postprocess_acoustic(
         mel, lf0, vuv = split_streams(acoustic_features, [80, 1, 1])
     else:
         raise ValueError(f"Unknown feature type: {feature_type}")
+
+    if fill_silence_to_rest:
+        mask = _get_nonrest_frame_soft_mask(
+            binary_dict, numeric_dict, linguistic_features
+        )
+        if feature_type == "world":
+            mgc, lf0, vuv, bap = _fill_silence_to_world_params(mgc, lf0, vuv, bap, mask)
+        elif feature_type == "melf0":
+            mel, lf0, vuv = _fill_silence_to_mel_params(mel, lf0, vuv, mask)
 
     if f0_shift_in_cent != 0:
         lf0_offset = f0_shift_in_cent * np.log(2) / 1200
@@ -1016,11 +1026,6 @@ def predict_waveform(
 def postprocess_waveform(
     wav,
     sample_rate,
-    frame_period,
-    binary_dict,
-    numeric_dict,
-    duration_modified_labels=None,
-    adjust_sil_gain=False,
     dtype=np.int16,
     peak_norm=False,
     loudness_norm=False,
@@ -1031,11 +1036,6 @@ def postprocess_waveform(
     Args:
         wav (ndarray): The input waveform
         sample_rate (int): The sampling rate
-        frame_period (float): The frame period in milliseconds
-        binary_dict (dict): Dictionary of binary features
-        numeric_dict (dict): Dictionary of numeric features
-        duration_modified_labels (nnmnkwii.io.hts.HTSLabelFile): Optional HTS label file
-        adjust_sil_gain (bool): Whether to adjust gain of silence regions
         dtype (np.dtype): The dtype of output waveform. Default is np.int16.
         peak_norm (bool): Whether to perform peak normalization
         loudness_norm (bool): Whether to perform loudness normalization
@@ -1045,23 +1045,6 @@ def postprocess_waveform(
         ndarray: The post-processed waveform
     """
     wav = bandpass_filter(wav, sample_rate)
-
-    if adjust_sil_gain:
-        if duration_modified_labels is None:
-            raise ValueError(
-                "duration_modified_labels must be provided to adjust silence gain"
-            )
-        # NOTE: uses linguistic features to find silence regions
-        # TODO: maybe better to use both linguist ic/acoustic features
-        hts_frame_shift = int(frame_period * 1e4)
-        linguistic_features = fe.linguistic_features(
-            duration_modified_labels,
-            binary_dict,
-            numeric_dict,
-            add_frame_features=True,
-            frame_shift=hts_frame_shift,
-        )
-        wav = decrease_sil_gain(wav, binary_dict, numeric_dict, linguistic_features)
 
     # Peak normalize audio to 0 dB
     if peak_norm:
@@ -1097,33 +1080,34 @@ def postprocess_waveform(
     return wav
 
 
-def decrease_sil_gain(
-    wav, binary_dict, numeric_dict, linguistic_features, win_length=100
+def _get_nonrest_frame_soft_mask(
+    binary_dict,
+    numeric_dict,
+    linguistic_features,
+    win_length=200,
+    duration_threshold=1.0,
 ):
-    """Decrease the gain of silence regions
-
-    Note that this function has a side effect that it may decrease the gain
-    of `non-silence` regions in the waveform domain. For example, there
-    could be some sound (e.g. breath) at the beginning or ending of the rest
-    note and its gain may be decreased by this function.
+    """Get soft max re
 
     Args:
-        wav (ndarray): waveform
-        binary_dict (dict): dictionary of binary features
-        numeric_dict (dict): dictionary of numeric features
-        linguistic_features (ndarray): frame-level input features
-        win_length (int): window length for smoothing.
+        binary_dict (dict): Dictionary for binary features
+        numeric_dict (dict): Dictionary for numeric features
+        linguistic_features (ndarray): Linguistic features
+        win_length (int): Window length
 
     Returns:
-        ndarray: waveform
+        ndarray: Soft mask for voiced frames.
+            1 for voiced frames and 0 for otherwise.
     """
+    mask = np.ones(len(linguistic_features))
+
     in_sil_indices = []
     for k, v in binary_dict.items():
         name, _ = v
         if "C-Phone_sil" in name or "C-Phone_pau" in name:
             in_sil_indices.append(k)
     if len(in_sil_indices) == 0:
-        return wav
+        return mask
 
     in_note_dur_idx = None
     for k, v in numeric_dict.items():
@@ -1132,30 +1116,55 @@ def decrease_sil_gain(
             in_note_dur_idx = k
             break
 
-    soft_mask = np.ones(len(linguistic_features))
+    dur = linguistic_features[:, len(binary_dict) + in_note_dur_idx]
+    dur_in_sec = dur * 0.01
     for in_sil_idx in in_sil_indices:
-        # Decrease gain by 1e-3 for every sil regions
-        # NOTE: not optimized and can be turned for better performance
-        if in_note_dur_idx is not None:
-            dur = linguistic_features[:, len(binary_dict) + in_note_dur_idx]
-            # Only mask out segmets over 1.0 second such as long pause
-            # 0.01 * 100 = 1s
-            soft_mask[(linguistic_features[:, in_sil_idx] > 0) & (dur > 100)] = 1e-3
-        else:
-            soft_mask[linguistic_features[:, in_sil_idx] > 0] = 1e-3
+        # Only mask out sil/pau segments over ${silence_threshold} sec. such as long pause
+        mask[
+            (linguistic_features[:, in_sil_idx] > 0) & (dur_in_sec > duration_threshold)
+        ] = 0
 
-    hop_size = len(wav) // len(linguistic_features)
-    # 5ms hop size x 100 = 500 ms
-    win_length = 100
-    soft_mask = scipy.signal.convolve(
-        soft_mask, np.ones(win_length) / win_length, mode="same"
-    )
-    soft_mask_up = np.interp(
-        np.arange(len(wav)) / hop_size, np.arange(len(soft_mask)), soft_mask
-    )
-    wav = wav * soft_mask_up
+    # make a smoothed mask with ${win_length} * 5ms window length
+    mask = scipy.signal.convolve(mask, np.ones(win_length) / win_length, mode="same")
 
-    return wav
+    # make sure that we don't mask out frames where notes are assigned
+    pitch_idx = get_pitch_index(binary_dict, numeric_dict)
+    score_f0 = linguistic_features[:, pitch_idx]
+    mask[score_f0 > 0] = 1.0
+
+    return mask
+
+
+def _fill_silence_to_world_params(mgc, lf0, vuv, bap, mask):
+    mgc_sil = np.zeros((1, mgc.shape[1]))
+
+    # NOTE: mgc_sil is a VERY ROUGH estimate of mgc for silence regions
+    # the speech signal is assumed to be in [-1, 1].
+    #   sr = 48000
+    #   noise = np.random.randn(sr * 10) * 1e-5
+    #   f0, timeaxis = pyworld.harvest(noise, sr, frame_period=5)
+    #   f0[:] = 0
+    #   spectrogram = pyworld.cheaptrick(noise, f0, timeaxis, sr)
+    #   mgc = pyworld.code_spectral_envelope(spectrogram, sr, 60)
+    #   print(mgc.mean(0))
+    mgc_sil[0, 0] = -23.3
+    mgc_sil[0, 1] = 0.0679
+    mgc_sil[0, 2] = 0.00640
+    mgc_sil[0, 3:] = 1e-3
+    bap_sil = np.zeros_like(bap) + 1e-11
+
+    mgc = mgc * mask + (1 - mask) * mgc_sil
+    bap = bap * mask + (1 - mask) * bap_sil
+
+    return mgc, lf0, vuv, bap
+
+
+def _fill_silence_to_mel_params(mel, lf0, vuv, mask):
+    # NOTE: -5.5 is also a very rough estimate of log-melspectrogram
+    # for silence regions
+    mel_sil = np.zeros((1, mel.shape[1])) - 5.5
+    mel = mel * mask + (1 - mask) * mel_sil
+    return mel, lf0, vuv
 
 
 def correct_vuv_by_phone(vuv, binary_dict, linguistic_features):
