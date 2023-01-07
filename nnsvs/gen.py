@@ -855,6 +855,7 @@ def postprocess_acoustic(
         return mel, lf0, vuv
 
 
+@torch.no_grad()
 def predict_waveform(
     device,
     multistream_features,
