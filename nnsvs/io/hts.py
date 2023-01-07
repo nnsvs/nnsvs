@@ -154,6 +154,7 @@ def segment_labels(
     end_indices = []
     si = 0
 
+    done_last_label = False
     for idx, (s, e, label) in enumerate(labels):
         d = (e - s) * 1e-7
         is_silence = _is_silence(label)
@@ -190,11 +191,12 @@ def segment_labels(
         else:
             if len(seg) == 0:
                 si = idx
+            if idx == len(labels) - 1:
+                done_last_label = True
             seg.append((s, e, label), strict)
 
     if len(seg) > 0:
         seg_d = compute_nosil_duration(seg)
-
         # If the last segment is short, combine with the previous segment.
         if seg_d < min_duration:
             end_indices[-1] = si + len(seg) - 1
@@ -203,11 +205,12 @@ def segment_labels(
             end_indices.append(si + len(seg) - 1)
 
         # Handle last label
-        s, e, label = labels[-1]
-        d = (e - s) * 1e-7
-        if _is_silence(label) and d > silence_threshold:
-            start_indices.append(end_indices[-1])
-            end_indices.append(end_indices[-1])
+        if not done_last_label:
+            s, e, label = labels[-1]
+            d = (e - s) * 1e-7
+            if _is_silence(label) and d > silence_threshold:
+                start_indices.append(end_indices[-1])
+                end_indices.append(end_indices[-1])
 
     segments = []
     for s, e in zip(start_indices, end_indices):
