@@ -89,6 +89,7 @@ class SPSVS(object):
         assert model_dir / "config.yaml"
         self.config = OmegaConf.load(model_dir / "config.yaml")
         self.feature_type = self.config.get("feature_type", "world")
+        self.sample_rate = self.config.get("sample_rate", 48000)
 
         # qst
         self.binary_dict, self.numeric_dict = hts.load_question_set(
@@ -209,7 +210,7 @@ class SPSVS(object):
             indent=4,
         )
 
-        repr = f"""Statistical parametric SVS (sampling rate: {self.config.sample_rate})
+        repr = f"""Statistical parametric SVS (sampling rate: {self.sample_rate})
 Time-lag model: {timelag_str}
 Duration model: {duration_str}
 Acoustic model: {acoustic_str}
@@ -426,7 +427,7 @@ Acoustic model: {acoustic_str}
             postfilter_model=self.postfilter_model,
             postfilter_config=self.postfilter_config,
             postfilter_out_scaler=self.postfilter_out_scaler,
-            sample_rate=self.config.sample_rate,
+            sample_rate=self.sample_rate,
             frame_period=self.config.frame_period,
             relative_f0=self.config.acoustic.relative_f0,
             feature_type=self.feature_type,
@@ -454,7 +455,7 @@ Acoustic model: {acoustic_str}
             vocoder=self.vocoder,
             vocoder_config=self.vocoder_config,
             vocoder_in_scaler=self.vocoder_in_scaler,
-            sample_rate=self.config.sample_rate,
+            sample_rate=self.sample_rate,
             frame_period=self.config.frame_period,
             use_world_codec=self.config.get("use_world_codec", False),
             feature_type=self.feature_type,
@@ -473,7 +474,7 @@ Acoustic model: {acoustic_str}
     ):
         wav = postprocess_waveform(
             wav=wav,
-            sample_rate=self.config.sample_rate,
+            sample_rate=self.sample_rate,
             dtype=dtype,
             peak_norm=peak_norm,
             loudness_norm=loudness_norm,
@@ -623,4 +624,4 @@ WORLD is only supported for waveform generation"""
             target_loudness=target_loudness,
         )
 
-        return wav, self.config.sample_rate
+        return wav, self.sample_rate
