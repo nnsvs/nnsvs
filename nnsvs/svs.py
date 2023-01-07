@@ -449,6 +449,37 @@ Acoustic model: {acoustic_str}
         vocoder_type="world",
         vuv_threshold=0.5,
     ):
+        """Predict waveform from acoustic features
+
+        Args:
+            multistream_features (tuple): Multi-stream acoustic features.
+            vocoder_type (str): Vocoder type. One of ``world``, ``pwg`` or ``usfgan``.
+                If ``auto`` is specified, the vocoder is automatically selected.
+            vuv_threshold (float): V/UV threshold.
+
+        Returns:
+            ndarray: Predicted waveform.
+        """
+
+        if vocoder_type in ["pwg", "usfgan"] and self.vocoder is None:
+            raise ValueError(
+                """Pre-trained vocodr model is not found.
+WORLD is only supported for waveform generation"""
+            )
+
+        if vocoder_type == "auto":
+            if self.feature_type == "melf0":
+                assert self.vocoder is not None
+                vocoder_type = (
+                    "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
+                )
+            elif self.feature_type == "world":
+                if self.vocoder is None:
+                    vocoder_type = "world"
+                else:
+                    vocoder_type = (
+                        "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
+                    )
         wav = predict_waveform(
             device=self.device,
             multistream_features=multistream_features,
@@ -505,8 +536,8 @@ Acoustic model: {acoustic_str}
 
         Args:
             labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
-            vocoder_type (str): Vocoder type. ``world``, ``pwg``, ``usfgan``, and ``auto``
-                is supported.
+            vocoder_type (str): Vocoder type. One of ``world``, ``pwg`` or ``usfgan``.
+                If ``auto`` is specified, the vocoder is automatically selected.
             post_filter_type (str): Post-filter type. ``merlin``, ``gv`` or ``nnsvs``
                 is supported.
             trajectory_smoothing (bool): Whether to smooth acoustic feature trajectory.
@@ -526,26 +557,6 @@ Acoustic model: {acoustic_str}
             raise ValueError(f"Unknown vocoder type: {vocoder_type}")
         if post_filter_type not in ["merlin", "nnsvs", "gv", "none"]:
             raise ValueError(f"Unknown post-filter type: {post_filter_type}")
-
-        if vocoder_type == "pwg" and self.vocoder is None:
-            raise ValueError(
-                """Pre-trained vocodr model is not found.
-WORLD is only supported for waveform generation"""
-            )
-
-        if vocoder_type == "auto":
-            if self.feature_type == "melf0":
-                assert self.vocoder is not None
-                vocoder_type = (
-                    "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
-                )
-            elif self.feature_type == "world":
-                if self.vocoder is None:
-                    vocoder_type = "world"
-                else:
-                    vocoder_type = (
-                        "usfgan" if isinstance(self.vocoder, USFGANWrapper) else "pwg"
-                    )
 
         # Predict timinigs
         duration_modified_labels = self.predict_timing(labels)
