@@ -415,7 +415,7 @@ def postprocess_duration(labels, pred_durations, lag, frame_period=5):
 
 
 @torch.no_grad()
-def predict_timings(
+def predict_timing(
     device,
     labels,
     binary_dict,
