@@ -654,7 +654,7 @@ WORLD is only supported for waveform generation"""
 
 
 class NEUTRINO(SPSVS):
-    """NEUTRINO-like interface for singig voice synthesis
+    """NEUTRINO-like interface for singing voice synthesis
 
     Args:
         model_dir (str): model directory
