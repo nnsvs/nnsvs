@@ -203,10 +203,10 @@ def main():
     start_time = time.time()
     logger = getLogger(verbose=100, name="neutrino")
     if args.use_api:
-        logger.info(f"Using webapi: {args.url}")
+        logger.info(f"Using webapi: {args.url} for infernce")
         f0, mgc, bap = run_api(args, logger)
     else:
-        logger.info("Using local machine")
+        logger.info("Using local machine for inference")
         f0, mgc, bap = run_local(args, logger)
 
     # Save to file

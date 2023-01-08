@@ -126,10 +126,10 @@ def main():
     start_time = time.time()
     logger = getLogger(verbose=100, name="neutrino")
     if args.use_api:
-        logger.info(f"Using webapi: {args.url}")
+        logger.info(f"Using webapi: {args.url} for inference")
         wav, sr = run_api(args, logger)
     else:
-        logger.info("Using local machine")
+        logger.info("Using local machine for inference")
         wav, sr = run_local(args, logger)
 
     wavfile.write(args.output_wav, sr, wav)
