@@ -861,6 +861,13 @@ class NEUTRINO(SPSVS):
         assert len(multistream_features) == 4
         mgc, lf0, vuv, bap = multistream_features
 
+        if not self.config.get("use_world_codec", False):
+            self.logger.warn(
+                """use_world_codec is not set.
+ WORLD (NEUTRINO edition) does not work with the output of this model.
+            """
+            )
+
         # Convert lf0 to f0
         f0 = np.exp(lf0.copy())
         f0[vuv < vuv_threshold] = 0
