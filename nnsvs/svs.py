@@ -274,6 +274,7 @@ Acoustic model: {acoustic_str}
         Args:
             device (str): cpu or cuda.
         """
+        self.logger.info(f"Set device to {device}")
         self.device = device
         self.timelag_model.to(device)
         self.duration_model.to(device)
