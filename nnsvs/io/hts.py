@@ -278,8 +278,10 @@ def _label2phrases_neutrino(labels):
                 if _is_silence(label):
                     continue
             else:
-                if not _is_silence(label) and (
-                    idx > 0 and not _is_br(labels.contexts[idx - 1])
+                if (
+                    not _is_silence(label)
+                    and (idx > 0 and not _is_br(labels.contexts[idx - 1]))
+                    or (idx == 0 and not _is_silence(label))
                 ):
                     continue
 
