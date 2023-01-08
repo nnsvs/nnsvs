@@ -653,6 +653,14 @@ WORLD is only supported for waveform generation"""
         return wav, self.sample_rate
 
 
+def _warn_if_model_is_old(logger):
+    logger.warning(
+        """It is likely you have trained you model with old NNSVS.
+It is recommended to retrain your model with the latest version of NNSVS.
+"""
+    )
+
+
 class NEUTRINO(SPSVS):
     """NEUTRINO-like interface for singing voice synthesis
 
@@ -671,6 +679,7 @@ class NEUTRINO(SPSVS):
             self.logger.warning(
                 "WORLD coded is required to output NEUTRIN-compatible features"
             )
+            _warn_if_model_is_old(self.logger)
 
     def musicxml2label(self, input_file):
         """Convert musicXML to full and mono HTS labels
@@ -793,6 +802,11 @@ class NEUTRINO(SPSVS):
         # Convert lf0 to f0
         f0 = np.exp(lf0.copy())
         f0[vuv < vuv_threshold] = 0
+
+        # NOTE: Neutrino-compatible MGC should have negative values at the 0-th coefficient.
+        if mgc[:, 0].mean() > 0:
+            self.logger.warning("MGC 0-th coefficient is positive.")
+            _warn_if_model_is_old(self.logger)
 
         # Make sure to have correct array layout and dtype
         # These parameters can be used to generate waveform by WORLD
