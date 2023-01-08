@@ -4,6 +4,7 @@ NOTE: validation is not implemented. Expect 500 errors for unexpected inputs.
 """
 
 import tarfile
+import tempfile
 from os import listdir, rmdir
 from pathlib import Path
 from shutil import move
@@ -18,16 +19,17 @@ from nnsvs.svs import NEUTRINO
 from omegaconf import OmegaConf
 from scipy.io import wavfile
 from starlette.responses import StreamingResponse
+from utaupy.utils import ust2hts
 
 SCORE_DIR = Path("./score")
-MONO_LAB_DIR = SCORE_DIR / "label" / "mono"
 FULL_LAB_DIR = SCORE_DIR / "label" / "full"
+UST_DIR = SCORE_DIR / "ust"
 
 TIMING_LAB_DIR = SCORE_DIR / "label" / "timing"
 OUTPUT_DIR = Path("./output")
 MODEL_DIR = Path("./model")
 
-for d in [SCORE_DIR, MONO_LAB_DIR, FULL_LAB_DIR, TIMING_LAB_DIR, OUTPUT_DIR, MODEL_DIR]:
+for d in [SCORE_DIR, FULL_LAB_DIR, UST_DIR, TIMING_LAB_DIR, OUTPUT_DIR, MODEL_DIR]:
     d.mkdir(exist_ok=True, parents=True)
 
 app = FastAPI()
@@ -96,10 +98,28 @@ def create_model(model: UploadFile, model_id: str):
 
 
 @app.post("/score/full/upload")
-async def upload(full_lab: UploadFile):
+async def upload_full_lab(full_lab: UploadFile):
     with open(f"{FULL_LAB_DIR}/{full_lab.filename}", "wb") as f:
         f.write(full_lab.file.read())
     return {"filename": full_lab.filename}
+
+
+@app.post("/score/ust/upload")
+async def upload_ust(ust: UploadFile, model_id: str):
+    ust_path = UST_DIR / ust.filename
+    with open(ust_path, "wb") as f:
+        f.write(ust.file.read())
+
+    model_dir = MODEL_DIR / model_id
+    table_path = model_dir / "kana2phonemes.table"
+    assert table_path.exists()
+
+    full_lab = FULL_LAB_DIR / ust.filename.replace(".ust", ".lab")
+    ust2hts(
+        str(ust_path), full_lab, table_path, strict_sinsy_style=False, as_mono=False
+    )
+
+    return {"filename": ust.filename}
 
 
 @app.get("/run/timing")

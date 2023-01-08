@@ -19,6 +19,7 @@ usage:
 """
 import argparse
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -26,15 +27,16 @@ import numpy as np
 import requests
 import torch
 from nnmnkwii.io import hts
-from nnsvs.io.hts import full_to_mono
+from nnsvs.io.hts import full_to_mono, merge_sil
 from nnsvs.logger import getLogger
+from utaupy.utils import ust2hts
 
 
 def get_parser():
     parser = argparse.ArgumentParser(
         description="Pretend as if the script is NEUTRINO",
     )
-    parser.add_argument("full_lab", type=str, help="Full context labels")
+    parser.add_argument("input_file", type=str, help="Input file (.ust or .lab)")
     parser.add_argument("timing_lab", type=str, help="Path of timing labels")
     parser.add_argument("output_f0", type=str, help="Path of output F0")
     parser.add_argument("output_mgc", type=str, help="Path of output MGC")
@@ -61,9 +63,27 @@ def run_local(args, _):
         model_dir, device="cuda" if torch.cuda.is_available() else "cpu", verbose=100
     )
 
-    full_lab = Path(args.full_lab)
-    assert full_lab.exists()
-    full_labels = hts.load(full_lab)
+    input_file = Path(args.input_file)
+    assert input_file.exists()
+    if input_file.suffix == ".ust":
+        table_path = model_dir / "kana2phonemes.table"
+        assert table_path.exists()
+        with tempfile.NamedTemporaryFile(suffix=".lab") as tf:
+            ust2hts(
+                str(input_file),
+                tf.name,
+                table_path,
+                strict_sinsy_style=False,
+                as_mono=False,
+            )
+            full_labels = hts.HTSLabelFile()
+            with open(tf.name) as f:
+                for label in f.readlines():
+                    full_labels.append(label.split(), strict=False)
+    elif input_file.suffix == ".lab":
+        full_labels = hts.load(input_file)
+    else:
+        raise ValueError(f"Not supported file type: {input_file.suffix}")
 
     timing_lab = Path(args.timing_lab)
     if not timing_lab.exists():
@@ -90,24 +110,35 @@ def run_local(args, _):
 
 
 def run_api(args, logger):
-    full_lab = Path(args.full_lab)
+    input_file = Path(args.input_file)
     url = args.url[:-1] if args.url[-1] == "/" else args.url
-    assert full_lab.exists()
 
-    name = full_lab.stem
+    name = input_file.stem
     # pretend as if the model_dir is model_id
     model_id = args.model_dir
 
-    # Upload full-context labels
-    logger.info(f"Uploading full_lab: {full_lab}")
-    res = requests.post(
-        url + "/score/full/upload",
-        files={
-            "full_lab": open(full_lab, "rb"),
-        },
-    )
+    # Upload full-context labels or UST
+    if input_file.suffix == ".ust":
+        logger.info(f"Uploading UST: {input_file}")
+        res = requests.post(
+            url + "/score/ust/upload",
+            params={
+                "model_id": model_id,
+            },
+            files={
+                "ust": open(input_file, "rb"),
+            },
+        )
+    elif input_file.suffix == ".lab":
+        logger.info(f"Uploading full_lab: {input_file}")
+        res = requests.post(
+            url + "/score/full/upload",
+            files={
+                "full_lab": open(input_file, "rb"),
+            },
+        )
     if res.status_code != 200:
-        raise RuntimeError(f"Failed to upload full_lab: {res.status_code}")
+        raise RuntimeError(f"Failed to upload file: {res.status_code}")
 
     # Predict timing
     logger.info("Predicting timing")
