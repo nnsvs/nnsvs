@@ -1,4 +1,5 @@
 import json
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -199,6 +200,9 @@ class SPSVS(object):
                 model_dir / "vocoder_model.pth", device, self.acoustic_config
             )
         else:
+            self.logger.info(
+                "No trained vocoder model found. WORLD vocoder will be used."
+            )
             self.vocoder = None
             self.vocoder_config = None
             self.vocoder_in_scaler = None
@@ -286,6 +290,7 @@ Acoustic model: {acoustic_str}
         Returns:
             ndarray: Predicted time-lag.
         """
+        start_time = time.time()
         lag = predict_timelag(
             self.device,
             labels,
@@ -302,6 +307,9 @@ Acoustic model: {acoustic_str}
             force_clip_input_features=self.config.timelag.force_clip_input_features,
             frame_period=self.config.frame_period,
         )
+        self.logger.info(
+            f"Elapsed time for time-lag prediction: {time.time() - start_time:.3f} sec"
+        )
         return lag
 
     def predict_duration(self, labels):
@@ -313,6 +321,7 @@ Acoustic model: {acoustic_str}
         Returns:
             ndarray: Predicted durations.
         """
+        start_time = time.time()
         durations = predict_duration(
             self.device,
             labels,
@@ -327,6 +336,9 @@ Acoustic model: {acoustic_str}
             force_clip_input_features=self.config.duration.force_clip_input_features,
             frame_period=self.config.frame_period,
         )
+        self.logger.info(
+            f"Elapsed time for duration prediction: {time.time() - start_time:.3f} sec"
+        )
         return durations
 
     def postprocess_duration(self, labels, pred_durations, lag):
@@ -340,8 +352,12 @@ Acoustic model: {acoustic_str}
         Returns:
             nnmnkwii.io.hts.HTSLabelFile: duration modified HTS labels.
         """
+        start_time = time.time()
         duration_modified_labels = postprocess_duration(
             labels, pred_durations, lag, frame_period=self.config.frame_period
+        )
+        self.logger.info(
+            f"Elapsed time for duration post-processing: {time.time() - start_time:.3f} sec"
         )
         return duration_modified_labels
 
@@ -371,6 +387,7 @@ Acoustic model: {acoustic_str}
         Returns:
             ndarray: Predicted acoustic features.
         """
+        start_time = time.time()
         acoustic_features = predict_acoustic(
             device=self.device,
             labels=duration_modified_labels,
@@ -391,6 +408,14 @@ Acoustic model: {acoustic_str}
             frame_period=self.config.frame_period,
             f0_shift_in_cent=f0_shift_in_cent,
         )
+        self.logger.info(
+            f"Elapsed time for acoustic feature prediction: {time.time() - start_time:.3f} sec"
+        )
+        # log real-time factor (RT)
+        RT = (time.time() - start_time) / (
+            acoustic_features.shape[0] * self.config.frame_period / 1000
+        )
+        self.logger.info(f"Real-time factor for acoustic feature prediction: {RT:.3f}")
         return acoustic_features
 
     def postprocess_acoustic(
@@ -435,6 +460,7 @@ Acoustic model: {acoustic_str}
         Returns:
             tuple: Post-processed multi-stream acoustic features.
         """
+        start_time = time.time()
         multistream_features = postprocess_acoustic(
             device=self.device,
             duration_modified_labels=duration_modified_labels,
@@ -460,6 +486,9 @@ Acoustic model: {acoustic_str}
             force_fix_vuv=force_fix_vuv,
             fill_silence_to_rest=fill_silence_to_rest,
         )
+        self.logger.info(
+            f"Elapsed time for acoustic post-processing: {time.time() - start_time:.3f} sec"
+        )
         return multistream_features
 
     def predict_waveform(
@@ -479,7 +508,7 @@ Acoustic model: {acoustic_str}
         Returns:
             ndarray: Predicted waveform.
         """
-
+        start_time = time.time()
         if vocoder_type in ["pwg", "usfgan"] and self.vocoder is None:
             raise ValueError(
                 """Pre-trained vocodr model is not found.
@@ -512,6 +541,11 @@ WORLD is only supported for waveform generation"""
             vocoder_type=vocoder_type,
             vuv_threshold=vuv_threshold,
         )
+        self.logger.info(
+            f"Elapsed time for waveform generation: {time.time() - start_time:.3f} sec"
+        )
+        RT = (time.time() - start_time) / (len(wav) / self.sample_rate)
+        self.logger.info(f"Real-time factor for waveform generation: {RT:.3f}")
         return wav
 
     def postprocess_waveform(
@@ -522,6 +556,19 @@ WORLD is only supported for waveform generation"""
         loudness_norm=False,
         target_loudness=-20,
     ):
+        """Post-process waveform
+
+        Args:
+            wav (ndarray): Waveform.
+            dtype (dtype): Data type of waveform.
+            peak_norm (bool): Whether to apply peak normalization.
+            loudness_norm (bool): Whether to apply loudness normalization.
+            target_loudness (float): Target loudness in dB.
+
+        Returns:
+            ndarray: Post-processed waveform.
+        """
+        start_time = time.time()
         wav = postprocess_waveform(
             wav=wav,
             sample_rate=self.sample_rate,
@@ -529,6 +576,9 @@ WORLD is only supported for waveform generation"""
             peak_norm=peak_norm,
             loudness_norm=loudness_norm,
             target_loudness=target_loudness,
+        )
+        self.logger.info(
+            f"Elapsed time for waveform post-processing: {time.time() - start_time:.3f} sec"
         )
         return wav
 
@@ -576,6 +626,7 @@ WORLD is only supported for waveform generation"""
             target_loudness (float): Target loudness in dB.
             segmneted_synthesis (bool): Whether to use segmented synthesis.
         """
+        start_time = time.time()
         vocoder_type = vocoder_type.lower()
         if vocoder_type not in ["world", "pwg", "usfgan", "auto"]:
             raise ValueError(f"Unknown vocoder type: {vocoder_type}")
@@ -658,15 +709,16 @@ WORLD is only supported for waveform generation"""
             loudness_norm=loudness_norm,
             target_loudness=target_loudness,
         )
-
+        self.logger.info(f"Total time: {time.time() - start_time:.3f} sec")
+        RT = (time.time() - start_time) / (len(wav) / self.sample_rate)
+        self.logger.info(f"Total real-time factor: {RT:.3f}")
         return wav, self.sample_rate
 
 
 def _warn_if_model_is_old(logger):
     logger.warning(
         """It is likely you have trained you model with old NNSVS.
-It is recommended to retrain your model with the latest version of NNSVS.
-"""
+It is recommended to retrain your model with the latest version of NNSVS."""
     )
 
 
@@ -794,7 +846,7 @@ class NEUTRINO(SPSVS):
         # Post-processing for acoustic features
         # NOTE: if non-zero post_f0_shift_in_cent is specified, the output pitch
         # will be shifted as a part of post-processing
-        multistream_features = self.postprocess_acoustic(
+        multistream_features = super().postprocess_acoustic(
             acoustic_features=acoustic_features,
             duration_modified_labels=duration_modified_full_labels,
             trajectory_smoothing=trajectory_smoothing,
