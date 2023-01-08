@@ -921,6 +921,8 @@ class VariancePredictor(BaseModel):
         in_ph_start_idx (int): the start index of phoneme identity in a hed file
         in_ph_end_idx (int): the end index of phoneme identity in a hed file
         embed_dim (int): the dimension of the phoneme embedding
+        mask_indices (list): the input feature indices to be masked.
+            e.g., specify pitch_idx to mask pitch features.
     """
 
     def __init__(
@@ -938,6 +940,7 @@ class VariancePredictor(BaseModel):
         in_ph_start_idx: int = 1,
         in_ph_end_idx: int = 50,
         embed_dim=None,
+        mask_indices=None,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -948,6 +951,7 @@ class VariancePredictor(BaseModel):
         self.num_vocab = in_ph_end_idx - in_ph_start_idx
         self.embed_dim = embed_dim
         self.use_mdn = use_mdn
+        self.mask_indices = mask_indices
 
         if self.embed_dim is not None:
             assert in_dim > self.num_vocab
@@ -1000,6 +1004,11 @@ class VariancePredictor(BaseModel):
         Returns:
             torch.Tensor: the output tensor
         """
+        # Masking specified features
+        if self.mask_indices is not None:
+            for idx in self.mask_indices:
+                x[:, :, idx] *= 0.0
+
         if self.embed_dim is not None:
             x_first, x_ph_onehot, x_last = torch.split(
                 x,
