@@ -8,19 +8,17 @@ from nnsvs.svs import NEUTRINO, SPSVS
 from nnsvs.util import example_xml_file
 
 
-@pytest.mark.parametrize("segmented_synthesis", [False, True])
-@pytest.mark.parametrize("post_filter_type", ["merlin", "gv", "nnsvs"])
+@pytest.mark.parametrize("post_filter_type", ["merlin", "gv", "nnsvs", "none"])
 @pytest.mark.parametrize("vocoder_type", ["world"])
-def test_svs(segmented_synthesis, post_filter_type, vocoder_type):
+def test_svs(post_filter_type, vocoder_type):
     model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
-    engine = SPSVS(model_dir)
+    engine = SPSVS(model_dir, verbose=100)
 
     contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
     labels = hts.HTSLabelFile.create_from_contexts(contexts)
 
     wav, sr = engine.svs(
         labels,
-        segmented_synthesis=segmented_synthesis,
         post_filter_type=post_filter_type,
         vocoder_type=vocoder_type,
     )
@@ -28,9 +26,24 @@ def test_svs(segmented_synthesis, post_filter_type, vocoder_type):
     assert np.isfinite(wav).all()
 
 
+def test_segmented_svs():
+    model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
+    engine = SPSVS(model_dir, verbose=100)
+
+    contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
+    labels = hts.HTSLabelFile.create_from_contexts(contexts)
+
+    wav, sr = engine.svs(
+        labels,
+        segmented_synthesis=True,
+    )
+    assert sr == 48000
+    assert np.isfinite(wav).all()
+
+
 def test_neutrino():
     model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
-    engine = NEUTRINO(model_dir)
+    engine = NEUTRINO(model_dir, verbose=100)
 
     musicxml = example_xml_file(key="get_over")
     full_labels, mono_labels = engine.musicxml2label(musicxml)
@@ -50,7 +63,7 @@ def test_neutrino():
 
 def test_neutrino_phrase():
     model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
-    engine = NEUTRINO(model_dir)
+    engine = NEUTRINO(model_dir, verbose=100)
 
     musicxml = example_xml_file(key="get_over")
     full_labels, mono_labels = engine.musicxml2label(musicxml)
