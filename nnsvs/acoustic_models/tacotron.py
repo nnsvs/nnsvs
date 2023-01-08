@@ -144,7 +144,7 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
         embed_dim (int): Embedding dimension.
         init_type (str): Initialization type.
         eval_dropout (bool): If True, dropout is applied in evaluation.
-        initial_value=0.0,
+        initial_value (float) : initial value for the autoregressive decoder.
     """
 
     def __init__(
