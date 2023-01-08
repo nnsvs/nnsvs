@@ -236,14 +236,23 @@ Acoustic model: {acoustic_str}
             repr += "Post-filter model: None\n"
 
         if self.vocoder is not None:
-            vocoder_params = {
-                "generator_type": self.vocoder_config.get(
-                    "generator_type", "ParallelWaveGANGenerator"  # type: ignore
-                ),
-                "generator_params": OmegaConf.to_container(
-                    self.vocoder_config.generator_params
-                ),
-            }
+            if (
+                "generator" in self.vocoder_config
+                and "discriminator" in self.vocoder_config
+            ):
+                # usfgan
+                vocoder_params = OmegaConf.to_container(
+                    self.vocoder_config["generator"], throw_on_missing=True
+                )
+            else:
+                vocoder_params = {
+                    "generator_type": self.vocoder_config.get(
+                        "generator_type", "ParallelWaveGANGenerator"  # type: ignore
+                    ),
+                    "generator_params": OmegaConf.to_container(
+                        self.vocoder_config.generator_params
+                    ),
+                }
             vocoder_str = json.dumps(
                 vocoder_params,
                 sort_keys=False,
