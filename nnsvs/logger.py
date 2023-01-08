@@ -8,7 +8,7 @@ from os.path import dirname
 format = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
 
 
-def getLogger(verbose=0, filename=None, name="nnsvs"):
+def getLogger(verbose=0, filename=None, name="nnsvs", add_stream_handler=False):
     logger = logging.getLogger(name)
     if verbose >= 100:
         logger.setLevel(logging.DEBUG)
@@ -19,7 +19,8 @@ def getLogger(verbose=0, filename=None, name="nnsvs"):
 
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(logging.Formatter(format))
-    # logger.addHandler(stream_handler)
+    if add_stream_handler:
+        logger.addHandler(stream_handler)
 
     if filename is not None:
         os.makedirs(dirname(filename), exist_ok=True)
