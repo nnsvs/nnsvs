@@ -1,3 +1,5 @@
+from warnings import warn
+
 import librosa
 import numpy as np
 import pyloudnorm as pyln
@@ -1059,7 +1061,7 @@ def postprocess_waveform(
         wav = pyln.normalize.loudness(wav, loudness, target_loudness)
 
     # NOTE: use np.int16 to save disk space
-    if dtype == np.int16:
+    if dtype in [np.int16, "int16"]:
         # NOTE: NNSVS (>=0.0.3) uses waveforms normalized in [-1, 1] for training.
         # so the following code shouldn't be used but in case for models trained
         # with earlier NNSVS
@@ -1070,9 +1072,8 @@ def postprocess_waveform(
             wav = (wav * 32767.0).astype(np.int16)
         else:
             # may need to handle int32 data (if any)
-            raise ValueError(
-                f"Unexpected waveform range: {np.min(wav)} - {np.max(wav)}"
-            )
+            warn("Unexpected waveform range: {} - {}".format(np.min(wav), np.max(wav)))
+            warn("Failed to convert to int16. Returning waveform with floating point.")
     elif dtype is None:
         pass
     else:
