@@ -59,6 +59,9 @@ def run_local(args, _):
     from utaupy.utils import ust2hts
 
     model_dir = Path(args.model_dir)
+    # NOTE: this is needed to be compatible with NEUTRINO's Run.bat
+    if not model_dir.exists():
+        model_dir = "model" / model_dir
     engine = NEUTRINO(
         model_dir, device="cuda" if torch.cuda.is_available() else "cpu", verbose=100
     )
