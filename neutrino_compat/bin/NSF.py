@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 import requests
-from scipy.io import wavfile
+import soundfile as sf
 
 
 def get_parser():
@@ -143,7 +143,7 @@ def main():
         logger.info("Using local machine for inference")
         wav, sr = run_local(args, logger)
 
-    wavfile.write(args.output_wav, sr, wav)
+    sf.write(args.output_wav, wav, sr)
     logger.info(f"Elapsed time: {time.time() - start_time:.2f} sec")
 
 
