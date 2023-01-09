@@ -50,6 +50,11 @@ def _instantiate_model(model_id):
     return model
 
 
+def _finalize():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
 @app.get("/healthcheck")
 def perform_healthcheck():
     return {"healthcheck": "OK"}
@@ -138,6 +143,8 @@ async def run_timing(name: str, model_id: str):
     with open(timing_lab, "w") as f:
         f.write(str(timing_labels))
 
+    _finalize()
+
     return {"timing": str(timing_labels)}
 
 
@@ -189,6 +196,7 @@ async def run_acoustic(name: str, model_id: str, phrase_num: int = -1):
         timing_labels,
         phrase_num=phrase_num,
     )
+    _finalize()
 
     if phrase_num > 0:
         name = f"{name}-{phrase_num}"
@@ -242,6 +250,7 @@ async def run_vocoder(
         loudness_norm=loudness_norm,
         dtype=dtype,
     )
+    _finalize()
 
     if vocoder_type == "world":
         suffix = "_syn.wav"
