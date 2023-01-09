@@ -18,6 +18,7 @@ usage:
 
 """
 import argparse
+import logging
 import sys
 import tempfile
 import time
@@ -25,11 +26,6 @@ from pathlib import Path
 
 import numpy as np
 import requests
-import torch
-from nnmnkwii.io import hts
-from nnsvs.io.hts import full_to_mono, merge_sil
-from nnsvs.logger import getLogger
-from utaupy.utils import ust2hts
 
 
 def get_parser():
@@ -56,7 +52,11 @@ def get_parser():
 
 
 def run_local(args, _):
+    import torch
+    from nnmnkwii.io import hts
+    from nnsvs.io.hts import full_to_mono
     from nnsvs.svs import NEUTRINO
+    from utaupy.utils import ust2hts
 
     model_dir = Path(args.model_dir)
     engine = NEUTRINO(
@@ -201,7 +201,16 @@ def main():
     args = get_parser().parse_args(sys.argv[1:])
 
     start_time = time.time()
-    logger = getLogger(verbose=100, name="neutrino")
+
+    format = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+    logger = logging.getLogger("NEUTRINO")
+    logger.setLevel(logging.INFO)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter(format))
+    logger.addHandler(stream_handler)
+
     if args.use_api:
         logger.info(f"Using webapi: {args.url} for infernce")
         f0, mgc, bap = run_api(args, logger)

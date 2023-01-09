@@ -17,15 +17,13 @@ usage:
     -t              : view information                [  off]
 """
 import argparse
+import logging
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
-import pyworld
 import requests
-import torch
-from nnsvs.logger import getLogger
 from scipy.io import wavfile
 
 
@@ -46,6 +44,8 @@ def get_parser():
 
 
 def run_local(args, _):
+    import pyworld
+    import torch
     from nnsvs.svs import NEUTRINO
 
     model_dir = Path(args.model_dir)
@@ -124,7 +124,15 @@ def main():
     args = get_parser().parse_args(sys.argv[1:])
 
     start_time = time.time()
-    logger = getLogger(verbose=100, name="neutrino")
+    format = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+    logger = logging.getLogger("NSF")
+    logger.setLevel(logging.INFO)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter(format))
+    logger.addHandler(stream_handler)
+
     if args.use_api:
         logger.info(f"Using webapi: {args.url} for inference")
         wav, sr = run_api(args, logger)
