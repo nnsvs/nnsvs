@@ -18,7 +18,7 @@ from nnsvs.io.hts import full_to_mono
 from nnsvs.svs import NEUTRINO
 from omegaconf import OmegaConf
 from scipy.io import wavfile
-from starlette.responses import StreamingResponse
+from starlette.responses import RedirectResponse, StreamingResponse
 from utaupy.utils import ust2hts
 
 SCORE_DIR = Path("./score")
@@ -58,6 +58,11 @@ def _finalize():
 @app.get("/healthcheck")
 def perform_healthcheck():
     return {"healthcheck": "OK"}
+
+
+@app.get("/")
+async def docs_redirect():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/models/list")
