@@ -187,11 +187,6 @@ def my_app(config: DictConfig) -> None:
         wav = postprocess_waveform(
             wav=wav,
             sample_rate=config.synthesis.sample_rate,
-            frame_period=config.synthesis.frame_period,
-            binary_dict=binary_dict,
-            numeric_dict=numeric_dict,
-            duration_modified_labels=duration_modified_labels,
-            adjust_sil_gain=False,
             dtype=np.int16,
             peak_norm=False,
             loudness_norm=False,
