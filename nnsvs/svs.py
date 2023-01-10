@@ -862,7 +862,7 @@ class NEUTRINO(SPSVS):
         mgc, lf0, vuv, bap = multistream_features
 
         if not self.config.get("use_world_codec", False):
-            self.logger.warn(
+            self.logger.warning(
                 """use_world_codec is not set.
  WORLD (NEUTRINO edition) does not work with the output of this model.
             """
