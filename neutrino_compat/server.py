@@ -4,7 +4,6 @@ NOTE: validation is not implemented. Expect 500 errors for unexpected inputs.
 """
 
 import tarfile
-import tempfile
 from os import listdir, rmdir
 from pathlib import Path
 from shutil import move
@@ -22,14 +21,25 @@ from starlette.responses import RedirectResponse, StreamingResponse
 from utaupy.utils import ust2hts
 
 SCORE_DIR = Path("./score")
+MUSICXML_DIR = SCORE_DIR / "musicxml"
 FULL_LAB_DIR = SCORE_DIR / "label" / "full"
+MONO_LAB_DIR = SCORE_DIR / "label" / "mono"
 UST_DIR = SCORE_DIR / "ust"
 
 TIMING_LAB_DIR = SCORE_DIR / "label" / "timing"
 OUTPUT_DIR = Path("./output")
 MODEL_DIR = Path("./model")
 
-for d in [SCORE_DIR, FULL_LAB_DIR, UST_DIR, TIMING_LAB_DIR, OUTPUT_DIR, MODEL_DIR]:
+for d in [
+    SCORE_DIR,
+    MUSICXML_DIR,
+    FULL_LAB_DIR,
+    MONO_LAB_DIR,
+    UST_DIR,
+    TIMING_LAB_DIR,
+    OUTPUT_DIR,
+    MODEL_DIR,
+]:
     d.mkdir(exist_ok=True, parents=True)
 
 app = FastAPI()
@@ -112,6 +122,28 @@ async def upload_full_lab(full_lab: UploadFile):
     with open(f"{FULL_LAB_DIR}/{full_lab.filename}", "wb") as f:
         f.write(full_lab.file.read())
     return {"filename": full_lab.filename}
+
+
+@app.post("/score/musicxml/upload")
+async def upload_musicxml(musicxml: UploadFile):
+    filename = musicxml.filename
+    musicxml_path = MUSICXML_DIR / filename
+    with open(musicxml_path, "wb") as f:
+        f.write(musicxml.file.read())
+
+    full_labels, mono_labels = NEUTRINO.musicxml2label(str(musicxml_path))
+    full_lab_path = FULL_LAB_DIR / (
+        filename.replace(".musicxml", "").replace(".xml", "") + ".lab"
+    )
+    mono_lab_path = MONO_LAB_DIR / (
+        filename.replace(".musicxml", "").replace(".xml", "") + ".lab"
+    )
+    with open(full_lab_path, "w") as f:
+        f.write(str(full_labels))
+    with open(mono_lab_path, "w") as f:
+        f.write(str(mono_labels))
+
+    return {"filename": filename}
 
 
 @app.post("/score/ust/upload")

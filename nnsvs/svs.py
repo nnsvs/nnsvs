@@ -743,7 +743,8 @@ class NEUTRINO(SPSVS):
             )
             _warn_if_model_is_old(self.logger)
 
-    def musicxml2label(self, input_file):
+    @classmethod
+    def musicxml2label(cls, input_file):
         """Convert musicXML to full and mono HTS labels
 
         Args:
