@@ -1,0 +1,167 @@
+0 0 0 sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, pau
+1 31305 1 m a, ch i
+2 31820 0 pau
+3 32080 1 a, k a
+4 32545 0 pau
+5 32790 1 r i, h a, n a, y a, k a, e, e, t e, r u, m a
+6 34725 0 pau
+7 34915 1 s u, i, n o, ts u, m e, t a, s a
+8 36820 0 pau
+9 37140 1 n e, m u
+10 37595 0 pau
+11 37885 1 r e, n a, i
+12 38365 0 pau
+13 38600 1 g o, z e, N, n i, j i, s u, b e, t e, g a, ky u
+14 40545 0 pau
+15 40755 1 s o, k u, n i, k a, w a, r u
+16 42450 0 pau
+17 42630 1 o, i, r u, k i
+18 43365 0 pau
+19 43515 1 r e, n o, r a, i, t a, a, a
+20 45275 0 pau
+21 45505 1 y a, k e, ts u, k u
+22 46320 0 pau
+23 46420 1 y o, o, o, n a, i, n o, n a, k a, s u, b e, t e, g a
+24 49180 0 pau
+25 49280 1 s o, o, u, s o, n a, r a
+26 51000 0 pau
+27 51315 1 h o, N, t o, n i, i
+28 52135 0 pau
+29 52235 1 y o, k a, a, t a, n o, n i, i, n e
+30 54175 0 pau
+31 54195 1 k i, m i, n o, k u, b i, o, sh i, m e, r u, y u, m e, o, m i, t a
+32 57090 0 pau
+33 57125 1 h i, k a, r i, n o
+34 57955 0 pau
+35 58070 1 a, f u, r e, r u, h i, r u, s a, g a, r i, k i, m i, n o, h o, s o, i, n o, d o, g a, h a, n e, r u, n o, o
+36 62910 0 pau
+37 62940 1 n a, k i, d a, sh i
+38 63725 0 pau
+39 63820 1 s o, n a, m e, d e, m i, t e, i, t a
+40 67000 0 pau
+41 68565 1 k a, k u, y u, u, g o, o, r o, n i, i
+42 71225 0 pau
+43 71295 1 s a
+44 72180 0 pau
+45 72405 1 t o, b i, k o, N, N, d e, m i, t a, i, t o
+46 75180 0 pau
+47 75335 1 o, m o, u, u, u, u
+48 76680 0 pau
+49 76775 1 m a
+50 77045 0 pau
+51 77105 1 s a, o, o, n a, h i, k a, r i, ts u, ts u, m a, r e, t e, k i, r e, i
+52 80180 0 pau
+53 80210 1 k a, k u, y u, u, g o, o, r o, n i, i
+54 82860 0 pau
+55 82930 1 s a
+56 83815 0 pau
+57 84045 1 t o, b i, k o, N, N, d e, m i, t a, r a
+58 86815 0 pau
+59 86910 1 s o, sh i, t a, r a, a, a, s u, u, b e, t e, g a, y u, r u, s a, r e, r u, y o, o, n a, k i, g a, sh i, t e
+60 91910 0 pau, sil, sil, sil, sil, sil, pau
+61 103325 1 b e, r a, N
+62 103820 0 pau
+63 104060 1 d a, n o
+64 104545 0 pau
+65 104775 1 m u, k o, o, g a, w a, k a, i, d a, N, o
+66 106725 0 pau
+67 106955 1 n o, b o
+68 107365 0 pau
+69 107490 1 t e, y u, k u, o, t o
+70 108815 0 pau
+71 109125 1 k a, g e
+72 109640 0 pau
+73 109875 1 r i, d a
+74 110365 0 pau
+75 110530 1 sh i, t a, s o, r a, g a, m a, d o, g a, r a, s u, n i, h e, y a, n i, o, ch i, r u
+76 114450 0 pau
+77 114570 1 k a, k u, s a, N, s u, r u, y u, u, g u, r e
+78 117180 0 pau
+79 117490 1 n a, k i, h a, r a, sh i, t a, y o, n a, h i, n o, a, k a, t o, k e, r u, y o
+80 121275 0 pau
+81 121330 1 n i, s u, k o, sh i, z u, ts u
+82 122995 0 pau
+83 123275 1 s u, k o, sh i, z u, ts u, sh i, N, d e, y u, k u, s e, k a, i
+84 126180 0 pau
+85 126200 1 k i, m i, n o, k u, b i, o, sh i, m e, r u, y u, m e, o, m i, t a
+86 129090 0 pau
+87 129120 1 h a, r u, k a, z e, n i, y u, r e, r u, k a, a, t e, N, k a, w a, i, t e, k i, r e, t a, k u, ch i, b i, r u, u, k a, r a
+88 134905 0 pau
+89 134955 1 k o, b o, r e, r u, k o, t o, b a, w a, a, w a, n o, y o, o
+90 138815 0 pau
+91 140565 1 k a, k u, y u, u, g o, o, r o, n i, i
+92 143225 0 pau
+93 143295 1 s a
+94 144180 0 pau
+95 144405 1 t o, b i, k o, N, N, d e, m i, t a, i, t o
+96 147180 0 pau
+97 147335 1 o, m o, u, u, u, u
+98 148680 0 pau
+99 148775 1 m a
+100 149040 0 pau
+101 149080 1 sh i, r o, o, n i, k i, o, k u, t o, k a, s a, r e, t e, k i, e, r u
+102 152180 0 pau
+103 152215 1 k a, k u, y u, u, g o, o, r o, n i, i
+104 154860 0 pau
+105 154930 1 s a
+106 155815 0 pau
+107 156045 1 t o, b i, k o, N, N, d e, m i, t a, r a
+108 158815 0 pau
+109 158945 1 m a, t a, m u, k a, sh i, m i, t a, i, n i, n e, m u, r e, r u, y o, n a, s o, N, n a, k i, g a, sh i, t e
+110 163910 0 pau, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, pau
+111 186400 1 t o, k e, i, n o
+112 190090 0 pau
+113 191130 1 by o, sh i, N, y a, t e, r e, b i, n o
+114 195905 0 pau
+115 196890 1 sh i, k a, i, sh a, y a
+116 198095 0 pau
+117 198355 1 s o, k o, n i, r u, k e, d o
+118 201725 0 pau
+119 202770 1 m i, e, n a, i, d a, r e, k a, n o
+120 206815 0 pau
+121 206950 1 w a, r a, i, g o, e
+122 207910 0 pau
+123 208040 1 h o, w a, sh i, t e, h a, N, ky o, s u, r u
+124 210180 0 pau
+125 210445 1 a, r e, g u, r o, a, j i, t e
+126 214455 0 pau
+127 215300 1 m i, m i, n a, r i, g a, k i, e, n a, i, y a, m a, n a, i
+128 220640 0 pau
+129 222085 1 a, r e, g u, r o, a, j i, t e
+130 226455 0 pau
+131 226935 1 m i, m i, n a, r i, g a, k i, e, n a, i, y a, m a, n a, i
+132 232280 0 pau, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, sil, pau
+133 259335 1 d a, r e, m o, m i, N, n a, k i, e, t e, k u, y u, m e, o, m i, t a
+134 262185 0 pau
+135 262230 1 m a, y o, n a, k a, n o, h e, y a, n o, h i, r o, s a, t o, s e, i, j a, k u, g a, m u, n e, n i, ts u, u, k a, e, t e
+136 267995 0 pau
+137 268040 1 j o, o, z u, n i
+138 268865 0 pau
+139 268985 1 i, k i, g a, d e, k i, n a, k u, n a, r u
+140 272090 0 pau
+141 272920 1 ky a, k a, k u, y u, u, g o, o, r o, n i
+142 276275 0 pau
+143 276385 1 s a
+144 277270 0 pau
+145 277495 1 t o, b i, k o, N, N, d e, m i, t a, r a
+146 280265 0 pau
+147 280360 1 s o, sh i, t a, r a, a, a
+148 281815 0 pau
+149 281830 1 k i, i, t o, n e, m u, r u, y o, o, n i, k i, e, t e, i, k e, r u, N, d a
+150 285275 0 pau
+151 285325 1 b o, k u, n o, i, n a, i, a, s a, w a
+152 288815 0 pau
+153 289160 1 i, m a, y o, r i, z u, u
+154 290530 0 pau
+155 290590 1 t o, s u, b a, r a, sh i, k u, t e, e
+156 293450 0 pau
+157 293460 1 s u, u, b e, t e, n o, h a, g u, r u, m a, g a, k a, m i, a, a, t a, k i
+158 296815 0 pau
+159 296950 1 t o, s o, N, n a, a
+160 300635 0 pau
+161 301600 1 s e, k a, i, d a, a, a, a
+162 306995 0 pau, sil, sil, pau
+163 314395 1 h a, a, a, a, a
+164 318455 0 pau
+165 318760 1 h a
+166 320270 0 pau

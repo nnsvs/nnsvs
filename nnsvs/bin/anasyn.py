@@ -1,6 +1,5 @@
 import os
 from os.path import join
-from pathlib import Path
 
 import hydra
 import numpy as np
@@ -12,10 +11,9 @@ from nnsvs.dsp import bandpass_filter
 from nnsvs.gen import gen_world_params
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_stream_sizes, split_streams
-from nnsvs.usfgan import USFGANWrapper
-from nnsvs.util import StandardScaler, init_seed, load_utt_list
+from nnsvs.svs import load_vocoder
+from nnsvs.util import init_seed, load_utt_list
 from omegaconf import DictConfig, OmegaConf
-from parallel_wavegan.utils import load_model
 from scipy.io import wavfile
 from tqdm.auto import tqdm
 
@@ -181,74 +179,13 @@ def my_app(config: DictConfig) -> None:
 
     # Vocoder
     if config.vocoder.checkpoint is not None and len(config.vocoder.checkpoint) > 0:
-        path = Path(to_absolute_path(config.vocoder.checkpoint))
-        vocoder_dir = path.parent
-        if (vocoder_dir / "vocoder_model.yaml").exists():
-            # packed model
-            vocoder_config = OmegaConf.load(vocoder_dir / "vocoder_model.yaml")
-        elif (vocoder_dir / "config.yml").exists():
-            # PWG checkpoint
-            vocoder_config = OmegaConf.load(vocoder_dir / "config.yml")
-        else:
-            # usfgan
-            vocoder_config = OmegaConf.load(vocoder_dir / "config.yaml")
-
-        if "generator" in vocoder_config and "discriminator" in vocoder_config:
-            # usfgan
-            checkpoint = torch.load(
-                path,
-                map_location=lambda storage, loc: storage,
-            )
-            vocoder = hydra.utils.instantiate(vocoder_config.generator).to(device)
-            vocoder.load_state_dict(checkpoint["model"]["generator"])
-            vocoder.remove_weight_norm()
-            vocoder = USFGANWrapper(vocoder_config, vocoder)
-
-            # Extract scaler params for [mgc, bap]
-            if vocoder_config.data.aux_feats == ["mcep", "codeap"]:
-                mean_ = np.load(vocoder_dir / "in_vocoder_scaler_mean.npy")
-                var_ = np.load(vocoder_dir / "in_vocoder_scaler_var.npy")
-                scale_ = np.load(vocoder_dir / "in_vocoder_scaler_scale.npy")
-                stream_sizes = get_static_stream_sizes(
-                    acoustic_config.stream_sizes,
-                    acoustic_config.has_dynamic_features,
-                    acoustic_config.num_windows,
-                )
-                mgc_end_dim = stream_sizes[0]
-                bap_start_dim = sum(stream_sizes[:3])
-                bap_end_dim = sum(stream_sizes[:4])
-                vocoder_in_scaler = StandardScaler(
-                    np.concatenate(
-                        [mean_[:mgc_end_dim], mean_[bap_start_dim:bap_end_dim]]
-                    ),
-                    np.concatenate(
-                        [var_[:mgc_end_dim], var_[bap_start_dim:bap_end_dim]]
-                    ),
-                    np.concatenate(
-                        [scale_[:mgc_end_dim], scale_[bap_start_dim:bap_end_dim]]
-                    ),
-                )
-            else:
-                vocoder_in_scaler = StandardScaler(
-                    np.load(vocoder_dir / "in_vocoder_scaler_mean.npy")[:80],
-                    np.load(vocoder_dir / "in_vocoder_scaler_var.npy")[:80],
-                    np.load(vocoder_dir / "in_vocoder_scaler_scale.npy")[:80],
-                )
-        else:
-            # Normal pwg
-            vocoder = load_model(path, config=vocoder_config).to(device)
-            vocoder.remove_weight_norm()
-            vocoder_in_scaler = StandardScaler(
-                np.load(vocoder_dir / "in_vocoder_scaler_mean.npy"),
-                np.load(vocoder_dir / "in_vocoder_scaler_var.npy"),
-                np.load(vocoder_dir / "in_vocoder_scaler_scale.npy"),
-            )
-
-        vocoder.eval()
+        vocoder, vocoder_in_scaler, vocoder_config = load_vocoder(
+            to_absolute_path(config.vocoder.checkpoint),
+            device,
+            acoustic_config,
+        )
     else:
-        vocoder = None
-        vocoder_config = None
-        vocoder_in_scaler = None
+        vocoder, vocoder_in_scaler, vocoder_config = None, None, None
         if config.synthesis.vocoder_type != "world":
             logger.warning("Vocoder checkpoint is not specified")
             logger.info(f"Use world instead of {config.synthesis.vocoder_type}.")

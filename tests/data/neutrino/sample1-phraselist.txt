@@ -1,0 +1,13 @@
+0 0 0 pau
+1 2380 1 h a, r u, g a, k i, t a, h a, r u, g a, k i, t a br
+2 7160 1 d o, k o, n i, k i, t a
+3 11250 0 pau
+4 11935 1 y a, m a, n i, k i, t a, s a, t o, n i, k i, t a br
+5 16795 1 n o, n i, m o, k i, t a
+6 20870 0 pau
+7 21590 1 h a, n a, g a, s a, k u, h a, n a, g a, s a, k u br
+8 26380 1 d o, k o, n i, s a, k u
+9 30405 0 pau
+10 31170 1 y a, m a, n i, s a, k u, s a, t o, n i, s a, k u br
+11 36015 1 n o, n i, m o, s a, k u
+12 40615 0 pau

@@ -13,13 +13,12 @@ from nnsvs.train_util import (
     collate_fn_random_segments,
     compute_distortions,
     eval_model,
-    load_vocoder,
     log_params_from_omegaconf_dict,
     save_checkpoint,
     save_configs,
     setup_gan,
 )
-from nnsvs.util import PyTorchStandardScaler, make_non_pad_mask
+from nnsvs.util import PyTorchStandardScaler, load_vocoder, make_non_pad_mask
 from omegaconf import DictConfig
 from torch import nn
 from torch.cuda.amp import autocast

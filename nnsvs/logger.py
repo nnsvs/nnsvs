@@ -17,9 +17,12 @@ def getLogger(verbose=0, filename=None, name="nnsvs"):
     else:
         logger.setLevel(logging.WARN)
 
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(logging.Formatter(format))
-    # logger.addHandler(stream_handler)
+    logger.addHandler(stream_handler)
 
     if filename is not None:
         os.makedirs(dirname(filename), exist_ok=True)
