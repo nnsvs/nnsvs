@@ -60,6 +60,10 @@ def test_neutrino():
     wav = engine.predict_waveform(f0, mgc, bap, vocoder_type="world")
     assert np.isfinite(wav).all()
 
+    wav, sr = engine.svs(full_labels)
+    assert np.isfinite(wav).all()
+    assert sr == 48000
+
 
 def test_neutrino_phrase():
     model_dir = retrieve_pretrained_model("r9y9/yoko_latest")

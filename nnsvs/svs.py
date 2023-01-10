@@ -32,17 +32,38 @@ from nnsvs.util import MinMaxScaler, StandardScaler, extract_static_scaler, load
 from omegaconf import OmegaConf
 
 
-class SPSVS(object):
+class BaseSVS(object):
+    """Base class for singing voice synthesis (SVS) inference
+
+    All SVS engines should inherit from this class.
+
+    The input of the SVS engine uses the HTS-style full-context labels.
+    The output should be a tuple of raw waveform and sampling rate.
+    To allow language-independent SVS, this base class does not define
+    the interface for the frontend functionality such as
+    converting musicXML/UST to HTS labels. The frontend processing
+    should be done externally (e.g., using pysinsy or utaupy) or can
+    be implemented with an optional method.
+    """
+
+    def svs(self, labels, *args, **kwargs):
+        """Run SVS inference and returns the synthesized waveform
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+        Returns:
+            tuple: (waveform, sampling rate)
+        """
+        pass
+
+
+class SPSVS(BaseSVS):
     """Statistical parametric singing voice synthesis (SPSVS)
 
-    This class is meant to be used for inference only. Use the ``svs`` method
-    for the simplest inference, or use the separated methods (e.g.,
-    ``predict_acoustic`` and ``predict_waveform``) to control each components
-    of the SVS system.
-
-    In addition, this class is designed to be language-independent. Therefore,
-    frontend functionality such as converting musicXML/UST to HTS labels
-    is not included.
+    Use the ``svs`` method for the simplest inference, or use the
+    separated methods (e.g.,``predict_acoustic`` and ``predict_waveform``)
+    to control each components of the parametric SVS system.
 
     Args:
         model_dir (str): directory of the model
@@ -592,8 +613,7 @@ WORLD is only supported for waveform generation"""
         trajectory_smoothing_cutoff=50,
         trajectory_smoothing_cutoff_f0=20,
         vuv_threshold=0.5,
-        pre_f0_shift_in_cent=0,
-        post_f0_shift_in_cent=0,
+        style_shift=0,
         force_fix_vuv=False,
         fill_silence_to_rest=False,
         dtype=np.int16,
@@ -615,10 +635,7 @@ WORLD is only supported for waveform generation"""
             trajectory_smoothing_cutoff_f0 (int): Cutoff frequency for trajectory
                 smoothing of f0.
             vuv_threshold (float): Threshold for VUV.
-            f0_shift_in_cent (float): F0 scaling factor.
-            vibrato_scale (float): Scale for vibrato. Only valid if the acoustic
-                features contain vibrato parameters.
-            return_states (bool): Whether to return the internal states (for debugging)
+            style_shift (int): style shift parameter
             force_fix_vuv (bool): Whether to correct VUV.
             fill_silence_to_rest (bool): Fill silence to rest frames.
             dtype (np.dtype): Data type of the output waveform.
@@ -673,7 +690,7 @@ WORLD is only supported for waveform generation"""
             # will be shifted before running the acoustic model
             acoustic_features = self.predict_acoustic(
                 duration_modified_labels_seg,
-                f0_shift_in_cent=pre_f0_shift_in_cent,
+                f0_shift_in_cent=style_shift * 100,
             )
 
             # Post-processing for acoustic features
@@ -687,7 +704,7 @@ WORLD is only supported for waveform generation"""
                 trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
                 force_fix_vuv=force_fix_vuv,
                 fill_silence_to_rest=fill_silence_to_rest,
-                f0_shift_in_cent=post_f0_shift_in_cent,
+                f0_shift_in_cent=-style_shift * 100,
             )
 
             # Generate waveform by vocoder
@@ -802,7 +819,7 @@ class NEUTRINO(SPSVS):
         Args:
             full_labels (nnmnkwii.io.hts.HTSLabelFile): full HTS label
             timing_labels (nnmnkwii.io.hts.HTSLabelFile): timing HTS label
-            style_shift (float): style shift parameter
+            style_shift (int): style shift parameter
             phrase_num (int): phrase number to use for inference
             trajectory_smoothing (bool): whether to apply trajectory smoothing
             trajectory_smoothing_cutoff (float): cutoff frequency for trajectory smoothing
@@ -933,5 +950,20 @@ class NEUTRINO(SPSVS):
             loudness_norm=loudness_norm,
             target_loudness=target_loudness,
         )
-
         return wav
+
+    def svs(self, labels):
+        """Synthesize wavefrom from HTS labels
+
+        Args:
+            labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+
+        Returns:
+            tuple: (waveform, sample_rate)
+        """
+        self.logger.warning(
+            "Use `predict_acoustic` and `predict_waveform` methods instead."
+        )
+        f0, mgc, bap = self.predict_acoustic(labels)
+        wav = self.predict_waveform(f0, mgc, bap)
+        return wav, self.sample_rate
