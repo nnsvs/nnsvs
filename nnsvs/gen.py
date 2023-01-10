@@ -1089,7 +1089,7 @@ def _get_nonrest_frame_soft_mask(
     win_length=200,
     duration_threshold=1.0,
 ):
-    """Get soft max re
+    """Get mask for non-rest frames
 
     Args:
         binary_dict (dict): Dictionary for binary features
@@ -1098,8 +1098,8 @@ def _get_nonrest_frame_soft_mask(
         win_length (int): Window length
 
     Returns:
-        ndarray: Soft mask for voiced frames.
-            1 for voiced frames and 0 for otherwise.
+        ndarray: Soft mask for non-rest frames.
+            1 for non-rest frames and 0 for otherwise.
     """
     mask = np.ones(len(linguistic_features))
 
