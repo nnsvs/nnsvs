@@ -11,7 +11,7 @@ from nnsvs.gen import (
     postprocess_acoustic,
     postprocess_waveform,
     predict_acoustic,
-    predict_timings,
+    predict_timing,
     predict_waveform,
 )
 from nnsvs.logger import getLogger
@@ -106,7 +106,7 @@ def my_app(config: DictConfig) -> None:
         if config.synthesis.ground_truth_duration:
             duration_modified_labels = labels
         else:
-            duration_modified_labels = predict_timings(
+            duration_modified_labels = predict_timing(
                 device=device,
                 labels=labels,
                 binary_dict=binary_dict,
