@@ -71,6 +71,13 @@ def _save_checkpoint(input_file, output_file, logger):
 
 
 def main(enunu_dir, out_dir, verbose=100):
+    """Run the main function
+
+    NOTE: This function is used by https://github.com/oatsu-gh/SimpleEnunu.
+    So we need to be careful about the changes.
+    It would be probably better to move this functionality to under the nnsvs
+    directory.
+    """
     logger = getLogger(verbose=verbose)
     enunu_dir = Path(enunu_dir)
     out_dir = Path(out_dir)
