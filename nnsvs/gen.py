@@ -1134,7 +1134,7 @@ def _get_nonrest_frame_soft_mask(
     score_f0 = linguistic_features[:, pitch_idx]
     mask[score_f0 > 0] = 1.0
 
-    return mask
+    return mask.reshape(-1, 1)
 
 
 def _fill_silence_to_world_params(mgc, lf0, vuv, bap, mask):

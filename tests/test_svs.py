@@ -26,6 +26,23 @@ def test_svs(post_filter_type, vocoder_type):
     assert np.isfinite(wav).all()
 
 
+def test_svs_options():
+    model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
+    engine = SPSVS(model_dir, verbose=100)
+
+    contexts = pysinsy.extract_fullcontext(example_xml_file(key="get_over"))
+    labels = hts.HTSLabelFile.create_from_contexts(contexts)
+
+    engine.svs(
+        labels,
+        fill_silence_to_rest=True,
+    )
+    engine.svs(
+        labels,
+        force_fix_vuv=True,
+    )
+
+
 def test_segmented_svs():
     model_dir = retrieve_pretrained_model("r9y9/yoko_latest")
     engine = SPSVS(model_dir, verbose=100)
