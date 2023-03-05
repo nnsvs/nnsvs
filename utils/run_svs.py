@@ -44,18 +44,18 @@ if __name__ == "__main__":
     if input_file.suffix == ".ust":
         table_path = model_dir / "kana2phonemes.table"
         assert table_path.exists()
-        with tempfile.NamedTemporaryFile(suffix=".lab") as tf:
-            ust2hts(
-                str(input_file),
-                tf.name,
-                table_path,
-                strict_sinsy_style=False,
-                as_mono=False,
-            )
-            labels = hts.HTSLabelFile()
-            with open(tf.name) as f:
-                for label in f.readlines():
-                    labels.append(label.split(), strict=False)
+        full_lab_path = out_dir / f"{input_file.stem}_full.lab"
+        ust2hts(
+            str(input_file),
+            full_lab_path,
+            table_path,
+            strict_sinsy_style=False,
+            as_mono=False,
+        )
+        labels = hts.HTSLabelFile()
+        with open(full_lab_path) as f:
+            for label in f.readlines():
+                labels.append(label.split(), strict=False)
         labels = merge_sil(labels)
     elif input_file.suffix in [".xml", ".musicxml"]:
         contexts = pysinsy.extract_fullcontext(str(input_file))
