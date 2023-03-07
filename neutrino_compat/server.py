@@ -124,6 +124,13 @@ async def upload_full_lab(full_lab: UploadFile):
     return {"filename": full_lab.filename}
 
 
+@app.post("/score/timing/upload")
+async def upload_timing_lab(timing_lab: UploadFile):
+    with open(f"{TIMING_LAB_DIR}/{timing_lab.filename}", "wb") as f:
+        f.write(timing_lab.file.read())
+    return {"filename": timing_lab.filename}
+
+
 @app.post("/score/musicxml/upload")
 async def upload_musicxml(musicxml: UploadFile):
     filename = musicxml.filename
