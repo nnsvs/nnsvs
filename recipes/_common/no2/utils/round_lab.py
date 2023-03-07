@@ -69,10 +69,10 @@ for lab_type in ["generated_mono", "generated_full", "mono_label"]:
                 # Corner case: rounded to zero duration
                 if lab.end_times[i] == lab.start_times[i]:
                     print(
-                        "Detected zero frames. Assing one frame from the next phoneme"
+                        "Detected zero frames. Assign one frame from the next phoneme"
                     )
                     print(name, lab[i])
-                    # let's consume one frame from the next (presumely) vowel
+                    # let's consume one frame from the next (presumably) vowel
                     d = (lab.end_times[i + 1] - lab.start_times[i + 1]) // frame_shift
                     assert d >= 2
                     lab.end_times[i] += frame_shift
