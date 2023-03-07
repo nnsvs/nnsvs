@@ -233,11 +233,7 @@ for base in tqdm(base_files):
         print(f"Multiple {utt_id} is found, so {_wav_path[0]} is used.")
     wav_path = _wav_path[0]
 
-    wav, sr = librosa.load(wav_path, sr=config["sample_rate"])
-    assert sr == config["sample_rate"]
-
-    # gain normalize
-    wav = wav / wav.max() * 0.99
+    wav, sr = librosa.load(wav_path, sr=None)
 
     seg_idx = 0
     while True:
