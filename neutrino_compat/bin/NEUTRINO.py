@@ -143,21 +143,33 @@ def run_api(args, logger):
     if res.status_code != 200:
         raise RuntimeError(f"Failed to upload file: {res.status_code}")
 
-    # Predict timing
-    logger.info("Predicting timing")
-    res = requests.get(
-        url + "/run/timing",
-        params={
-            "name": name,
-            "model_id": model_id,
-        },
-    )
-    if res.status_code != 200:
-        raise RuntimeError(f"Failed to predict timing: {res.status_code}")
-    timing_str = res.json()["timing"]
-    logger.info(timing_str)
-    with open(args.timing_lab, "w") as f:
-        f.write(timing_str)
+    # Upload (possibly modified) timing labels if present
+    if Path(args.timing_lab).exists():
+        logger.info(f"Uploading timing_lab: {args.timing_lab}")
+        res = requests.post(
+            url + "/score/timing/upload",
+            files={
+                "timing_lab": open(args.timing_lab, "rb"),
+            },
+        )
+        if res.status_code != 200:
+            raise RuntimeError(f"Failed to upload file: {res.status_code}")
+    else:
+        # Predict timing
+        logger.info("Predicting timing")
+        res = requests.get(
+            url + "/run/timing",
+            params={
+                "name": name,
+                "model_id": model_id,
+            },
+        )
+        if res.status_code != 200:
+            raise RuntimeError(f"Failed to predict timing: {res.status_code}")
+        timing_str = res.json()["timing"]
+        logger.info(timing_str)
+        with open(args.timing_lab, "w") as f:
+            f.write(timing_str)
 
     # Phraselist
     if args.phraselist is not None:
