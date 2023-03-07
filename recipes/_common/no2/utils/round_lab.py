@@ -49,9 +49,10 @@ for m in tqdm(files):
 
 # Rounding
 print("Round label files.")
-for name in ["generated_mono", "generated_full", "mono_label"]:
-    files = sorted(glob(join(config["out_dir"], name, "*.lab")))
-    dst_dir = join(config["out_dir"], name + "_round")
+frame_shift = 50000
+for lab_type in ["generated_mono", "generated_full", "mono_label"]:
+    files = sorted(glob(join(config["out_dir"], lab_type, "*.lab")))
+    dst_dir = join(config["out_dir"], lab_type + "_round")
     os.makedirs(dst_dir, exist_ok=True)
 
     for path in tqdm(files):
@@ -63,15 +64,24 @@ for name in ["generated_mono", "generated_full", "mono_label"]:
             lab.end_times[x] = round(lab.end_times[x] / 50000) * 50000
 
         # Check if rounding is done property
-        if name == "mono_label":
+        if lab_type == "mono_label":
             for i in range(len(lab) - 1):
+                # Corner case: rounded to zero duration
+                if lab.end_times[i] == lab.start_times[i]:
+                    print(
+                        "Detected zero frames. Assing one frame from the next phoneme"
+                    )
+                    print(name, lab[i])
+                    # let's consume one frame from the next (presumely) vowel
+                    d = (lab.end_times[i + 1] - lab.start_times[i + 1]) // frame_shift
+                    assert d >= 2
+                    lab.end_times[i] += frame_shift
+                    lab.start_times[i + 1] += frame_shift
+
                 if lab.end_times[i] != lab.start_times[i + 1]:
                     print(path)
                     print(i, lab[i])
                     print(i + 1, lab[i + 1])
-                    import ipdb
-
-                    ipdb.set_trace()
 
         with open(join(dst_dir, name), "w") as of:
             of.write(str(lab))
