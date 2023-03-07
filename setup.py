@@ -68,6 +68,7 @@ setup(
             "flake8-bugbear",
             "isort>=4.3,<5.2.0",
             "click<8.1.0",
+            "importlib-metadata<5.0",
         ],
         "test": ["pytest"],
     },
