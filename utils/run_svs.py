@@ -25,6 +25,7 @@ def get_parser():
     )
     parser.add_argument("--device", type=str, default="cuda", help="Device")
     parser.add_argument("--phoneme-flag", type=str, help="phoneme flag (p9)")
+    parser.add_argument("--verbose", default=100, type=int, help="Verbose level")
     return parser
 
 
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 
     model_name = model_dir.name
 
-    engine = SPSVS(model_dir, device=args.device)
+    engine = SPSVS(model_dir, device=args.device, verbose=args.verbose)
 
     if input_file.suffix == ".ust":
         table_path = model_dir / "kana2phonemes.table"
@@ -77,4 +78,9 @@ if __name__ == "__main__":
         segmented_synthesis=False,
     )
 
-    wavfile.write(out_dir / f"{input_file.stem}_{model_name}.wav", sr, wav)
+    if args.phoneme_flag is not None:
+        filename = f"{input_file.stem}_{model_name}_{args.phoneme_flag}.wav"
+    else:
+        filename = f"{input_file.stem}_{model_name}.wav"
+
+    wavfile.write(out_dir / filename, sr, wav)
