@@ -193,6 +193,16 @@ class SPSVS(BaseSVS):
             self.acoustic_out_scaler, self.acoustic_config
         )
 
+        # (Optional) lf0 model
+        if (model_dir / "lf0_model.pth").exists():
+            assert hasattr(self.acoustic_model, "lf0_model")
+            self.logger.info("Loading an external lf0 model.")
+            checkpoint = torch.load(
+                model_dir / "lf0_model.pth",
+                map_location=device,
+            )
+            self.acoustic_model.lf0_model.load_state_dict(checkpoint["state_dict"])
+
         self.acoustic_model.eval()
 
         # Post-filter
@@ -678,12 +688,18 @@ WORLD is only supported for waveform generation"""
         # Run acoustic model and vocoder
         hts_frame_shift = int(self.config.frame_period * 1e4)
         wavs = []
+        self.logger.info(f"Number of segments: {len(duration_modified_labels_segs)}")
         for duration_modified_labels_seg in tqdm(
             duration_modified_labels_segs,
             desc="[segment]",
             total=len(duration_modified_labels_segs),
         ):
             duration_modified_labels_seg.frame_shift = hts_frame_shift
+
+            # Print phoneme sequence for verbosity
+            mono_labels = full_to_mono(duration_modified_labels_seg)
+            s = label2phrases_str(mono_labels, note_indices=None)
+            self.logger.info("[Phrases]: \n" + s)
 
             # Predict acoustic features
             # NOTE: if non-zero pre_f0_shift_in_cent is specified, the input pitch
