@@ -9,6 +9,7 @@ from nnsvs.io.hts import (
     label2phrases,
     label2phrases_str,
     merge_sil,
+    overwrite_phoneme_flags_,
     segment_labels,
 )
 
@@ -91,3 +92,14 @@ def test_segment_label(filename):
 
     # Check if the number of labels are the same
     assert len(timing_labels) == sum(len(phrase) for phrase in phrases)
+
+
+def test_overwrite_phoneme_flags():
+    labels = hts.HTSLabelFile()
+    labels.append((0, 50000, "v@xx^pau-o+r=e_xx%xx^xx_xx~xx-1!1[xx$xx]xx/A:"))
+    overwrite_phoneme_flags_(labels, "soft")
+    assert labels.contexts[0] == "v@xx^pau-o+r=e_xx%xx^soft_xx~xx-1!1[xx$xx]xx/A:"
+    overwrite_phoneme_flags_(labels, "xx")
+    assert labels.contexts[0] == "v@xx^pau-o+r=e_xx%xx^xx_xx~xx-1!1[xx$xx]xx/A:"
+    overwrite_phoneme_flags_(labels, "loud")
+    assert labels.contexts[0] == "v@xx^pau-o+r=e_xx%xx^loud_xx~xx-1!1[xx$xx]xx/A:"

@@ -1,7 +1,10 @@
+import re
 from copy import deepcopy
 
 import numpy as np
 from nnmnkwii.io import hts
+
+_flag_re = re.compile(r"\^([A-Za-z0-9]+)\_")
 
 
 def full_to_mono(labels):
@@ -378,3 +381,23 @@ def label2phrases(labels, fix_offset=True):
     if fix_offset:
         phrases = [fix_label_offset_to_zero(p) for p in phrases]
     return phrases
+
+
+def overwrite_phoneme_flags_(labels, flag):
+    """Overwrite phoneme flags
+
+    Args:
+        labels (nnmnkwii.io.hts.HTSLabelFile): HTS labels
+        flag (str): phoneme flag to overwrite
+
+    Returns:
+        nnmnkwii.io.hts.HTSLabelFile: modified HTS labels
+    """
+
+    contexts = labels.contexts
+    for i in range(len(contexts)):
+        assert len(_flag_re.findall(contexts[i])) == 1, (i, contexts[i])
+        contexts[i] = _flag_re.sub(f"^{flag}_", contexts[i])
+    labels.contexts = contexts
+
+    return labels

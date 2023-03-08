@@ -1,16 +1,14 @@
 """Overwrite phoneme flags for HTS full-context labels
 """
 import argparse
-import re
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from nnmnkwii.io import hts
+from nnsvs.io.hts import overwrite_phoneme_flags_
 from nnsvs.util import load_utt_list
 from tqdm.auto import tqdm
-
-flag_re = re.compile(r"\^([A-Za-z0-9]+)\_")
 
 
 def get_parser():
@@ -28,12 +26,7 @@ def get_parser():
 
 def process_labels(utt_id, in_dir, out_dir, flag):
     labels = hts.load(in_dir / f"{utt_id}.lab")
-    contexts = labels.contexts
-    for i in range(len(contexts)):
-        assert len(flag_re.findall(contexts[i])) == 1, (i, contexts[i])
-        contexts[i] = flag_re.sub(f"^{flag}_", contexts[i])
-    labels.contexts = contexts
-
+    overwrite_phoneme_flags_(labels, flag)
     out_file = out_dir / f"{utt_id}.lab"
     with open(out_file, "w") as f:
         f.write(str(labels))
