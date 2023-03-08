@@ -225,7 +225,7 @@ for base in tqdm(base_files):
     utt_id = splitext(basename(base))[0]
 
     _wav_path = glob(
-        join(expanduser(config["db_root"]), f"**/{utt_id}.wav"), recursive=True
+        join(expanduser(config["db_root"]), join("**", f"{utt_id}.wav")), recursive=True
     )
     if _wav_path is None:
         sys.exit(f"{utt_id} is not found.")
