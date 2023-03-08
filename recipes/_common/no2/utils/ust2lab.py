@@ -1,6 +1,5 @@
 import os
 import sys
-import tempfile
 from glob import glob
 from os.path import basename, expanduser, join, splitext
 
@@ -33,17 +32,20 @@ for ust_path in tqdm(files):
 
     for as_mono in [True, False]:
         n = "generated_mono" if as_mono else "generated_full"
-        f = tempfile.NamedTemporaryFile("w+")
-
-        ust2hts(ust_path, f.name, table_path, strict_sinsy_style=False, as_mono=as_mono)
-
-        lab = hts.HTSLabelFile()
-        for label in f.readlines():
-            lab.append(label.split(), strict=False)
-        lab = merge_sil(lab)
         dst_dir = join(config["out_dir"], f"{n}")
         os.makedirs(dst_dir, exist_ok=True)
-        with open(join(dst_dir, name + ".lab"), "w") as f:
-            f.write(str(fix_mono_lab_before_align(lab, config["spk"])))
+        
+        lab_path = join(dst_dir, name + ".lab") 
+        
+        ust2hts(ust_path, lab_path, table_path, strict_sinsy_style=False, as_mono=as_mono)
 
-        f.close()
+        lab = hts.HTSLabelFile()
+
+        with open(lab_path, "r") as f:
+            for label in f.readlines():
+                lab.append(label.split(), strict=False)
+                
+        lab = merge_sil(lab)
+        
+        with open(lab_path, "w") as f:
+            f.write(str(fix_mono_lab_before_align(lab, config["spk"])))
