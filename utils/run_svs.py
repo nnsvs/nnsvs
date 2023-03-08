@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pysinsy
 from nnmnkwii.io import hts
-from nnsvs.io.hts import merge_sil
+from nnsvs.io.hts import merge_sil, overwrite_phoneme_flags_
 from nnsvs.svs import SPSVS
 from nnsvs.util import init_seed
 from scipy.io import wavfile
@@ -24,6 +24,7 @@ def get_parser():
         "--vocoder_type", type=str, default="usfgan", help="Vocoder type"
     )
     parser.add_argument("--device", type=str, default="cuda", help="Device")
+    parser.add_argument("--phoneme-flag", type=str, help="phoneme flag (p9)")
     return parser
 
 
@@ -63,6 +64,9 @@ if __name__ == "__main__":
         labels = hts.load(input_file)
     else:
         raise ValueError(f"Unknown input file type: {input_file.suffix}")
+
+    if args.phoneme_flag is not None:
+        overwrite_phoneme_flags_(labels, args.phoneme_flag)
 
     init_seed(1234)
     wav, sr = engine.svs(
