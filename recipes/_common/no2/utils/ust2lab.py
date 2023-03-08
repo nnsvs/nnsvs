@@ -34,18 +34,20 @@ for ust_path in tqdm(files):
         n = "generated_mono" if as_mono else "generated_full"
         dst_dir = join(config["out_dir"], f"{n}")
         os.makedirs(dst_dir, exist_ok=True)
-        
-        lab_path = join(dst_dir, name + ".lab") 
-        
-        ust2hts(ust_path, lab_path, table_path, strict_sinsy_style=False, as_mono=as_mono)
+
+        lab_path = join(dst_dir, name + ".lab")
+
+        ust2hts(
+            ust_path, lab_path, table_path, strict_sinsy_style=False, as_mono=as_mono
+        )
 
         lab = hts.HTSLabelFile()
 
         with open(lab_path, "r") as f:
             for label in f.readlines():
                 lab.append(label.split(), strict=False)
-                
+
         lab = merge_sil(lab)
-        
+
         with open(lab_path, "w") as f:
             f.write(str(fix_mono_lab_before_align(lab, config["spk"])))
