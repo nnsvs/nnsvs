@@ -396,7 +396,13 @@ def overwrite_phoneme_flags_(labels, flag):
 
     contexts = labels.contexts
     for i in range(len(contexts)):
-        assert len(_flag_re.findall(contexts[i])) == 1, (i, contexts[i])
+        n = len(_flag_re.findall(contexts[i]))
+        if n == 0:
+            print(i, contexts[i])
+            print("Warn: it is likely to have a wrong input format. Ignoring.")
+        elif n != 1:
+            print(i, contexts[i])
+            raise RuntimeError("More than two flags are found")
         contexts[i] = _flag_re.sub(f"^{flag}_", contexts[i])
     labels.contexts = contexts
 
