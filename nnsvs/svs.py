@@ -696,11 +696,6 @@ WORLD is only supported for waveform generation"""
         ):
             duration_modified_labels_seg.frame_shift = hts_frame_shift
 
-            # Print phoneme sequence for verbosity
-            mono_labels = full_to_mono(duration_modified_labels_seg)
-            s = label2phrases_str(mono_labels, note_indices=None)
-            self.logger.info("[Phrases]: \n" + s)
-
             # Predict acoustic features
             # NOTE: if non-zero pre_f0_shift_in_cent is specified, the input pitch
             # will be shifted before running the acoustic model
