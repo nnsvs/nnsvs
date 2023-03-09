@@ -39,7 +39,9 @@ setup(
     ],
     extras_require={
         "dev": [
-            "matplotlib",
+            # NOTE: tentative fix for https://github.com/nnsvs/nnsvs/issues/191
+            "matplotlib<3.6.0",
+            "seaborn",
             "mlflow",
             "optuna",
             "hydra-optuna-sweeper",
