@@ -112,7 +112,9 @@ class SPSVS(BaseSVS):
     def __init__(self, model_dir, device="cpu", verbose=0):
         self.device = device
 
-        self.logger = getLogger(verbose=verbose)
+        # NOTE: assuming that the logger is instantiated without hydra
+        # needs to add stream handler to the logger explicitly
+        self.logger = getLogger(verbose=verbose, add_stream_handler=True)
 
         if isinstance(model_dir, str):
             model_dir = Path(model_dir)
