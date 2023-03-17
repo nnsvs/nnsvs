@@ -77,7 +77,9 @@ def test_label2phrases(filename, fix_offset):
     assert len(timing_labels) == sum(len(phrase) for phrase in phrases)
 
 
-@pytest.mark.parametrize("filename", ["sample1", "sample2", "sample3", "meltdown_main", "sample4"])
+@pytest.mark.parametrize(
+    "filename", ["sample1", "sample2", "sample3", "meltdown_main", "sample4"]
+)
 def test_segment_label(filename):
     timing_labels = hts.load(
         join(dirname(__file__), "data", "neutrino", f"{filename}_timing.lab")
