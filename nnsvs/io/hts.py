@@ -227,7 +227,7 @@ def segment_labels(
     if len(seg) > 0:
         seg_d = compute_nosil_duration(seg)
         # If the last segment is short, combine with the previous segment.
-        if seg_d < min_duration:
+        if seg_d < min_duration and len(end_indices) > 1:
             end_indices[-1] = si + len(seg) - 1
         else:
             start_indices.append(si)
