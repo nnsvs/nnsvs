@@ -50,7 +50,7 @@ duration_data: myconfig
 
 acoustic_model: acoustic_nnsvs_world_multi_ar_f0
 acoustic_train: myconfig
-acoustic_data: world
+acoustic_data: world_nit-song070
 
 postfilter_model: postfilter_mgc
 postfilter_train: mgc
