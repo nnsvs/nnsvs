@@ -811,6 +811,7 @@ class FFConvLSTM(BaseModel):
         in_ph_start_idx: int = 1,
         in_ph_end_idx: int = 50,
         embed_dim=None,
+        enforce_sorted=True,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -820,6 +821,7 @@ class FFConvLSTM(BaseModel):
         self.num_vocab = in_ph_end_idx - in_ph_start_idx
         self.embed_dim = embed_dim
         self.use_mdn = use_mdn
+        self.enforce_sorted = enforce_sorted
 
         if self.embed_dim is not None:
             assert in_dim > self.num_vocab
@@ -904,9 +906,11 @@ class FFConvLSTM(BaseModel):
 
         out = self.ff(x)
         out = self.conv(out.transpose(1, 2)).transpose(1, 2)
-        sequence = pack_padded_sequence(out, lengths, batch_first=True)
+        sequence = pack_padded_sequence(
+            out, lengths, batch_first=True, enforce_sorted=self.enforce_sorted
+        )
         out, _ = self.lstm(sequence)
-        out, _ = pad_packed_sequence(out, batch_first=True)
+        out, _ = pad_packed_sequence(out, batch_first=True, total_length=x.size(1))
 
         return self.fc(out)
 
@@ -1099,6 +1103,7 @@ class LSTMEncoder(BaseModel):
         in_ph_start_idx: int = 1,
         in_ph_end_idx: int = 50,
         embed_dim=None,
+        enforce_sorted=True,
     ):
         super(LSTMEncoder, self).__init__()
         self.in_dim = in_dim
@@ -1106,6 +1111,7 @@ class LSTMEncoder(BaseModel):
         self.in_ph_end_idx = in_ph_end_idx
         self.num_vocab = in_ph_end_idx - in_ph_start_idx
         self.embed_dim = embed_dim
+        self.enforce_sorted = enforce_sorted
 
         if self.embed_dim is not None:
             assert in_dim > self.num_vocab
@@ -1146,9 +1152,11 @@ class LSTMEncoder(BaseModel):
 
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
-        x = pack_padded_sequence(x, lengths, batch_first=True)
+        x = pack_padded_sequence(
+            x, lengths, batch_first=True, enforce_sorted=self.enforce_sorted
+        )
         out, _ = self.lstm(x)
-        out, _ = pad_packed_sequence(out, batch_first=True)
+        out, _ = pad_packed_sequence(out, batch_first=True, total_length=x.shape[1])
         out = self.hidden2out(out)
         return out
 
