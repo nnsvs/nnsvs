@@ -3,12 +3,12 @@ Update guide
 
 This page summarizes guides when you use the updated version of NNSVS.
 
-v0.0.3 to master
+v0.0.3 to v0.1.0
 ----------------
 
-.. warning::
-
-    The master branch is the development version of NNSVS. It is ready for developers to try out new features but use it on your own.
+There are many undocumented new features and changes related to `#150`_.
+Please check the Namine Ritsu's recipes and relevant source code for the details.
+@r9y9 may add docmentation later but it is not guraranteed.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -19,7 +19,7 @@ Hed
 ~~~
 
 NNSVS now uses the rest note information in the preprocessing and synthesis stages.
-In addition, NNSVS aasumes that the rest note (or equivalent phoneme) context is on the first feature in your hed file. For example, the first feature of a JP hed file should look like:
+In addition, NNSVS assumes that the rest note (or equivalent phoneme) context is on the first feature in your hed file. For example, the first feature of a JP hed file should look like:
 
 .. code-block::
 
@@ -30,34 +30,16 @@ Please do make sure to have the rest note context on the top of the hed file.
 Models
 ^^^^^^^
 
-- We've found that multi-stream models generally worked better than single-stream models. Please consider using multi-stream models. See also :doc:`acoustic_models` and :doc:`how_to_choose_model`.
-
-config.yaml
-^^^^^^^^^^^^
-
-TBD
-
-Run.sh
-^^^^^^^
-
-TBD
-
-train.py: train config
-^^^^^^^^^^^^^^^^^^^^^^
-
-TBD
+- Diffusion-based acoustic models are now supported. Consider using it if quality matters than speed. `#175`_
+- We've found that multi-stream models generally worked better than single-stream models. Please consider using multi-stream models. See also :doc:`modules/acoustic_models` and :doc:`how_to_choose_model`.
 
 train.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``batch_max_frames`` if specified, the batch size will be automatically adjusted to fit the specified number of frames. To allow efficient use of GPU memory, please do set this value.
 
-train_acoustic.py: train config
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TBD
-
-train_resf0.py: data config
+train_acoustic.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``batch_max_frames`` if specified, the batch size will be automatically adjusted to fit the specified number of frames. To allow efficient use of GPU memory, please do set this value.
@@ -151,3 +133,6 @@ train_resf0.py: data config
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``max_time_frames`` specifies maximum number of time frames. You can set non-negative values to limit the maximum time frames for making a mini-batch. It would be useful to workaround GPU OOM issues.
+
+.. _#150: https://github.com/r9y9/nnsvs/issues/150
+.. _#175: https://github.com/r9y9/nnsvs/pull/175

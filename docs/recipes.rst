@@ -1,10 +1,6 @@
 Getting started with recipes
 ============================
 
-.. warning::
-
-    This section needs to be re-written according to the recent major updates. Will be updated soon.
-
 This page describes how to use a recipe to create a singing voice synthesis (SVS) system.
 
 What is a recipe?

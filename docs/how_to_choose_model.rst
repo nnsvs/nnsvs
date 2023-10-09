@@ -29,7 +29,7 @@ Acoustic model
 
 - Use static features only. We found that dynamic features are less beneficial (at least for Namine Ritsu's database).
 - Use :class:`nnsvs.model.Conv1dResnet` (``use_mdn=True``) if you like old-style MDN-based acoustic model that was used in `Namine Ritsu's V2 model <https://www.youtube.com/watch?v=pKeo9IE_L1I>`_.
-- If you have a large amount of data, use multi-stream models (e.g., :class:`nnsvs.acoustic_models.NPSSMultistreamParametricModel`) where each feature stream is modeled by an autoregressive decoder except V/UV feature stream. Specifically, use autoregressive models for MGCs, log-F0, and BAP features. Please refer to the Namine Ritsu's recipes to find example model configurations. Note that autoregresive models tend to require a larger amount of training data.
+- If you have a large amount of data, use multi-stream models (e.g., :class:`nnsvs.acoustic_models.NPSSMultistreamParametricModel`) where each feature stream is modeled by an autoregressive decoder except V/UV feature stream. Specifically, use autoregressive models for MGCs, log-F0, and BAP features. Please refer to the Namine Ritsu's recipes to find example model configurations. Note that autoregresive models tend to require a larger amount of training data. Consider try fine-tuning if you have less amount of data.
 
 
 Multi-stream models

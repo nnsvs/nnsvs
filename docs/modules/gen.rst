@@ -14,8 +14,20 @@ Generation from trained models
 
     predict_timelag
     predict_duration
+    predict_timing
     predict_acoustic
+    predict_waveform
 
+Post-processisng
+-----------------
+
+.. autosummary::
+    :toctree: generated/
+    :nosignatures:
+
+    postprocess_duration
+    postprocess_acoustic
+    postprocess_waveform
 
 Generation helpers
 -------------------
@@ -24,11 +36,9 @@ Generation helpers
     :toctree: generated/
     :nosignatures:
 
-    postprocess_duration
     correct_vuv_by_phone
     gen_spsvs_static_features
     gen_world_params
-
 
 Utils
 ------

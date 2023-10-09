@@ -10,6 +10,7 @@ Neural network based singing voice synthesis library
 
 - GitHub: https://github.com/nnsvs/nnsvs
 - Paper: https://arxiv.org/abs/2210.15987
+- Demo: https://r9y9.github.io/projects/nnsvs/
 
 
 Features
@@ -19,14 +20,31 @@ Features
 - **Multiple languages**: NNSVS has been used for creating singing voice synthesis (SVS) systems for multiple languages by VocalSynth comminities (8+ as far as I know).
 - **Research friendly**: NNSVS comes with reproducible Kaldi/ESPnet-style recipes. You can use NNSVS to create baseline systems for your research.
 
-Note that NNSVS was originally designed for research purposes. Please check out more user-friendly `ENUNU <https://github.com/oatsu-gh/ENUNU>`_ for creative purposes.
+Tools
+-----
+
+Note that NNSVS was originally designed for research purposes. Please check out more user-friendly tools below if you are neither a researcher nor a sofware developer.
+
+- `ENUNU <https://github.com/oatsu-gh/ENUNU>`_
+- `Simple-ENUNU <https://github.com/oatsu-gh/SimpleEnunu>`_
+
 You can find a practical guide for NNSVS/ENUNU at https://nnsvs.carrd.co/ (by `xuu <https://xuu.crd.co/>`_).
 A detailed tutorial for for making voice banks can be found at `NNSVS Database Making Tutorial <https://docs.google.com/document/d/1uMsepxbdUW65PfIWL1pt2OM6ZKa5ybTTJOpZ733Ht6s/edit?usp=sharing>`_ (by `PixProcuer <https://twitter.com/PixPrucer>`_).
 
-Audio samples
--------------
+Selected samples
+----------------
 
-https://r9y9.github.io/projects/nnsvs/
+Diffusion + SiFiGAN for Ritsu (2023/03/12)
+
+.. youtube:: 1V41mghsxIU
+   :align: center
+
+Diffusion + SiFiGAN for Cipher  (2023/03/14)
+
+.. youtube:: CIa6NMnTpfM
+   :align: center
+
+Autoregressive model + uSFGAN  (2022/09/24)
 
 ..  youtube:: u2210L3JXPo
    :align: center
@@ -59,7 +77,6 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    optuna
    train_vocoders
    train_usfgan
-   train_postfilters
    enunu2nnsvs
 
 .. toctree::
@@ -81,6 +98,7 @@ You can find more from the NNSVS/ENUNU community: `YouTube <https://www.youtube.
    modules/svs
    modules/dsp
    modules/gen
+   modules/io
    modules/mdn
    modules/pitch
    modules/multistream

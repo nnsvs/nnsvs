@@ -60,6 +60,10 @@ It is often observed that the predicted features are over-smoothed especially if
 Post-filter
 ------------
 
+.. warning::
+
+   The post-filter is currently not recommended to use. Consider using a diffusion acoustic model to alleviate the over-smoothing problem.
+
 A post-filter is a post-processing module, typically applied for spectral features only.
 There are multiple choices to address the over-smoothing problem by a post-filter as follows:
 
