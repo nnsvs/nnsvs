@@ -1296,7 +1296,6 @@ class TransformerEncoder(BaseModel):
 
 
 # For backward compatibility
-# Will be removed in v0.1.0
 
 
 def ResF0Conv1dResnet(*args, **kwargs):
