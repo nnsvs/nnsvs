@@ -22,15 +22,19 @@ jobs:
             python-version: 3.8
           - os: ubuntu-20.04
             python-version: 3.9
+          - os: ubuntu-20.04
+            python-version: "3.10"
+          - os: ubuntu-20.04
+            python-version: "3.11"
           - os: macos-latest
             python-version: 3.9
           - os: windows-latest
             python-version: 3.9
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install OS dependencies
@@ -47,16 +51,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -U numpy
+        pip install -U numpy wheel
         pip install -r requirements.txt
         pip install -e ".[dev,lint,test]"
 
         # Install NSF implementations for PWG
-        pip install git+https://github.com/nnsvs/ParallelWaveGAN@nnsvs
+        pip install git+https://github.com/nnsvs/ParallelWaveGAN@nnsvs --no-build-isolation
         # Install hn-uSFGAN
-        pip install git+https://github.com/nnsvs/HN-UnifiedSourceFilterGAN@nnsvs
+        pip install git+https://github.com/nnsvs/HN-UnifiedSourceFilterGAN@nnsvs --no-build-isolation
         # Install SiFi-GAN
-        pip install git+https://github.com/nnsvs/SiFiGAN@nnsvs
+        pip install git+https://github.com/nnsvs/SiFiGAN@nnsvs --no-build-isolation
 
     - name: Lint with pysen
       run: |

@@ -27,7 +27,7 @@ setup(
         "cython",
         "torch >= 1.6.0",
         "torchaudio",
-        "hydra-core >= 1.1.0, < 1.2.0",
+        "hydra-core >= 1.1.0",
         "hydra_colorlog >= 1.1.0",
         "librosa >= 0.7.0",
         "pysptk",
