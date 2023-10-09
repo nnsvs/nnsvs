@@ -23,7 +23,7 @@ Features
 Tools
 -----
 
-Note that NNSVS was originally designed for research purposes. Please check out more user-friendly tools below if you are neither a researcher nor a sofware developer.
+Note that NNSVS was originally designed for research purposes. Please check out more user-friendly tools below if you are neither a researcher nor a software developer.
 
 - `ENUNU <https://github.com/oatsu-gh/ENUNU>`_
 - `Simple-ENUNU <https://github.com/oatsu-gh/SimpleEnunu>`_
