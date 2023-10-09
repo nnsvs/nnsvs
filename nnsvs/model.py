@@ -14,6 +14,7 @@ from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 __all__ = [
+    "ExtractFromInput",
     "FFN",
     "LSTMRNN",
     "LSTMRNNSAR",
@@ -28,6 +29,28 @@ __all__ = [
     "VariancePredictor",
     "TransformerEncoder",
 ]
+
+
+class ExtractFromInput(BaseModel):
+    """Extract a part of input
+
+    This class doesn't have any learnable parameters.
+
+    Args:
+        start_idx (int): the start index of the input
+        end_idx (int): the end index of the input
+
+    """
+
+    def __init__(self, start_idx, end_idx):
+        super().__init__()
+        self.start_idx = start_idx
+        self.end_idx = end_idx
+
+    def forward(self, x, lengths=None, y=None):
+        """Forward pass"""
+        # x: (B, T, C)
+        return x[:, :, self.start_idx : self.end_idx]
 
 
 class Conv1dResnet(BaseModel):
