@@ -68,6 +68,9 @@ class Conv1dResnet(BaseModel):
         use_mdn (bool): whether to use MDN or not
         num_gaussians (int): the number of gaussians in MDN
         dim_wise (bool): whether to use dim-wise or not
+        in_ph_start_idx (int): the start index of phoneme identity in a hed file
+        in_ph_end_idx (int): the end index of phoneme identity in a hed file
+        embed_dim (int): the dimension of the phoneme embedding
     """
 
     def __init__(
@@ -699,12 +702,7 @@ class MDNv2(BaseModel):
 
 
 class Conv1dResnetMDN(BaseModel):
-    """Conv1dResnet with MDN output layer
-
-    .. warning::
-
-        Will be removed in v0.1.0. Use Conv1dResNet with ``use_mdn=True`` instead.
-    """
+    """Conv1dResnet with MDN output layer"""
 
     def __init__(
         self,
@@ -720,10 +718,7 @@ class Conv1dResnetMDN(BaseModel):
         super().__init__()
 
         if "dropout" in kwargs:
-            warn(
-                "dropout argument in Conv1dResnet is deprecated"
-                " and will be removed in future versions"
-            )
+            warn("dropout argument in Conv1dResnet is deprecated")
 
         model = [
             Conv1dResnet(
