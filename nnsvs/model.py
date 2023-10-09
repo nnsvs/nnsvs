@@ -1152,11 +1152,12 @@ class LSTMEncoder(BaseModel):
 
         if isinstance(lengths, torch.Tensor):
             lengths = lengths.to("cpu")
+        total_length = x.size(1)
         x = pack_padded_sequence(
             x, lengths, batch_first=True, enforce_sorted=self.enforce_sorted
         )
         out, _ = self.lstm(x)
-        out, _ = pad_packed_sequence(out, batch_first=True, total_length=x.shape[1])
+        out, _ = pad_packed_sequence(out, batch_first=True, total_length=total_length)
         out = self.hidden2out(out)
         return out
 
