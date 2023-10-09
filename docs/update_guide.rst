@@ -40,7 +40,7 @@ train.py: data config
 
 
 train_acoustic.py: data config
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - New parameter: ``batch_max_frames`` if specified, the batch size will be automatically adjusted to fit the specified number of frames. To allow efficient use of GPU memory, please do set this value.
 
