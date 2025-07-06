@@ -1,5 +1,5 @@
-"""Prepare static features from static + dynamic features
-"""
+"""Prepare static features from static + dynamic features"""
+
 import os
 from concurrent.futures import ProcessPoolExecutor
 from os.path import join
@@ -12,7 +12,7 @@ from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features
 from nnsvs.util import get_world_stream_info, load_utt_list
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def _extract_static_features(
@@ -55,7 +55,9 @@ def _extract_static_features(
     np.save(static_path, static_feats, allow_pickle=False)
 
 
-@hydra.main(config_path="conf/prepare_static_features", config_name="config")
+@hydra.main(
+    config_path="conf/prepare_static_features", config_name="config", version_base="1.1"
+)
 def my_app(config: DictConfig) -> None:
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
@@ -95,8 +97,8 @@ def my_app(config: DictConfig) -> None:
 
 
 def entry():
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()
 
 
 if __name__ == "__main__":
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()

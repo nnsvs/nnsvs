@@ -4,7 +4,7 @@ from functools import partial
 import numpy as np
 import torch
 from nnsvs.base import BaseModel, PredictionType
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def extract(a, t, x_shape):

@@ -14,7 +14,7 @@ from hydra.utils import to_absolute_path
 from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from sklearn.preprocessing import StandardScaler
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 logger = None
 
@@ -75,7 +75,9 @@ def apply_normalization_dir2dir(
         future.result()
 
 
-@hydra.main(config_path="conf/preprocess_normalize", config_name="config")
+@hydra.main(
+    config_path="conf/preprocess_normalize", config_name="config", version_base="1.1"
+)
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)

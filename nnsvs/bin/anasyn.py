@@ -164,7 +164,7 @@ def post_process(wav, sample_rate):
     return wav
 
 
-@hydra.main(config_path="conf/synthesis", config_name="config")
+@hydra.main(config_path="conf/synthesis", config_name="config", version_base="1.1")
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
@@ -224,8 +224,8 @@ def my_app(config: DictConfig) -> None:
 
 
 def entry():
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()
 
 
 if __name__ == "__main__":
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()

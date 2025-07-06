@@ -21,7 +21,7 @@ from scipy.io import wavfile
 from tqdm.auto import tqdm
 
 
-@hydra.main(config_path="conf/synthesis", config_name="config")
+@hydra.main(config_path="conf/synthesis", config_name="config", version_base="1.1")
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
@@ -38,6 +38,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.timelag.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=False,
     )
     timelag_model.load_state_dict(checkpoint["state_dict"])
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
@@ -50,6 +51,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.duration.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=False,
     )
     duration_model.load_state_dict(checkpoint["state_dict"])
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
@@ -62,6 +64,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.acoustic.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=False,
     )
     acoustic_model.load_state_dict(checkpoint["state_dict"])
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
@@ -84,7 +87,7 @@ def my_app(config: DictConfig) -> None:
         vocoder, vocoder_in_scaler, vocoder_config = None, None, None
         if config.synthesis.vocoder_type != "world":
             logger.warning("Vocoder checkpoint is not specified")
-            logger.info(f"Use world instead of {config.synthesis.vocoder_type}.")
+            logger.info("Use world instead of %s.", config.synthesis.vocoder_type)
         config.synthesis.vocoder_type = "world"
 
     # Run synthesis for each utt.
@@ -199,8 +202,8 @@ def my_app(config: DictConfig) -> None:
 
 
 def entry():
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()
 
 
 if __name__ == "__main__":
-    my_app()  # pylint: disable=no-value-for-parameter
+    my_app()

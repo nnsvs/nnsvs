@@ -44,7 +44,7 @@ from torch.utils import data as data_utils
 from torch.utils.data.sampler import BatchSampler
 from torch.utils.tensorboard import SummaryWriter
 
-plt.style.use("seaborn-whitegrid")
+plt.style.use("seaborn-v0_8-whitegrid")
 
 
 class ShuffleBatchSampler(BatchSampler):
@@ -197,10 +197,9 @@ def batch_by_size(
         num_tokens = num_tokens_fn(idx)
         sample_lens.append(num_tokens)
         sample_len = max(sample_len, num_tokens)
-        assert (
-            sample_len <= max_tokens
-        ), "sentence at index {} of size {} exceeds max_tokens " "limit of {}!".format(
-            idx, sample_len, max_tokens
+        assert sample_len <= max_tokens, (
+            f"sentence at index {idx} of size {sample_len} exceeds"
+            f"max_tokens limit of {max_tokens}!"
         )
         num_tokens = (len(batch) + 1) * sample_len
 

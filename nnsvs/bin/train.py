@@ -167,7 +167,7 @@ def train_loop(
             return x
 
     else:
-        from tqdm import tqdm
+        from tqdm.auto import tqdm
 
     train_iter = 1
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
@@ -260,7 +260,7 @@ def train_loop(
     return last_dev_loss
 
 
-@hydra.main(config_path="conf/train", config_name="config")
+@hydra.main(config_path="conf/train", config_name="config", version_base="1.1")
 def my_app(config: DictConfig) -> None:
     if "max_time_frames" in config.data and config.data.max_time_frames > 0:
         collate_fn = partial(

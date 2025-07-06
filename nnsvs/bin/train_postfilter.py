@@ -282,7 +282,7 @@ def train_loop(
             return x
 
     else:
-        from tqdm import tqdm
+        from tqdm.auto import tqdm
 
     train_iter = 1
     for epoch in tqdm(range(1, config.train.nepochs + 1)):
@@ -430,7 +430,9 @@ def train_loop(
     return last_dev_loss
 
 
-@hydra.main(config_path="conf/train_postfilter", config_name="config")
+@hydra.main(
+    config_path="conf/train_postfilter", config_name="config", version_base="1.1"
+)
 def my_app(config: DictConfig) -> None:
     # NOTE: set discriminator's in_dim automatically
     if config.model.netD.in_dim is None:

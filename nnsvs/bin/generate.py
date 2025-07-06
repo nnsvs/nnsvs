@@ -14,14 +14,14 @@ from nnsvs.logger import getLogger
 from nnsvs.multistream import get_windows, multi_stream_mlpg
 from nnsvs.train_util import NpyFileSource
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 logger = None
 
 use_cuda = torch.cuda.is_available()
 
 
-@hydra.main(config_path="conf/generate", config_name="config")
+@hydra.main(config_path="conf/generate", config_name="config", version_base="1.1")
 def my_app(config: DictConfig) -> None:
     global logger
     logger = getLogger(config.verbose)
@@ -50,7 +50,6 @@ def my_app(config: DictConfig) -> None:
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
 
             if model.prediction_type() == PredictionType.PROBABILISTIC:
-
                 max_mu, max_sigma = model.inference(feats, [feats.shape[1]])
 
                 if np.any(model_config.has_dynamic_features):
