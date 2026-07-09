@@ -94,7 +94,7 @@ if __name__ == "__main__":
         # or
         # (mel, lf0, vuv)
         streams = list(map(lambda x: x.reshape(-1), streams))[:4]
-        lf0_params[name] = float(streams[1])
+        lf0_params[name] = float(streams[1].item())
         out_feats = np.concatenate(streams)
 
         print(f"[{name}] dim: {in_feats.shape} -> {out_feats.shape}")

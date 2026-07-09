@@ -1294,12 +1294,12 @@ def eval_pitch_model(
             ax.set_xlim(timeaxis[0], timeaxis[-1])
             ax.set_ylim(
                 min(
-                    min(lf0_score_denorm_[lf0_score_denorm_ > 0]),
-                    min(lf0),
-                    min(pred_lf0),
+                    np.min(lf0_score_denorm_[lf0_score_denorm_ > 0]),
+                    np.min(lf0),
+                    np.min(pred_lf0),
                 )
                 - 0.1,
-                max(max(lf0_score_denorm_), max(lf0), max(pred_lf0)) + 0.1,
+                max(np.max(lf0_score_denorm_), np.max(lf0), np.max(pred_lf0)) + 0.1,
             )
             plt.legend(loc="upper right", borderaxespad=0, ncol=3)
             plt.tight_layout()
@@ -1334,12 +1334,12 @@ def eval_pitch_model(
             ax.set_xlim(timeaxis[0], timeaxis[-1])
             ax.set_ylim(
                 min(
-                    min(lf0_score[lf0_score > 0]),
-                    min(np.exp(lf0)),
-                    min(np.exp(pred_lf0)),
+                    np.min(lf0_score[lf0_score > 0]),
+                    np.min(np.exp(lf0)),
+                    np.min(np.exp(pred_lf0)),
                 )
                 - 10,
-                max(max(lf0_score), max(np.exp(lf0)), max(np.exp(pred_lf0))) + 10,
+                max(np.max(lf0_score), np.max(np.exp(lf0)), np.max(np.exp(pred_lf0))) + 10,
             )
             plt.legend(loc="upper right", borderaxespad=0, ncol=3)
             plt.tight_layout()
@@ -2077,8 +2077,8 @@ def plot_spsvs_params(
         ax.set_ylabel("Log-frequency [Hz]")
         ax.set_xlim(timeaxis[0], timeaxis[-1])
         ax.set_ylim(
-            min(min(lf0_score[lf0_score > 0]), min(lf0), min(pred_lf0)) - 0.1,
-            max(max(lf0_score), max(lf0), max(pred_lf0)) + 0.1,
+            min(np.min(lf0_score[lf0_score > 0]), np.min(lf0), np.min(pred_lf0)) - 0.1,
+            max(np.max(lf0_score), np.max(lf0), np.max(pred_lf0)) + 0.1,
         )
         plt.legend(loc="upper right", borderaxespad=0, ncol=3)
         plt.tight_layout()
@@ -2115,9 +2115,11 @@ def plot_spsvs_params(
         ax.set_ylabel("Frequency [Hz]")
         ax.set_xlim(timeaxis[0], timeaxis[-1])
         ax.set_ylim(
-            min(min(f0_score[f0_score > 0]), min(np.exp(lf0)), min(np.exp(pred_lf0)))
+            min(
+                np.min(f0_score[f0_score > 0]), np.min(np.exp(lf0)), np.min(np.exp(pred_lf0))
+            )
             - 10,
-            max(max(f0_score), max(np.exp(lf0)), max(np.exp(pred_lf0))) + 10,
+            max(np.max(f0_score), np.max(np.exp(lf0)), np.max(np.exp(pred_lf0))) + 10,
         )
         plt.legend(loc="upper right", borderaxespad=0, ncol=3)
         plt.tight_layout()
@@ -2300,8 +2302,8 @@ def plot_mel_params(
         ax.set_ylabel("Log-frequency [Hz]")
         ax.set_xlim(timeaxis[0], timeaxis[-1])
         ax.set_ylim(
-            min(min(lf0_score[lf0_score > 0]), min(lf0), min(pred_lf0)) - 0.1,
-            max(max(lf0_score), max(lf0), max(pred_lf0)) + 0.1,
+            min(np.min(lf0_score[lf0_score > 0]), np.min(lf0), np.min(pred_lf0)) - 0.1,
+            max(np.max(lf0_score), np.max(lf0), np.max(pred_lf0)) + 0.1,
         )
         plt.legend(loc="upper right", borderaxespad=0, ncol=3)
         plt.tight_layout()
@@ -2338,9 +2340,11 @@ def plot_mel_params(
         ax.set_ylabel("Frequency [Hz]")
         ax.set_xlim(timeaxis[0], timeaxis[-1])
         ax.set_ylim(
-            min(min(f0_score[f0_score > 0]), min(np.exp(lf0)), min(np.exp(pred_lf0)))
+            min(
+                np.min(f0_score[f0_score > 0]), np.min(np.exp(lf0)), np.min(np.exp(pred_lf0))
+            )
             - 10,
-            max(max(f0_score), max(np.exp(lf0)), max(np.exp(pred_lf0))) + 10,
+            max(np.max(f0_score), np.max(np.exp(lf0)), np.max(np.exp(pred_lf0))) + 10,
         )
         plt.legend(loc="upper right", borderaxespad=0, ncol=3)
         plt.tight_layout()

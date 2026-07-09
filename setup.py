@@ -45,8 +45,12 @@ setup(
     ],
     extras_require={
         "dev": [
-            # NOTE: tentative fix for https://github.com/nnsvs/nnsvs/issues/191
-            "matplotlib<3.6.0",
+            # matplotlib<3.6.0 was pinned as a tentative fix for
+            # https://github.com/nnsvs/nnsvs/issues/191, but old matplotlib
+            # still uses np.Inf internally, which numpy>=2.0 (required for
+            # Python 3.13) removed. Verified issue #191 does not reproduce
+            # on matplotlib 3.11.0.
+            "matplotlib",
             "seaborn",
             "mlflow",
             "optuna",
