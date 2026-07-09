@@ -1,9 +1,12 @@
-from importlib.machinery import SourceFileLoader
+import importlib.util
 from os.path import exists
 
 from setuptools import find_packages, setup
 
-version = SourceFileLoader("nnsvs.version", "nnsvs/version.py").load_module().version
+spec = importlib.util.spec_from_file_location("nnsvs.version", "nnsvs/version.py")
+version_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(version_module)
+version = version_module.version
 
 packages = find_packages()
 if exists("README.md"):
@@ -25,10 +28,13 @@ setup(
         "numpy",
         "scipy",
         "cython",
+        # pyworld/pysptk/nnmnkwii still import pkg_resources at runtime, which
+        # setuptools removed entirely as of 82.0.0
+        "setuptools < 81",
         "torch >= 1.6.0",
         "torchaudio",
-        "hydra-core >= 1.1.0",
-        "hydra_colorlog >= 1.1.0",
+        "hydra-core >= 1.3.0, < 1.4.0",
+        "hydra_colorlog >= 1.2.0",
         "librosa >= 0.7.0",
         "pysptk",
         "pyworld",

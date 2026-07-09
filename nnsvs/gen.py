@@ -350,7 +350,7 @@ def postprocess_duration(labels, pred_durations, lag, frame_period=5):
 
         # Compute note duration with time-lag
         # eq (11)
-        L = int(fe.duration_features(p)[0])
+        L = int(fe.duration_features(p)[0].item())
         if i < len(note_indices) - 1:
             L_hat = L - (lag[i - 1] - lag[i]) / hts_frame_shift
         else:
