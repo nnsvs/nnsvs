@@ -18,23 +18,33 @@ jobs:
         include:
           - os: ubuntu-20.04
             python-version: 3.7
+            lint: true
           - os: ubuntu-20.04
             python-version: 3.8
+            lint: true
           - os: ubuntu-20.04
             python-version: 3.9
+            lint: true
           - os: ubuntu-20.04
             python-version: "3.10"
+            lint: false
           - os: ubuntu-20.04
             python-version: "3.11"
+            lint: false
           - os: macos-latest
             python-version: 3.9
+            lint: true
           - os: windows-latest
             python-version: 3.9
+            lint: true
+          - os: ubuntu-latest
+            python-version: "3.13"
+            lint: false
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install OS dependencies
@@ -53,7 +63,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -U numpy wheel
         pip install -r requirements.txt
-        pip install -e ".[dev,lint,test]"
+        pip install -e ".[dev,test]"
 
         # Install NSF implementations for PWG
         pip install git+https://github.com/nnsvs/ParallelWaveGAN@nnsvs --no-build-isolation
@@ -62,7 +72,14 @@ jobs:
         # Install SiFi-GAN
         pip install git+https://github.com/nnsvs/SiFiGAN@nnsvs --no-build-isolation
 
+    # pinned black/mypy/flake8/isort pull in typed-ast, which fails to build on Python 3.13
+    - name: Install lint dependencies
+      if: matrix.lint
+      run: |
+        pip install -e ".[lint]"
+
     - name: Lint with pysen
+      if: matrix.lint
       run: |
         pysen run lint
 

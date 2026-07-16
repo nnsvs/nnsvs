@@ -1,11 +1,10 @@
 import importlib
 import random
-from os.path import join
+from os.path import dirname, join
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pkg_resources
 import pyworld
 import torch
 from hydra.utils import instantiate
@@ -138,7 +137,7 @@ def example_xml_file(key="haruga_kita"):
     Raises:
         FileNotFoundError: if the file is not found
     """
-    return pkg_resources.resource_filename(__name__, join(EXAMPLE_DIR, f"{key}.xml"))
+    return join(dirname(__file__), EXAMPLE_DIR, f"{key}.xml")
 
 
 def init_seed(seed):
