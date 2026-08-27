@@ -10,6 +10,9 @@ from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
 from nnmnkwii.util import apply_delta_windows
+from parallel_wavegan.bin.preprocess import logmelfilterbank
+from scipy.signal import firwin, lfilter
+
 from nnsvs.io.hts import get_pitch_index, get_pitch_indices
 from nnsvs.multistream import get_windows
 from nnsvs.pitch import (
@@ -22,8 +25,6 @@ from nnsvs.pitch import (
     lowpass_filter,
 )
 from nnsvs.util import init_seed
-from parallel_wavegan.bin.preprocess import logmelfilterbank
-from scipy.signal import firwin, lfilter
 
 
 def _collect_files(data_root, utt_list, ext):
@@ -264,9 +265,9 @@ class WORLDAcousticSource(FileDataSource):
         if self.f0_extractor == "parselmouth":
             import parselmouth
 
-            assert (
-                self.f0_floor is not None and self.f0_ceil is not None
-            ), "must be set manually"
+            assert self.f0_floor is not None and self.f0_ceil is not None, (
+                "must be set manually"
+            )
             harvest_num_frames = int(int(1000 * len(x) / fs) / self.frame_period) + 1
             f0 = (
                 parselmouth.Sound(x.astype(np.float64), fs)
@@ -353,7 +354,8 @@ class WORLDAcousticSource(FileDataSource):
                 lf0, sr_f0, cutoff=self.trajectory_smoothing_cutoff_f0
             )
 
-        # Fill continuous F0s for segments where no notes are assigned & no F0s are detected.
+        # Fill continuous F0s for segments where no notes are assigned & no F0s
+        # are detected.
         lf0_score = _midi_to_hz(l_features, self.pitch_idx, True)
         clf0_score = interp1d(lf0_score, kind="slinear")
         mask = np.convolve(lf0_score, np.ones(1), "same")
@@ -373,9 +375,10 @@ class WORLDAcousticSource(FileDataSource):
             threshold = 0.12
 
             if self.f0_extractor == "harvest":
-                # NOTE: harvest is not supported here since the current implemented algorithm
-                # relies on v/uv flags to find vibrato sections.
-                # We use DIO since it provides more accurate v/uv detection in my experience.
+                # NOTE: harvest is not supported here since the current
+                # implemented algorithm relies on v/uv flags to find vibrato
+                # sections. We use DIO since it provides more accurate v/uv
+                # detection in my experience.
                 _f0, _timeaxis = pyworld.dio(
                     x,
                     fs,
@@ -663,9 +666,9 @@ class MelF0AcousticSource(FileDataSource):
         if self.f0_extractor == "parselmouth":
             import parselmouth
 
-            assert (
-                self.f0_floor is not None and self.f0_ceil is not None
-            ), "must be set manually"
+            assert self.f0_floor is not None and self.f0_ceil is not None, (
+                "must be set manually"
+            )
             harvest_num_frames = int(int(1000 * len(x) / fs) / self.frame_period) + 1
             f0 = (
                 parselmouth.Sound(x.astype(np.float64), fs)
@@ -751,7 +754,8 @@ class MelF0AcousticSource(FileDataSource):
                 lf0, sr_f0, cutoff=self.trajectory_smoothing_cutoff_f0
             )
 
-        # Fill continuous F0s for segments where no notes are assigned & no F0s are detected.
+        # Fill continuous F0s for segments where no notes are assigned & no F0s
+        # are detected.
         lf0_score = _midi_to_hz(l_features, self.pitch_idx, True)
         clf0_score = interp1d(lf0_score, kind="slinear")
         mask = np.convolve(lf0_score, np.ones(1), "same")

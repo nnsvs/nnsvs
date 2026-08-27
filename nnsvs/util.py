@@ -1,18 +1,18 @@
 import importlib
 import random
-from os.path import join
+from os.path import dirname, join
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pkg_resources
 import pyworld
 import torch
 from hydra.utils import instantiate
-from nnsvs.multistream import get_static_features, get_static_stream_sizes
-from nnsvs.usfgan import USFGANWrapper
 from omegaconf import OmegaConf
 from torch import nn
+
+from nnsvs.multistream import get_static_features, get_static_stream_sizes
+from nnsvs.usfgan import USFGANWrapper
 
 try:
     from parallel_wavegan.utils import load_model
@@ -60,7 +60,8 @@ def init_weights(net, init_type="normal", init_gain=0.02):
             if hasattr(m, "bias") and m.bias is not None:
                 nn.init.constant_(m.bias.data, 0.0)
         elif classname.find("BatchNorm2d") != -1:
-            # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+            # BatchNorm Layer's weight is not a matrix; only normal
+            # distribution applies.
             nn.init.normal_(m.weight.data, 1.0, init_gain)
             nn.init.constant_(m.bias.data, 0.0)
 
@@ -138,7 +139,7 @@ def example_xml_file(key="haruga_kita"):
     Raises:
         FileNotFoundError: if the file is not found
     """
-    return pkg_resources.resource_filename(__name__, join(EXAMPLE_DIR, f"{key}.xml"))
+    return join(dirname(__file__), EXAMPLE_DIR, f"{key}.xml")
 
 
 def init_seed(seed):
@@ -387,6 +388,7 @@ def load_vocoder(path, device, acoustic_config):
         checkpoint = torch.load(
             path,
             map_location=lambda storage, loc: storage,
+            weights_only=True,
         )
 
         vocoder = instantiate(vocoder_config.generator).to(device)

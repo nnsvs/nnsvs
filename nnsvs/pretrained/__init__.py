@@ -5,8 +5,9 @@ from os.path import join
 from pathlib import Path
 from urllib.request import urlretrieve
 
-from nnsvs.util import dynamic_import
 from tqdm.auto import tqdm
+
+from nnsvs.util import dynamic_import
 
 DEFAULT_CACHE_DIR = join(os.path.expanduser("~"), ".cache", "nnsvs")
 CACHE_DIR = os.environ.get("NNSVS_CACHE_DIR", DEFAULT_CACHE_DIR)

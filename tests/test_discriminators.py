@@ -1,5 +1,6 @@
 import pytest
 import torch
+
 from nnsvs.discriminators import Conv2dD
 from nnsvs.util import init_seed
 

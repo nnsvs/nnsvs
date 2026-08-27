@@ -8,9 +8,19 @@ NNSVS_ROOT=$script_dir/..
 # NOTE: This environmental variable is only used for testing purpose
 export RUNNING_TEST_RECIPES=1
 
+# hts.sp.nitech.ac.jp is a university lab server that is occasionally
+# unreachable. Probe it once so we can skip the nit-song070 recipe tests
+# gracefully instead of failing the whole CI job on an unrelated outage.
+nitech_reachable() {
+    curl -fsS --connect-timeout 10 --max-time 15 --head \
+        https://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2 >/dev/null 2>&1
+}
+
 ###########################################################
 #                Dev (melf0, 48k)                         #
 ###########################################################
+
+if nitech_reachable; then
 
 # Use nit-song070 public dataset for testing on CI
 cd $NNSVS_ROOT/recipes/nit-song070/test-48k-melf0
@@ -91,9 +101,15 @@ rm -rf dump exp outputs tensorboard packed_models
     --acoustic_model acoustic_nnsvs_melf0_test \
     --vocoder_model nnsvs_melf0_sifigan_sr48k
 
+else
+    echo "WARNING: hts.sp.nitech.ac.jp is unreachable; skipping nit-song070 melf0 recipe test"
+fi
+
 ###########################################################
 #                Dev (world), 48k)                        #
 ###########################################################
+
+if nitech_reachable; then
 
 # Use nit-song070 public dataset for testing on CI
 cd $NNSVS_ROOT/recipes/nit-song070/test-48k-world
@@ -202,3 +218,7 @@ python $NNSVS_ROOT/utils/merge_postfilters.py \
     --acoustic_model acoustic_nnsvs_world_test \
     --postfilter_model postfilter_merged \
     --vocoder_model nnsvs_world_sifigan_sr48k
+
+else
+    echo "WARNING: hts.sp.nitech.ac.jp is unreachable; skipping nit-song070 world recipe test"
+fi

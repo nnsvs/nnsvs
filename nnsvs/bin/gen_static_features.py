@@ -7,6 +7,9 @@ import numpy as np
 import pyworld
 import torch
 from hydra.utils import to_absolute_path
+from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
+
 from nnsvs.acoustic_models.util import pad_inference
 from nnsvs.base import PredictionType
 from nnsvs.gen import get_windows
@@ -20,8 +23,6 @@ from nnsvs.multistream import (
 )
 from nnsvs.postfilters import variance_scaling
 from nnsvs.util import StandardScaler, load_utt_list
-from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
 logger = None
 
@@ -126,6 +127,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.model.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=True,
     )
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()

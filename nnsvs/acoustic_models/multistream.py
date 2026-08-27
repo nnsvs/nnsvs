@@ -1,8 +1,9 @@
 import torch
+from torch import nn
+
 from nnsvs.acoustic_models.util import pad_inference
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.multistream import split_streams
-from torch import nn
 
 __all__ = [
     "MultistreamSeparateF0ParametricModel",
@@ -203,11 +204,14 @@ class NPSSMultistreamParametricModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
-        vuv_model_bap_conditioning (bool): If True, use  BAP features for V/UV prediction.
+        vuv_model_bap_conditioning (bool): If True, use  BAP features for
+            V/UV prediction.
         vuv_model_bap0_conditioning (bool): If True, use only 0-th coef. of BAP
             for V/UV prediction.
-        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
-        vuv_model_mgc_conditioning (bool): If True, use MGC features for V/UV prediction.
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for
+            V/UV prediction.
+        vuv_model_mgc_conditioning (bool): If True, use MGC features for
+            V/UV prediction.
 
     """
 
@@ -389,7 +393,8 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
     .. note::
 
         This class was originally designed to be used with MDNs. However, the internal
-        design was changed to make it work with non-MDN and diffusion models. For example,
+        design was changed to make it work with non-MDN and diffusion models.
+        For example,
         you can use non-MDN models for MGC prediction.
 
     NPSS: :cite:t:`blaauw2017neural`
@@ -414,11 +419,14 @@ class NPSSMDNMultistreamParametricModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
-        vuv_model_bap_conditioning (bool): If True, use  BAP features for V/UV prediction.
+        vuv_model_bap_conditioning (bool): If True, use  BAP features for
+            V/UV prediction.
         vuv_model_bap0_conditioning (bool): If True, use only 0-th coef. of BAP
             for V/UV prediction.
-        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
-        vuv_model_mgc_conditioning (bool): If True, use MGC features for V/UV prediction.
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for
+            V/UV prediction.
+        vuv_model_mgc_conditioning (bool): If True, use MGC features for
+            V/UV prediction.
     """
 
     def __init__(
@@ -766,7 +774,8 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
     .. note::
 
         This class was originally designed to be used with MDNs. However, the internal
-        design was changed to make it work with non-MDN and diffusion models. For example,
+        design was changed to make it work with non-MDN and diffusion models.
+        For example,
         you can use non-MDN models for mel prediction.
 
     Args:
@@ -785,8 +794,10 @@ class MDNMultistreamSeparateF0MelModel(BaseModel):
         out_lf0_idx (int): index of lf0 in output features. Typically 180.
         out_lf0_mean (float): mean of lf0 in the training data of output features
         out_lf0_scale (float): scale of lf0 in the training data of output features
-        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for V/UV prediction.
-        vuv_model_mel_conditioning (bool): If True, use mel features for V/UV prediction.
+        vuv_model_lf0_conditioning (bool): If True, use log-F0 features for
+            V/UV prediction.
+        vuv_model_mel_conditioning (bool): If True, use mel features for
+            V/UV prediction.
     """
 
     def __init__(

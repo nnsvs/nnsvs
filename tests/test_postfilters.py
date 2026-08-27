@@ -1,5 +1,6 @@
 import pytest
 import torch
+
 from nnsvs.postfilters import Conv2dPostFilter, MovingAverage1d, MultistreamPostFilter
 from nnsvs.util import init_seed
 

@@ -3,9 +3,10 @@ import sys
 
 import joblib
 import numpy as np
+from omegaconf import OmegaConf
+
 from nnsvs.multistream import get_static_features
 from nnsvs.util import StandardScaler
-from omegaconf import OmegaConf
 
 
 def get_parser():

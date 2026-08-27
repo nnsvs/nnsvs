@@ -1,14 +1,15 @@
-"""Overwrite phoneme flags for HTS full-context labels
-"""
+"""Overwrite phoneme flags for HTS full-context labels"""
+
 import argparse
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from nnmnkwii.io import hts
+from tqdm.auto import tqdm
+
 from nnsvs.io.hts import overwrite_phoneme_flags_
 from nnsvs.util import load_utt_list
-from tqdm.auto import tqdm
 
 
 def get_parser():

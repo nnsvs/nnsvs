@@ -1,7 +1,8 @@
 import numpy as np
 import torch
-from nnsvs.usfgan.utils import SignalGenerator, dilated_factor
 from torch import nn
+
+from nnsvs.usfgan.utils import SignalGenerator, dilated_factor
 
 
 class USFGANWrapper(nn.Module):

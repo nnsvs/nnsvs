@@ -2,6 +2,7 @@
 
 so that the code for DiffSinger can be used.
 """
+
 import argparse
 import re
 import shutil

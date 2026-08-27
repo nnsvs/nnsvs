@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from nnmnkwii.datasets import FileSourceDataset
+
 from nnsvs.data import MelF0AcousticSource, WORLDAcousticSource
 
 

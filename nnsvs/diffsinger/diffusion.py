@@ -3,8 +3,9 @@ from functools import partial
 
 import numpy as np
 import torch
-from nnsvs.base import BaseModel, PredictionType
 from tqdm import tqdm
+
+from nnsvs.base import BaseModel, PredictionType
 
 
 def extract(a, t, x_shape):
@@ -206,8 +207,8 @@ class GaussianDiffusion(BaseModel):
     @torch.no_grad()
     def p_sample_plms(self, x, t, interval, cond):
         """
-        Use the PLMS method from Pseudo Numerical Methods for Diffusion Models on Manifolds
-        https://arxiv.org/abs/2202.09778.
+        Use the PLMS method from Pseudo Numerical Methods for Diffusion Models
+        on Manifolds https://arxiv.org/abs/2202.09778.
         """
 
         def get_x_pred(x, noise_t, t):
@@ -270,7 +271,8 @@ class GaussianDiffusion(BaseModel):
         """Forward step
 
         Args:
-            cond (torch.Tensor): conditioning features of shaep (B, T, encoder_hidden_dim)
+            cond (torch.Tensor): conditioning features of shape
+                (B, T, encoder_hidden_dim)
             lengths (torch.Tensor): lengths of each sequence in the batch
             y (torch.Tensor): ground truth of shape (B, T, C)
 

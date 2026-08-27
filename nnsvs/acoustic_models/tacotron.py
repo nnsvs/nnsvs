@@ -1,12 +1,13 @@
 import torch
+from torch import nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from nnsvs.acoustic_models.util import pad_inference
 from nnsvs.base import BaseModel
 from nnsvs.tacotron.decoder import MDNNonAttentiveDecoder
 from nnsvs.tacotron.decoder import NonAttentiveDecoder as TacotronNonAttentiveDecoder
 from nnsvs.tacotron.postnet import Postnet as TacotronPostnet
 from nnsvs.util import init_weights
-from torch import nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 __all__ = [
     "NonAttentiveDecoder",
@@ -101,7 +102,8 @@ class NonAttentiveDecoder(TacotronNonAttentiveDecoder):
         outs = super().forward(x, lengths, y)
 
         if self.postnet is not None:
-            # NOTE: `outs.clone()`` is necessary to compute grad on both outs and outs_fine
+            # NOTE: `outs.clone()`` is necessary to compute grad on both outs
+            # and outs_fine
             outs_fine = outs + self.postnet(outs.transpose(1, 2).clone()).transpose(
                 1, 2
             )
@@ -288,7 +290,8 @@ class BiLSTMNonAttentiveDecoder(BaseModel):
         outs = self.decoder(out, lengths, y)
 
         if self.postnet is not None:
-            # NOTE: `outs.clone()`` is necessary to compute grad on both outs and outs_fine
+            # NOTE: `outs.clone()`` is necessary to compute grad on both outs
+            # and outs_fine
             outs_fine = outs + self.postnet(outs.transpose(1, 2).clone()).transpose(
                 1, 2
             )

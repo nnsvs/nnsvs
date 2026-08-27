@@ -62,7 +62,7 @@ dst_dir = join(config["out_dir"], "mono_dtw")
 os.makedirs(dst_dir, exist_ok=True)
 
 excludes = []
-for (path1, path2) in tqdm(zip(generated_files, mono_label_files)):
+for path1, path2 in tqdm(zip(generated_files, mono_label_files)):
     lab_generated = hts.load(path1)
     lab_mono_label = hts.load(path2)
     name = basename(path1)

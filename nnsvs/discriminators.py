@@ -7,8 +7,9 @@ The others are used as intermedieate feature maps.
 
 import numpy as np
 import torch
-from nnsvs.util import init_weights
 from torch import nn
+
+from nnsvs.util import init_weights
 
 
 class Conv2dD(nn.Module):

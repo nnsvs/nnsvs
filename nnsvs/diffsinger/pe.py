@@ -20,7 +20,7 @@ def denorm_f0(
     if pitch_norm == "standard":
         f0 = f0 * f0_std + f0_mean
     elif pitch_norm == "log":
-        f0 = 2 ** f0
+        f0 = 2**f0
 
     if min is not None:
         f0 = f0.clamp(min=min)
@@ -292,9 +292,9 @@ class Prenet(nn.Module):
         nonpadding_mask_TB = 1 - padding_mask.float()[:, None, :]  # [B, 1, T]
         x = x.transpose(1, 2)
         hiddens = []
-        for i, l in enumerate(self.layers):
+        for i, layer in enumerate(self.layers):
             nonpadding_mask_TB = nonpadding_mask_TB[:, :, :: self.strides[i]]
-            x = l(x) * nonpadding_mask_TB
+            x = layer(x) * nonpadding_mask_TB
         hiddens.append(x)
         hiddens = torch.stack(hiddens, 0)  # [L, B, H, T]
         hiddens = hiddens.transpose(2, 3)  # [L, B, T, H]
@@ -448,7 +448,7 @@ class PitchExtractor(nn.Module):
         lf0, uv = pitch_pred[:, :, 0], pitch_pred[:, :, 1]
 
         # f0
-        f0 = 2 ** lf0
+        f0 = 2**lf0
 
         # log(f0)
         lf0 = torch.log(f0)

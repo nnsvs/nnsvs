@@ -3,15 +3,17 @@
 NOTE: The input must be out_acoutic_scaler.joblib that is used for normalizing
 the vocoder's input features
 """
+
 import argparse
 import sys
 from pathlib import Path
 
 import joblib
 import numpy as np
+from sklearn.preprocessing import StandardScaler
+
 from nnsvs.multistream import get_static_features
 from nnsvs.util import get_world_stream_info
-from sklearn.preprocessing import StandardScaler
 
 
 def get_parser():
@@ -50,7 +52,8 @@ if __name__ == "__main__":
 
     if input_file.stem != "out_acoustic_scaler":
         raise ValueError(
-            f"Expected input_file.stem to be 'out_acoustic_scaler', got {input_file.stem}"
+            "Expected input_file.stem to be 'out_acoustic_scaler', "
+            f"got {input_file.stem}"
         )
 
     # NOTE: The output files are supposed to be used for normalizing
@@ -94,7 +97,7 @@ if __name__ == "__main__":
         # or
         # (mel, lf0, vuv)
         streams = list(map(lambda x: x.reshape(-1), streams))[:4]
-        lf0_params[name] = float(streams[1])
+        lf0_params[name] = float(streams[1].item())
         out_feats = np.concatenate(streams)
 
         print(f"[{name}] dim: {in_feats.shape} -> {out_feats.shape}")
@@ -108,8 +111,9 @@ If you are going to train NSF-based vocoders, please set the following parameter
 out_lf0_mean: {lf0_params["mean"]}
 out_lf0_scale: {lf0_params["scale"]}
 
-NOTE: If you are using the same data for training acoustic/vocoder models, the F0 statistics
-for those models should be the same. If you are using different data for training
+NOTE: If you are using the same data for training acoustic/vocoder models,
+the F0 statistics for those models should be the same. If you are using
+different data for training
 acoustic/vocoder models (e.g., training a vocoder model on a multiple DBs),
 you will likely need to set different F0 statistics for acoustic/vocoder models.
 

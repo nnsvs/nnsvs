@@ -9,12 +9,13 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
+from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
+
 from nnsvs.base import PredictionType
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_windows, multi_stream_mlpg
 from nnsvs.train_util import NpyFileSource
-from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
 logger = None
 
@@ -37,6 +38,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.model.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=True,
     )
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
@@ -50,7 +52,6 @@ def my_app(config: DictConfig) -> None:
             feats = torch.from_numpy(in_feats[idx]).unsqueeze(0).to(device)
 
             if model.prediction_type() == PredictionType.PROBABILISTIC:
-
                 max_mu, max_sigma = model.inference(feats, [feats.shape[1]])
 
                 if np.any(model_config.has_dynamic_features):

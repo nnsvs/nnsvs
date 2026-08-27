@@ -1,6 +1,9 @@
 from warnings import warn
 
 import torch
+from torch import nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.dsp import TrTimeInvFIRFilter
 from nnsvs.layers.conv import ResnetBlock, WNConv1d
@@ -10,8 +13,6 @@ from nnsvs.multistream import split_streams
 from nnsvs.transformer.attentions import sequence_mask
 from nnsvs.transformer.encoder import Encoder as _TransformerEncoder
 from nnsvs.util import init_weights
-from torch import nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 __all__ = [
     "ExtractFromInput",
@@ -56,7 +57,8 @@ class ExtractFromInput(BaseModel):
 class Conv1dResnet(BaseModel):
     """Conv1d + Resnet
 
-    The model is inspired by the MelGAN's model architecture (:cite:t:`kumar2019melgan`).
+    The model is inspired by the MelGAN's model architecture
+    (:cite:t:`kumar2019melgan`).
     MDN layer is added if use_mdn is True.
 
     Args:
@@ -100,7 +102,8 @@ class Conv1dResnet(BaseModel):
         if "dropout" in kwargs:
             warn(
                 "dropout argument in Conv1dResnet is deprecated"
-                " and will be removed in future versions"
+                " and will be removed in future versions",
+                stacklevel=2,
             )
 
         if self.embed_dim is not None:
@@ -116,7 +119,7 @@ class Conv1dResnet(BaseModel):
             WNConv1d(conv_in_dim, hidden_dim, kernel_size=7, padding=0),
         ]
         for n in range(num_layers):
-            model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
+            model.append(ResnetBlock(hidden_dim, dilation=2**n))
 
         last_conv_out_dim = hidden_dim if use_mdn else out_dim
         model += [
@@ -257,7 +260,8 @@ class Conv1dResnetSAR(Conv1dResnet):
         if "dropout" in kwargs:
             warn(
                 "dropout argument in Conv1dResnetSAR is deprecated"
-                " and will be removed in future versions"
+                " and will be removed in future versions",
+                stacklevel=2,
             )
 
         if stream_sizes is None:
@@ -571,7 +575,8 @@ class MDN(BaseModel):
         if "dropout" in kwargs:
             warn(
                 "dropout argument in MDN is deprecated"
-                " and will be removed in future versions"
+                " and will be removed in future versions",
+                stacklevel=2,
             )
         model = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         if num_layers > 1:
@@ -718,7 +723,7 @@ class Conv1dResnetMDN(BaseModel):
         super().__init__()
 
         if "dropout" in kwargs:
-            warn("dropout argument in Conv1dResnet is deprecated")
+            warn("dropout argument in Conv1dResnet is deprecated", stacklevel=2)
 
         model = [
             Conv1dResnet(

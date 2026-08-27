@@ -98,9 +98,10 @@ def get_static_stream_sizes(stream_sizes, has_dynamic_features, num_windows):
         inputs (array like): input 3-d or 2-d array
         num_windows (int): number of windows
         stream_sizes (list): stream sizes
-        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
-        streams (list, optional): Streams of interests. Returns all streams if streams is None.
-            Defaults to None.
+        has_dynamic_features (list): binary flags that indicates if steams
+            have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams
+            if streams is None. Defaults to None.
 
     Returns:
         list: stream sizes
@@ -126,9 +127,10 @@ def get_static_features(
         inputs (array like): input 3-d or 2-d array
         num_windows (int): number of windows
         stream_sizes (list): stream sizes
-        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
-        streams (list, optional): Streams of interests. Returns all streams if streams is None.
-            Defaults to None.
+        has_dynamic_features (list): binary flags that indicates if steams
+            have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams
+            if streams is None. Defaults to None.
 
     Returns:
         list: list of static features
@@ -178,9 +180,10 @@ def multi_stream_mlpg(
         variances (array like): variances of input features
         windows (list): windows for parameter generation
         stream_sizes (list): stream sizes
-        has_dynamic_features (list): binary flags that indicates if steams have dynamic features
-        streams (list, optional): Streams of interests. Returns all streams if streams is None.
-            Defaults to None.
+        has_dynamic_features (list): binary flags that indicates if steams
+            have dynamic features
+        streams (list, optional): Streams of interests. Returns all streams
+            if streams is None. Defaults to None.
 
     Raises:
         RuntimeError: if stream sizes are wrong

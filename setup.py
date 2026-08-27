@@ -1,9 +1,12 @@
-from importlib.machinery import SourceFileLoader
+import importlib.util
 from os.path import exists
 
 from setuptools import find_packages, setup
 
-version = SourceFileLoader("nnsvs.version", "nnsvs/version.py").load_module().version
+spec = importlib.util.spec_from_file_location("nnsvs.version", "nnsvs/version.py")
+version_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(version_module)
+version = version_module.version
 
 packages = find_packages()
 if exists("README.md"):
@@ -25,10 +28,13 @@ setup(
         "numpy",
         "scipy",
         "cython",
+        # pyworld/pysptk/nnmnkwii still import pkg_resources at runtime, which
+        # setuptools removed entirely as of 82.0.0
+        "setuptools < 81",
         "torch >= 1.6.0",
         "torchaudio",
-        "hydra-core >= 1.1.0",
-        "hydra_colorlog >= 1.1.0",
+        "hydra-core >= 1.3.0, < 1.4.0",
+        "hydra_colorlog >= 1.2.0",
         "librosa >= 0.7.0",
         "pysptk",
         "pyworld",
@@ -39,8 +45,12 @@ setup(
     ],
     extras_require={
         "dev": [
-            # NOTE: tentative fix for https://github.com/nnsvs/nnsvs/issues/191
-            "matplotlib<3.6.0",
+            # matplotlib<3.6.0 was pinned as a tentative fix for
+            # https://github.com/nnsvs/nnsvs/issues/191, but old matplotlib
+            # still uses np.Inf internally, which numpy>=2.0 (required for
+            # Python 3.13) removed. Verified issue #191 does not reproduce
+            # on matplotlib 3.11.0.
+            "matplotlib",
             "seaborn",
             "mlflow",
             "optuna",
@@ -62,15 +72,7 @@ setup(
             "matplotlib>=1.5",
         ],
         "lint": [
-            "pysen",
-            "types-setuptools",
-            "mypy<=0.910",
-            "black>=19.19b0,<=20.8",
-            "flake8>=3.7,<4",
-            "flake8-bugbear",
-            "isort>=4.3,<5.2.0",
-            "click<8.1.0",
-            "importlib-metadata<5.0",
+            "ruff>=0.13,<0.17",
         ],
         "test": ["pytest"],
     },

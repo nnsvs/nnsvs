@@ -6,10 +6,11 @@
 
 import torch
 import torch.nn.functional as F
+from torch import nn
+
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 from nnsvs.util import init_weights
-from torch import nn
 
 
 def decoder_init(m):
@@ -183,7 +184,8 @@ class NonAttentiveDecoder(BaseModel):
         Args:
             encoder_outs (torch.Tensor): encoder outputs (B, T, C)
             in_lens (torch.Tensor): input lengths
-            decoder_targets (torch.Tensor): decoder targets for teacher-forcing. (B, T, C)
+            decoder_targets (torch.Tensor): decoder targets for
+                teacher-forcing. (B, T, C)
 
         Returns:
             torch.Tensor: the output (B, C, T)

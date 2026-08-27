@@ -1,11 +1,12 @@
 import math
 
 import torch
-from nnsvs.base import BaseModel
-from nnsvs.util import make_pad_mask
 from torch import nn
 from torch.nn import Parameter
 from torch.nn import functional as F
+
+from nnsvs.base import BaseModel
+from nnsvs.util import make_pad_mask
 
 
 def softmax(x, dim):
@@ -116,16 +117,16 @@ class MultiheadAttention(nn.Module):
         self.num_heads = num_heads
         self.dropout = dropout
         self.head_dim = embed_dim // num_heads
-        assert (
-            self.head_dim * num_heads == self.embed_dim
-        ), "embed_dim must be divisible by num_heads"
-        self.scaling = self.head_dim ** -0.5
+        assert self.head_dim * num_heads == self.embed_dim, (
+            "embed_dim must be divisible by num_heads"
+        )
+        self.scaling = self.head_dim**-0.5
 
         self.self_attention = self_attention
         self.encoder_decoder_attention = encoder_decoder_attention
 
         assert not self.self_attention or self.qkv_same_dim, (
-            "Self-attention requires query, key and " "value to be of the same size"
+            "Self-attention requires query, key and value to be of the same size"
         )
 
         if self.qkv_same_dim:
@@ -552,7 +553,7 @@ class TransformerFFNLayer(nn.Module):
             assert incremental_state is None, "Nar-generation does not allow this."
 
         x = self.ffn_1(x.permute(1, 2, 0)).permute(2, 0, 1)
-        x = x * self.kernel_size ** -0.5
+        x = x * self.kernel_size**-0.5
 
         if incremental_state is not None:
             x = x[-1:]
@@ -617,7 +618,10 @@ class EncSALayer(nn.Module):
         if self.num_heads > 0:
             residual = x
             x = self.layer_norm1(x)
-            x, _, = self.self_attn(
+            (
+                x,
+                _,
+            ) = self.self_attn(
                 query=x, key=x, value=x, key_padding_mask=encoder_padding_mask
             )
             x = F.dropout(x, self.dropout, training=self.training)
@@ -719,7 +723,9 @@ class FFTBlocks(nn.Module):
         if padding_mask is None:
             padding_mask = make_pad_mask(lengths).to(x.device)
 
-        # padding_mask = x.abs().sum(-1).eq(0).data if padding_mask is None else padding_mask
+        # padding_mask = (
+        #     x.abs().sum(-1).eq(0).data if padding_mask is None else padding_mask
+        # )
         nonpadding_mask_TB = (
             1 - padding_mask.transpose(0, 1).float()[:, :, None]
         )  # [T, B, 1]

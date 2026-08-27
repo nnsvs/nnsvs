@@ -6,7 +6,8 @@ NEUTRINO - NEURAL SINGING SYNTHESIZER (Electron v1.2.0-Stable)
             Copyright (c) 2020-2022 STUDIO NEUTRINO All rights reserved.
 
 usage:
-    NEUTRINO full.lab timing.lab output.f0 output.mgc output.bap model_directory [option]
+    NEUTRINO full.lab timing.lab output.f0 output.mgc output.bap
+             model_directory [option]
     options : description [default]
     -n i        : number of threads (CPU)                 [MAX]
     -k i        : style shift                             [  0]
@@ -17,6 +18,7 @@ usage:
     -t          : view information                        [off]
 
 """
+
 import argparse
 import logging
 import sys
@@ -38,9 +40,11 @@ def get_parser():
     parser.add_argument("output_mgc", type=str, help="Path of output MGC")
     parser.add_argument("output_bap", type=str, help="Path of output BAP")
     parser.add_argument("model_dir", type=str, help="model_dir")
-    parser.add_argument(
-        "-i", "--phraselist", type=str, default=None, help="Path of phraselist"
-    ),
+    (
+        parser.add_argument(
+            "-i", "--phraselist", type=str, default=None, help="Path of phraselist"
+        ),
+    )
     parser.add_argument(
         "-p", "--phrase_num", type=int, default=-1, help="Phrase number"
     )
@@ -54,9 +58,10 @@ def get_parser():
 def run_local(args, _):
     import torch
     from nnmnkwii.io import hts
+    from utaupy.utils import ust2hts
+
     from nnsvs.io.hts import full_to_mono
     from nnsvs.svs import NEUTRINO
-    from utaupy.utils import ust2hts
 
     model_dir = Path(args.model_dir)
     # NOTE: this is needed to be compatible with NEUTRINO's Run.bat

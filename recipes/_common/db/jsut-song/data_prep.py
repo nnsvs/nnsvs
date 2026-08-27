@@ -8,6 +8,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 from nnmnkwii.io import hts
+
 from nnsvs.io.hts import get_note_indices
 
 
@@ -64,8 +65,9 @@ full_align_new_dir = join(jsut_song_root, "label_phone_align")
 os.makedirs(full_align_new_dir, exist_ok=True)
 
 # replace contexts with HTS demo's one
-# this is needed because nnmnkwii assumes that pitch is represented by midi note (e.g. E4),
-# while jsut-song's label uses numbers (e.g. 87) to represent pitch.
+# this is needed because nnmnkwii assumes that pitch is represented by
+# midi note (e.g. E4), while jsut-song's label uses numbers (e.g. 87) to
+# represent pitch.
 full_lab_files = sorted(glob(join(full_align_dir, "*.lab")))
 names = list(map(lambda s: basename(s), full_lab_files))
 nit_lab_files = list(

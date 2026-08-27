@@ -4,7 +4,7 @@ __all__ = ["WaveNet", "receptive_field_size"]
 
 
 def receptive_field_size(
-    total_layers, num_cycles, kernel_size, dilation=lambda x: 2 ** x
+    total_layers, num_cycles, kernel_size, dilation=lambda x: 2**x
 ):
     """Compute receptive field size of WaveNet
 

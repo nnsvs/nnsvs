@@ -1,4 +1,5 @@
 import torch
+
 from nnsvs.base import PredictionType
 from nnsvs.util import init_seed
 

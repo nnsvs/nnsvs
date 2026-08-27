@@ -7,6 +7,10 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
+from omegaconf import DictConfig, OmegaConf
+from scipy.io import wavfile
+from tqdm.auto import tqdm
+
 from nnsvs.gen import (
     postprocess_acoustic,
     postprocess_waveform,
@@ -16,9 +20,6 @@ from nnsvs.gen import (
 )
 from nnsvs.logger import getLogger
 from nnsvs.util import extract_static_scaler, init_seed, load_utt_list, load_vocoder
-from omegaconf import DictConfig, OmegaConf
-from scipy.io import wavfile
-from tqdm.auto import tqdm
 
 
 @hydra.main(config_path="conf/synthesis", config_name="config")
@@ -38,6 +39,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.timelag.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=True,
     )
     timelag_model.load_state_dict(checkpoint["state_dict"])
     timelag_in_scaler = joblib.load(to_absolute_path(config.timelag.in_scaler_path))
@@ -50,6 +52,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.duration.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=True,
     )
     duration_model.load_state_dict(checkpoint["state_dict"])
     duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
@@ -62,6 +65,7 @@ def my_app(config: DictConfig) -> None:
     checkpoint = torch.load(
         to_absolute_path(config.acoustic.checkpoint),
         map_location=lambda storage, loc: storage,
+        weights_only=True,
     )
     acoustic_model.load_state_dict(checkpoint["state_dict"])
     acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))

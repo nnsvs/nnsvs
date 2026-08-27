@@ -7,6 +7,9 @@ import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
 from nnmnkwii.datasets import FileSourceDataset
+from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
+
 from nnsvs.data import (
     DurationFeatureSource,
     MelF0AcousticSource,
@@ -15,8 +18,6 @@ from nnsvs.data import (
     WORLDAcousticSource,
 )
 from nnsvs.logger import getLogger
-from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
 logger = None
 

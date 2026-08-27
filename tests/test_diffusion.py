@@ -1,5 +1,6 @@
 import pytest
 import torch
+
 from nnsvs.base import PredictionType
 from nnsvs.diffsinger.denoiser import DiffNet
 from nnsvs.diffsinger.diffusion import GaussianDiffusion

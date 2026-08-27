@@ -1,4 +1,5 @@
 import pytest
+
 from nnsvs.acoustic_models import (
     BiLSTMMDNNonAttentiveDecoder,
     BiLSTMNonAttentiveDecoder,

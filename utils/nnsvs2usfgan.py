@@ -1,5 +1,5 @@
-"""Convert NNSVS's pre-processed features to usfgan-friendly format
-"""
+"""Convert NNSVS's pre-processed features to usfgan-friendly format"""
+
 import argparse
 import os
 import sys
@@ -8,11 +8,12 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pyworld
-from nnsvs.util import StandardScaler
 from omegaconf import OmegaConf
 from parallel_wavegan.utils import write_hdf5
 from scipy.io import wavfile
 from tqdm.auto import tqdm
+
+from nnsvs.util import StandardScaler
 
 
 def split_streams(inputs, stream_sizes=None):
@@ -208,9 +209,11 @@ if __name__ == "__main__":
             # NOTE: the following two features are not supported for now
             # write_hdf5(usfgan_feat_path, "/mcap", mcap)
 
-            # NNSVSや林さんのparallel_waveganでは、波形は hdf5/npy フォーマットに前処理で変換
-            # しているが、usfganは生データを読み込んでいるようなので、あわせる
-            # NNSVSの前処理で波形を float32 に変換していますが、必要であれば、int16に変換してください
+            # NNSVSや林さんのparallel_waveganでは、
+            # 波形は hdf5/npy フォーマットに前処理で変換しているが、
+            # usfganは生データを読み込んでいるようなので、あわせる
+            # NNSVSの前処理で波形を float32 に変換していますが、
+            # 必要であれば、int16に変換してください
             wavfile.write(out_wav_dir / f"{utt_id}.wav", sample_rate, wave.reshape(-1))
 
         # Write scp/list files for usfgan

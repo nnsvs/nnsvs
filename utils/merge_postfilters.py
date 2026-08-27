@@ -20,13 +20,17 @@ def get_parser():
 if __name__ == "__main__":
     args = get_parser().parse_args(sys.argv[1:])
 
-    mgc_checkpoint = torch.load(args.mgc_checkpoint, map_location="cpu")
-    bap_checkpoint = torch.load(args.bap_checkpoint, map_location="cpu")
+    mgc_checkpoint = torch.load(
+        args.mgc_checkpoint, map_location="cpu", weights_only=True
+    )
+    bap_checkpoint = torch.load(
+        args.bap_checkpoint, map_location="cpu", weights_only=True
+    )
 
     for path in [args.mgc_checkpoint, args.bap_checkpoint]:
         size = os.path.getsize(path)
         print("Processisng:", path)
-        print(f"File size: {size / 1024/1024:.3f} MB")
+        print(f"File size: {size / 1024 / 1024:.3f} MB")
 
     mgc_model = OmegaConf.load(Path(args.mgc_checkpoint).parent / "model.yaml")
     bap_model = OmegaConf.load(Path(args.bap_checkpoint).parent / "model.yaml")
@@ -52,4 +56,4 @@ if __name__ == "__main__":
     checkpoint_path = Path(args.output_dir) / "latest.pth"
     torch.save(checkpoint, checkpoint_path)
     size = os.path.getsize(checkpoint_path)
-    print(f"File size (after): {size / 1024/1024:.3f} MB")
+    print(f"File size (after): {size / 1024 / 1024:.3f} MB")

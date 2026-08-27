@@ -1,16 +1,17 @@
-"""Run NNSVS"s SVS inference
-"""
+"""Run NNSVS"s SVS inference"""
+
 import argparse
 import sys
 from pathlib import Path
 
 import pysinsy
 from nnmnkwii.io import hts
+from scipy.io import wavfile
+from utaupy.utils import ust2hts
+
 from nnsvs.io.hts import merge_sil, overwrite_phoneme_flags_
 from nnsvs.svs import SPSVS
 from nnsvs.util import init_seed
-from scipy.io import wavfile
-from utaupy.utils import ust2hts
 
 
 def get_parser():

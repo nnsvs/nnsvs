@@ -13,12 +13,13 @@ import pyworld
 import torch
 from fastapi import FastAPI, UploadFile
 from nnmnkwii.io import hts
-from nnsvs.io.hts import full_to_mono
-from nnsvs.svs import NEUTRINO
 from omegaconf import OmegaConf
 from scipy.io import wavfile
 from starlette.responses import RedirectResponse, StreamingResponse
 from utaupy.utils import ust2hts
+
+from nnsvs.io.hts import full_to_mono
+from nnsvs.svs import NEUTRINO
 
 SCORE_DIR = Path("./score")
 MUSICXML_DIR = SCORE_DIR / "musicxml"

@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyworld
 from nnmnkwii.preprocessing.f0 import interp1d
+from scipy.io import wavfile
+
 from nnsvs.pitch import (
     extract_smoothed_f0,
     extract_vibrato_likelihood,
@@ -14,7 +16,6 @@ from nnsvs.pitch import (
     lowpass_filter,
     nonzero_segments,
 )
-from scipy.io import wavfile
 
 
 def get_parser():

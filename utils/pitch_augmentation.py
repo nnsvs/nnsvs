@@ -1,5 +1,5 @@
-"""Pitch augmentation for extracted features
-"""
+"""Pitch augmentation for extracted features"""
+
 import argparse
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -7,8 +7,9 @@ from pathlib import Path
 
 import numpy as np
 from nnmnkwii.io import hts
-from nnsvs.util import load_utt_list
 from tqdm.auto import tqdm
+
+from nnsvs.util import load_utt_list
 
 
 def get_parser():

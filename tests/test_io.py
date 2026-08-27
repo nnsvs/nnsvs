@@ -3,6 +3,7 @@ from os.path import dirname, join
 import numpy as np
 import pytest
 from nnmnkwii.io import hts
+
 from nnsvs.io.hts import (
     full_to_mono,
     get_note_indices,

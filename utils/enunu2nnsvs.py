@@ -1,5 +1,5 @@
-"""Convert ENUNU's packed model to NNSVS's style
-"""
+"""Convert ENUNU's packed model to NNSVS's style"""
+
 import argparse
 import os
 import shutil
@@ -9,10 +9,11 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
-from nnsvs.logger import getLogger
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from omegaconf import OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from nnsvs.logger import getLogger
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():
@@ -49,11 +50,13 @@ def _scaler2numpy(input_file, out_dir, logger):
 
 def _save_checkpoint(input_file, output_file, logger):
     checkpoint = torch.load(
-        input_file, map_location=torch.device("cpu")  # pylint: disable='no-member'
+        input_file,
+        map_location=torch.device("cpu"),  # pylint: disable='no-member'
+        weights_only=True,
     )
     size = os.path.getsize(input_file)
     logger.info(f"Processisng: {input_file}")
-    logger.info(f"File size (before): {size / 1024/1024:.3f} MB")
+    logger.info(f"File size (before): {size / 1024 / 1024:.3f} MB")
     for k in ["optimizer_state", "lr_scheduler_state"]:
         if k in checkpoint.keys():
             del checkpoint[k]
@@ -67,7 +70,7 @@ def _save_checkpoint(input_file, output_file, logger):
 
     torch.save(checkpoint, output_file)
     size = os.path.getsize(output_file)
-    logger.info(f"File size (after): {size / 1024/1024:.3f} MB")
+    logger.info(f"File size (after): {size / 1024 / 1024:.3f} MB")
 
 
 def main(enunu_dir, out_dir, verbose=100):

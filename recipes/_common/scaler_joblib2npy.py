@@ -4,8 +4,9 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-from nnsvs.util import StandardScaler as NNSVSStandardScaler
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from nnsvs.util import StandardScaler as NNSVSStandardScaler
 
 
 def get_parser():

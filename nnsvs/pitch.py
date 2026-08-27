@@ -19,11 +19,13 @@ If you want to get maximum performance, you might want to tune these
 parameters with your dataset.
 I tested this code with kiritan_singing and nit-song070 database.
 """
+
 import librosa
 import numpy as np
 import torch
-from nnsvs.dsp import lowpass_filter
 from scipy.signal import argrelmax, argrelmin
+
+from nnsvs.dsp import lowpass_filter
 
 _c4_hz = 440 * 2 ** (3 / 12 - 1)
 _c4_cent = 4800
@@ -496,7 +498,8 @@ def extract_vibrato_parameters(
                 m = f0_seg.mean()
                 cross_count = len(np.where(np.diff(np.sign(f0_seg - m)))[0])
 
-                # Find the start_index so that the vibrato section has more than 5 crossing
+                # Find the start_index so that the vibrato section has
+                # more than 5 crossing
                 E = compute_extent(f0_seg)
                 extent = 0.5 * E.mean()
                 having_large_deviation = ((0.5 * E) > max_extent * 2).any()

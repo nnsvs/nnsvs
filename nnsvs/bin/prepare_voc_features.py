@@ -1,5 +1,5 @@
-"""Prepare input features for training neural vocoders
-"""
+"""Prepare input features for training neural vocoders"""
+
 import os
 from concurrent.futures import ProcessPoolExecutor
 from os.path import exists, islink, join
@@ -7,11 +7,12 @@ from os.path import exists, islink, join
 import hydra
 import numpy as np
 from hydra.utils import to_absolute_path
+from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
+
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_features
 from nnsvs.util import get_world_stream_info, load_utt_list
-from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
 
 def _prepare_voc_features(
@@ -36,8 +37,8 @@ def _prepare_voc_features(
     # remove batch-axis
     streams = list(map(lambda x: x.squeeze(0), streams))
 
-    # NOTE: even if the number of streams are larger than 4, we only use the first 4 streams
-    # for training neural vocoders
+    # NOTE: even if the number of streams are larger than 4, we only use the
+    # first 4 streams for training neural vocoders
     if len(streams) >= 4:
         mgc, lf0, vuv, bap = streams[0], streams[1], streams[2], streams[3]
         voc_feats = np.hstack((mgc, lf0, vuv, bap)).astype(np.float32)
@@ -49,7 +50,8 @@ def _prepare_voc_features(
     np.save(voc_feats_path, voc_feats, allow_pickle=False)
 
     # NOTE: To train vocoders with https://github.com/kan-bayashi/ParallelWaveGAN
-    # target waveform needs to be created in the same directory as the vocoder input features.
+    # target waveform needs to be created in the same directory as the vocoder
+    # input features.
     save_wave_path = join(out_dir, utt_id + "-wave.npy")
     if (not exists(save_wave_path)) and (not islink(save_wave_path)):
         os.symlink(join(in_dir, utt_id + "-wave.npy"), save_wave_path)

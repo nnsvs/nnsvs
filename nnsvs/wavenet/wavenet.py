@@ -1,7 +1,8 @@
 import torch
-from nnsvs.wavenet.modules import Conv1d1x1, ResSkipBlock
 from torch import nn
 from torch.nn import functional as F
+
+from nnsvs.wavenet.modules import Conv1d1x1, ResSkipBlock
 
 
 class WaveNet(nn.Module):

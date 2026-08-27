@@ -16,6 +16,7 @@ usage:
     -i i            : gpu id                          [    0]
     -t              : view information                [  off]
 """
+
 import argparse
 import logging
 import sys
@@ -46,6 +47,7 @@ def get_parser():
 def run_local(args, _):
     import pyworld
     import torch
+
     from nnsvs.svs import NEUTRINO
 
     model_dir = Path(args.model_dir)

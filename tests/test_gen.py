@@ -6,8 +6,9 @@ import pyworld
 from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.preprocessing.f0 import interp1d
-from nnsvs.gen import correct_vuv_by_phone, gen_spsvs_static_features
 from scipy.io import wavfile
+
+from nnsvs.gen import correct_vuv_by_phone, gen_spsvs_static_features
 
 
 def _extract_static_feats(wav, sr):

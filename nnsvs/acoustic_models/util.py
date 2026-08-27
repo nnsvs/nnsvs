@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+from torch.nn import functional as F
+
 from nnsvs.base import PredictionType
 from nnsvs.mdn import mdn_get_most_probable_sigma_and_mu
-from torch.nn import functional as F
 
 
 def predict_lf0_with_residual(

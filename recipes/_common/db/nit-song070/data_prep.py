@@ -8,6 +8,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 from nnmnkwii.io import hts
+
 from nnsvs.io.hts import get_note_indices
 
 
@@ -183,14 +184,15 @@ for lab_align_path in full_lab_align_files:
     wav_path = join(hts_demo_root, "data", "wav", name + ".wav")
     raw_path = join(hts_demo_root, "data", "raw", name + ".raw")
 
-    # We can load and manipulate audio (e.g., normalizing gain), but for now just copy it as is
+    # We can load and manipulate audio (e.g., normalizing gain), but for
+    # now just copy it as is
     if exists(wav_path):
         # sr, wave = wavfile.read(wav_path)
         wav, sr = librosa.load(wav_path, sr=48000)
     else:
         assert raw_path
         wav = np.fromfile(raw_path, dtype=np.int16)
-        wav = wav.astype(np.float32) / 2 ** 15
+        wav = wav.astype(np.float32) / 2**15
         sr = 48000
 
     if gain_normalize:

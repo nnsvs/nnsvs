@@ -1,13 +1,14 @@
 from pathlib import Path
 
 import hydra
+import pytest
+import torch
+from omegaconf import OmegaConf
+
 import nnsvs.bin.train
 import nnsvs.bin.train_acoustic
 import nnsvs.bin.train_postfilter
-import pytest
-import torch
 from nnsvs.util import init_seed
-from omegaconf import OmegaConf
 
 from .util import _test_model_impl
 

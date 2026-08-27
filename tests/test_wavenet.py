@@ -1,4 +1,5 @@
 import torch
+
 from nnsvs.wavenet import WaveNet
 
 

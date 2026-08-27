@@ -1,13 +1,14 @@
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from nnsvs.acoustic_models.util import pad_inference
 from nnsvs.base import BaseModel, PredictionType
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu, mdn_get_sample
 from nnsvs.tacotron.decoder import Prenet, ZoneOutCell
 from nnsvs.util import init_weights
-from torch import nn
-from torch.nn import functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 __all__ = [
     "ResF0NonAttentiveDecoder",
@@ -129,7 +130,8 @@ class ResF0NonAttentiveDecoder(BaseModel):
         Args:
             encoder_outs (torch.Tensor): encoder outputs (B, T, C)
             in_lens (torch.Tensor): input lengths
-            decoder_targets (torch.Tensor): decoder targets for teacher-forcing. (B, T, C)
+            decoder_targets (torch.Tensor): decoder targets for
+                teacher-forcing. (B, T, C)
 
         Returns:
             torch.Tensor: the output (B, C, T)
@@ -370,7 +372,8 @@ class MDNResF0NonAttentiveDecoder(BaseModel):
         Args:
             encoder_outs (torch.Tensor): encoder outputs (B, T, C)
             in_lens (torch.Tensor): input lengths
-            decoder_targets (torch.Tensor): decoder targets for teacher-forcing. (B, T, C)
+            decoder_targets (torch.Tensor): decoder targets for
+                teacher-forcing. (B, T, C)
 
         Returns:
             torch.Tensor: the output (B, C, T)

@@ -4,9 +4,10 @@ import hydra
 import joblib
 import numpy as np
 from hydra.utils import to_absolute_path
-from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from nnsvs.logger import getLogger
 
 
 @hydra.main(config_path="conf/fit_scaler", config_name="config")

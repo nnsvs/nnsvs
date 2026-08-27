@@ -11,6 +11,8 @@ from nnmnkwii.frontend import merlin as fe
 from nnmnkwii.io import hts
 from nnmnkwii.postfilters import merlin_post_filter
 from nnmnkwii.preprocessing.f0 import interp1d
+from sklearn.preprocessing import MinMaxScaler
+
 from nnsvs.base import PredictionType
 from nnsvs.dsp import bandpass_filter
 from nnsvs.io.hts import (
@@ -27,7 +29,6 @@ from nnsvs.multistream import (
 )
 from nnsvs.pitch import gen_sine_vibrato, lowpass_filter
 from nnsvs.postfilters import variance_scaling
-from sklearn.preprocessing import MinMaxScaler
 
 
 def _midi_to_hz(x, idx, log_f0=False):
@@ -350,11 +351,13 @@ def postprocess_duration(labels, pred_durations, lag, frame_period=5):
 
         # Compute note duration with time-lag
         # eq (11)
-        L = int(fe.duration_features(p)[0])
+        L = int(fe.duration_features(p)[0].item())
+        lag_prev = float(np.asarray(lag[i - 1]).item())
         if i < len(note_indices) - 1:
-            L_hat = L - (lag[i - 1] - lag[i]) / hts_frame_shift
+            lag_next = float(np.asarray(lag[i]).item())
+            L_hat = L - (lag_prev - lag_next) / hts_frame_shift
         else:
-            L_hat = L - (lag[i - 1]) / hts_frame_shift
+            L_hat = L - lag_prev / hts_frame_shift
 
         # Prevent negative duration
         L_hat = max(L_hat, 1)
@@ -385,17 +388,19 @@ def postprocess_duration(labels, pred_durations, lag, frame_period=5):
                 print(
                     f"Negative phoneme durations are predicted at {i}-th note. "
                     "The note duration: ",
-                    f"{round(float(L)*s,3)} sec -> {round(float(L_hat)*s,3)} sec",
+                    f"{round(float(L) * s, 3)} sec -> {round(float(L_hat) * s, 3)} sec",
                 )
                 print(
                     "It's likely that the model couldn't predict correct durations "
                     "for short notes."
                 )
                 print(
-                    f"Variance scaling based durations (in frame):\n{(mu + rho * sigma_sq)}"
+                    "Variance scaling based durations (in frame):\n"
+                    f"{(mu + rho * sigma_sq)}"
                 )
                 print(
-                    f"Fallback to uniform scaling (in frame):\n{(L_hat * mu / mu.sum())}"
+                    "Fallback to uniform scaling (in frame):\n"
+                    f"{(L_hat * mu / mu.sum())}"
                 )
                 d_norm = L_hat * mu / mu.sum()
         else:
@@ -684,7 +689,8 @@ def postprocess_acoustic(
             for acoustic features.
         postfilter_model (nn.Module): Post-filter model.
         postfilter_config (dict): Post-filter model configuration.
-        postfilter_out_scaler (sklearn.preprocessing.StandardScaler): Scaler for post-filter.
+        postfilter_out_scaler (sklearn.preprocessing.StandardScaler): Scaler
+            for post-filter.
         sample_rate (int): Sampling rate.
         frame_period (float): Frame period in milliseconds.
         relative_f0 (bool): If True, use relative f0.
@@ -695,7 +701,8 @@ def postprocess_acoustic(
         trajectory_smoothing (bool): Whether to apply trajectory smoothing.
         trajectory_smoothing_cutoff (float): Cutoff frequency for trajectory smoothing
             of spectral features.
-        trajectory_smoothing_cutoff_f0 (float): Cutoff frequency for trajectory smoothing of f0.
+        trajectory_smoothing_cutoff_f0 (float): Cutoff frequency for trajectory
+            smoothing of f0.
         vuv_threshold (float): V/UV threshold.
         f0_shift_in_cent (float): F0 shift in cents.
         vibrato_scale (float): Vibrato scale.
@@ -1072,8 +1079,14 @@ def postprocess_waveform(
             wav = (wav * 32767.0).astype(np.int16)
         else:
             # may need to handle int32 data (if any)
-            warn("Unexpected waveform range: {} - {}".format(np.min(wav), np.max(wav)))
-            warn("Failed to convert to int16. Returning waveform with floating point.")
+            warn(
+                "Unexpected waveform range: {} - {}".format(np.min(wav), np.max(wav)),
+                stacklevel=2,
+            )
+            warn(
+                "Failed to convert to int16. Returning waveform with floating point.",
+                stacklevel=2,
+            )
     elif dtype is None:
         pass
     else:
@@ -1121,7 +1134,8 @@ def _get_nonrest_frame_soft_mask(
     dur = linguistic_features[:, len(binary_dict) + in_note_dur_idx]
     dur_in_sec = dur * 0.01
     for in_sil_idx in in_sil_indices:
-        # Only mask out sil/pau segments over ${silence_threshold} sec. such as long pause
+        # Only mask out sil/pau segments over ${silence_threshold} sec.
+        # such as long pause
         mask[
             (linguistic_features[:, in_sil_idx] > 0) & (dur_in_sec > duration_threshold)
         ] = 0

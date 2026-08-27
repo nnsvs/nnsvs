@@ -1,32 +1,19 @@
 [build-system]
 requires = [
     "setuptools",
-    "cython>=0.28.0",
-    "scipy",
-    "cmake",
-    "numpy>=1.25.0; python_version>='3.9'",
-    "oldest-supported-numpy; python_version<'3.9'",
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.pysen]
-version = "0.10"
-
-[tool.pysen.lint]
-enable_black = true
-enable_flake8 = true
-enable_isort = true
-enable_mypy = false
-mypy_preset = "entry"
-line_length = 88
-py_version = "py38"
-
-[[tool.pysen.lint.mypy_targets]]
-paths = ["nnsvs", "tests"]
-
-[tool.pysen.lint.source]
-excludes = [
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+extend-exclude = [
     "nnsvs/usfgan/layers",
     "nnsvs/usfgan/models",
-    "nnsvs/usfgan/utils"
+    "nnsvs/usfgan/utils",
 ]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+
+[tool.ruff.format]

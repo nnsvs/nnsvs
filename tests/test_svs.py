@@ -2,6 +2,7 @@ import numpy as np
 import pysinsy
 import pytest
 from nnmnkwii.io import hts
+
 from nnsvs.io.hts import full_to_mono
 from nnsvs.pretrained import retrieve_pretrained_model
 from nnsvs.svs import NEUTRINO, SPSVS

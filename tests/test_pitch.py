@@ -3,6 +3,8 @@ from os.path import dirname, join
 import numpy as np
 import pytest
 import pyworld
+from scipy.io import wavfile
+
 from nnsvs.pitch import (
     extract_smoothed_f0,
     extract_vibrato_likelihood,
@@ -10,7 +12,6 @@ from nnsvs.pitch import (
     gen_sine_vibrato,
     hz_to_cent_based_c4,
 )
-from scipy.io import wavfile
 
 __test_wav_file = join(dirname(__file__), "data", "nitech_jp_song070_f001_004.wav")
 

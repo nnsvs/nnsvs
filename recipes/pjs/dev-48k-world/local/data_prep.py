@@ -9,6 +9,7 @@ import numpy as np
 import pysinsy
 import soundfile as sf
 from nnmnkwii.io import hts
+
 from nnsvs.io.hts import get_note_indices
 
 

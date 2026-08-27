@@ -3,14 +3,17 @@
 About sv56:
 International Telecommunication Union, Recommendation G.191:
 Software Tools and Audio Coding Standardization, Nov 11 2005.
-Sv56 has been used for gain normalization in several speech research including:
-- Using Cyclic Noise as the Source Signal for Neural Source-Filter-based Speech Waveform Model
+Sv56 has been used for gain normalization in several speech research
+including:
+- Using Cyclic Noise as the Source Signal for Neural Source-Filter-based
+  Speech Waveform Model
     - https://arxiv.org/abs/2004.02191
 - Zero-Shot Multi-Speaker Text-To-Speech with State-of-the-art Neural Speaker Embeddings
     - https://arxiv.org/abs/1910.10838
 
 sv56demo: https://github.com/foss-for-synopsys-dwc-arc-processors/G722
 """
+
 import argparse
 import os
 import sys

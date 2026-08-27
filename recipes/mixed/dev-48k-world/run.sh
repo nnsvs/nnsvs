@@ -49,7 +49,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
         echo "stage -1: Downloading data for nit-song070"
         mkdir -p downloads
         cd downloads
-        curl -LO http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
+        curl -fL --retry 3 --retry-delay 5 --retry-connrefused --connect-timeout 10 --max-time 300 -O https://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
         tar jxvf HTS-demo_NIT-SONG070-F001.tar.bz2
         cd $script_dir
     fi

@@ -20,7 +20,7 @@ def lowpass_filter(x, fs, cutoff=5, N=5):
     """
     nyquist = fs // 2
     norm_cutoff = cutoff / nyquist
-    Wn = [norm_cutoff]
+    Wn = norm_cutoff
 
     b, a = signal.butter(N, Wn, "lowpass")
     if len(x) <= max(len(a), len(b)) * (N // 2 + 1):

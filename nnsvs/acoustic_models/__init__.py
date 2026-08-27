@@ -1,5 +1,7 @@
 from functools import partial
 
+from torch import nn
+
 from nnsvs.acoustic_models.multistream import (
     MDNMultistreamSeparateF0MelModel,
     MultistreamSeparateF0MelModel,
@@ -25,7 +27,6 @@ from nnsvs.layers.conv import ResnetBlock, WNConv1d
 from nnsvs.mdn import MDNLayer, mdn_get_most_probable_sigma_and_mu
 from nnsvs.model import TransformerEncoder, VariancePredictor
 from nnsvs.util import init_weights
-from torch import nn
 
 __all__ = [
     # Non-autoregressive models
@@ -104,7 +105,7 @@ class ResF0Conv1dResnet(BaseModel):
             WNConv1d(in_dim, hidden_dim, kernel_size=7, padding=0),
         ]
         for n in range(num_layers):
-            model.append(ResnetBlock(hidden_dim, dilation=2 ** n))
+            model.append(ResnetBlock(hidden_dim, dilation=2**n))
 
         last_conv_out_dim = hidden_dim if use_mdn else out_dim
         model += [

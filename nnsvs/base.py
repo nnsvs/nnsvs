@@ -94,8 +94,8 @@ class BaseModel(nn.Module):
     def inference(self, x, lengths=None):
         """Inference method
 
-        If you want to implement custom inference method such as autoregressive sampling,
-        please override this method.
+        If you want to implement custom inference method such as autoregressive
+        sampling, please override this method.
 
         Defaults to call the forward method.
 
@@ -138,8 +138,9 @@ class BaseModel(nn.Module):
     def is_autoregressive(self):
         """Is autoregressive or not
 
-        If your custom model is an autoregressive model, please return ``True``. In that case,
-        you would need to implement autoregressive sampling in :py:meth:`inference`.
+        If your custom model is an autoregressive model, please return ``True``.
+        In that case, you would need to implement autoregressive sampling in
+        :py:meth:`inference`.
 
         Returns:
             bool: True if autoregressive. Default is False.

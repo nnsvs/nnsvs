@@ -1,14 +1,15 @@
-"""Convert Opencpop's segmented data to NNSVS's structure
-"""
+"""Convert Opencpop's segmented data to NNSVS's structure"""
+
 import argparse
 import sys
 from pathlib import Path
 
 import numpy as np
 from nnmnkwii.io import hts
-from nnsvs.io.hts import get_note_indices
 from scipy.io import wavfile
 from tqdm.auto import tqdm
+
+from nnsvs.io.hts import get_note_indices
 
 
 def get_parser():

@@ -3,9 +3,10 @@ import unittest
 import numpy as np
 import torch
 import torch.optim as optim
+from torch import nn
+
 from nnsvs import mdn
 from nnsvs.util import init_seed
-from torch import nn
 
 
 class MDN(nn.Module):
@@ -75,14 +76,10 @@ class TestMDN(unittest.TestCase):
         # wrap up the inverse data as Variables
         x = torch.from_numpy(
             self.x_train_inv.reshape(self.batch_size, -1, self.d_in)
-        ).to(
-            self.device
-        )  # (B, max(T), D_in)
+        ).to(self.device)  # (B, max(T), D_in)
         y = torch.from_numpy(
             self.y_train_inv.reshape(self.batch_size, -1, self.d_out)
-        ).to(
-            self.device
-        )  # (B, max(T), D_out)
+        ).to(self.device)  # (B, max(T), D_out)
         for e in range(1000):
             self.model.zero_grad()
             pi, sigma, mu = self.model(x)
@@ -107,7 +104,8 @@ class TestMDN(unittest.TestCase):
             upper_limit = self.y_test_range[i][1]
             assert lower_limit < sample and upper_limit > sample
             print(
-                f"sample: {sample}, lower_limit: {lower_limit}, upper_limit: {upper_limit}"
+                f"sample: {sample}, lower_limit: {lower_limit}, "
+                f"upper_limit: {upper_limit}"
             )
 
     def test_mdn_get_sample(self):
@@ -123,7 +121,8 @@ class TestMDN(unittest.TestCase):
             upper_limit = self.y_test_range[i][1]
             assert lower_limit < sample and upper_limit > sample
             print(
-                f"sample: {sample}, lower_limit: {lower_limit}, upper_limit: {upper_limit}"
+                f"sample: {sample}, lower_limit: {lower_limit}, "
+                f"upper_limit: {upper_limit}"
             )
 
 
